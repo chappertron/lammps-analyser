@@ -1,0 +1,126 @@
+#
+# Runs LAMMPS simulation electrolyte solutions
+#
+echo            screen
+variable        dcdfreq index 10000 variable        thermofreq index 100
+variable        rand equal 990416
+variable        nlayers equal 100
+variable        nsteps index 10000000
+variable        temp index 250
+variable        deltat equal 20
+variable        Thot equal (v_temp+v_deltat)
+variable        Tcold equal (v_temp-v_deltat)
+variable        dofh  equal 1.5925
+variable        dofo  equal 2.8151
+variable        seedH equal 35543
+variable        seedC equal 3356
+variable        dz equal 4.0
+variable        inputname  index startnemd
+variable        outputname string nemd1.TH${Thot}.TC${Tcold}
+# variable        outputname index run3-113
+
+# Define simulation conditios
+units           real
+boundary        p p p
+atom_style      full
+
+# Forcefield
+pair_style      lj/long/tip4p/long long long  1 2 1 1 0.1546 10 10
+pair_modify     mix arithmetic
+kspace_style    pppm/disp/tip4p 1.0e-5
+kspace_modify   force/disp/real 0.0001
+kspace_modify   force/disp/kspace 0.0002
+
+
+# Reads in previous configurations
+read_data       ${inputname}.data
+
+
+# Intramolecular interactions
+bond_style      hybrid harmonic # OW-HW
+bond_coeff      1 harmonic 5.102 0.9572
+angle_style     hybrid harmonic # HW-OW-HW
+angle_coeff     1 harmonic 2.198 104.52
+
+# Intermolecular interactions: Define pair coefficients
+pair_coeff 1 1 0.1852 3.1589 # O O TIP4P/2005 x
+pair_coeff 1 2 0.0000 0.0000 # O H TIP4P/2005 x
+pair_coeff 2 2 0.0000 0.0000 # H H TIP4P/2005 x
+
+# Define Masses
+mass 1 15.9994 # OW
+mass 2 1.00794 # HW
+
+# Define groups
+group           water type 1 2
+group           oxygen type 1
+group           hydrogen type 2
+
+
+#SIMULATION
+neighbor        2 bin
+neigh_modify    delay 5 every 1
+
+# Thermostats
+# Regions
+#set up the "hot region" at the left end of the box
+variable lx equal lx
+variable ly equal ly
+variable lz equal lz
+
+
+variable  cbl equal -${lz}/2.0+${dz}
+variable  cbh equal ${lz}/2.0-${dz}
+region hot1 block INF INF INF INF INF  ${cbl} units box
+region hot2 block INF INF INF INF ${cbh} INF   units box
+
+#set up the "cold region" in the middle of the box
+#region hot_region block INF INF INF INF ${cbl} ${cbh} units box
+region hot_region block INF INF INF INF -${dz} ${dz} units box
+
+#Hot regions  unification
+region cold_region union 2 hot1 hot2 units box
+
+#Apply thermostats
+compute T_hot water temp/region hot_region
+compute T_cold water temp/region cold_region
+fix thermostatH water temp/csvr $(v_Thot*2/3) $(v_Thot*2/3) $(500*dt) $(v_seedH)
+fix thermostatC water temp/csvr $(v_Tcold*2/3) $(v_Tcold*2/3) $(500*dt) $(v_seedC)
+fix_modify thermostatH temp T_hot
+fix_modify thermostatC temp T_cold
+
+fix cons_mom all momentum 1 linear 1 1 1
+compute mymom all momentum
+compute mymomwater water momentum
+
+# Reset timestel
+reset_timestep 0
+
+timestep        1
+
+fix             2 all nve
+
+log ${outputname}.log
+
+fix shakew water rattle 0.00001 200 0 b 1 a 1 # FB Shake Water
+
+thermo          ${thermofreq}
+
+thermo_style    custom step time etotal pe ke temp press pxx pyy pzz vol lx ly lz atoms density f_thermostatH f_thermostatC c_T_hot c_T_cold  c_mymom[*] c_mymomwater[*]
+# dump            1 all dcd ${dcdfreq} ${outputname}.dcd
+# dump_modify     1 unwrap yes
+dump            2 all custom ${dcdfreq} ${outputname}.dump id type x y z vx vy vz ix iy iz
+dump_modify     2 append no
+
+# Compute profile water and ions
+compute lwater water chunk/atom bin/1d z lower $(lz/v_nlayers) units box
+fix profw water  ave/chunk 1 $(v_nsteps) $(v_nsteps) lwater  density/number density/mass  temp file ${outputname}water.profiles adof 2
+
+# Compute prodile Oxygen and hydrogen
+compute loxygen oxygen chunk/atom bin/1d z lower $(lz/v_nlayers) units box
+fix tempoxy oxygen ave/chunk 1 $(v_nsteps) $(v_nsteps) loxygen density/number density/mass temp adof $(v_dofo) file ${outputname}oxygen.profiles
+compute lhydrogen hydrogen chunk/atom bin/1d z lower $(lz/v_nlayers) units box
+fix temphyd hydrogen ave/chunk 1 $(v_nsteps) $(v_nsteps) lhydrogen density/number density/mass temp adof $(v_dofh) file ${outputname}hydrogen.profiles
+
+run   $(v_nsteps)
+write_data      ${outputname}.data pair ij

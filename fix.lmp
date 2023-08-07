@@ -1,0 +1,15 @@
+units metal
+fix mynve all nve 
+
+fix 1 all langevin ${Temp} ${Temp} ${tdamp} 48279 tally yes
+
+fix_modify     mix arithmetic
+compute my_chunk all chunk/atom type
+
+# this is a test comment
+
+thermo v_s
+thermo 100
+thermo_style custom f_non_existent
+run 1000    
+
