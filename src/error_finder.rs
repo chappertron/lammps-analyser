@@ -1,7 +1,7 @@
 use anyhow::{Ok, Result};
 use owo_colors::OwoColorize;
 use thiserror::Error;
-use tree_sitter::{ Point, Query, QueryCursor, Tree, TreeCursor};
+use tree_sitter::{Point, Query, QueryCursor, Tree, TreeCursor};
 pub struct ErrorFinder {
     pub query: Query,
     cursor: QueryCursor,
@@ -43,36 +43,27 @@ impl ErrorFinder {
             let text = mat.captures[0].node.utf8_text(source_code)?;
             let start = mat.captures[0].node.start_position();
             let end = mat.captures[0].node.end_position();
-            self.syntax_errors.push(SyntaxError {
+            self.syntax_errors.push(SyntaxError::ParseError(ParseError {
                 text: text.into(),
                 start,
                 end,
-            });
+            }));
         }
         Ok(self.syntax_errors())
     }
 
     /// Tree-sitter can't currently query for missing nodes, so recursivley walking the tree instead
     /// Missing nodes are also not reported as errors, so this is needed?
-    /// TODO Walk back from missing nodes to work out the proper node? 
-    pub fn find_missing_nodes(
-        &mut self,
-        tree: &Tree,
-    ) -> Result<&Vec<SyntaxError>> {
+    /// TODO Walk back from missing nodes to work out the proper node?
+    pub fn find_missing_nodes(&mut self, tree: &Tree) -> Result<&Vec<SyntaxError>> {
         let mut cursor = tree.root_node().walk();
         let mut missing_nodes = vec![];
-        fn recur_missing(
-            cursor: &mut TreeCursor,
-            missing_nodes: &mut Vec<(Point, Point)>,
-        ) {
+        fn recur_missing(cursor: &mut TreeCursor, missing_nodes: &mut Vec<Point>) {
             if cursor.node().child_count() == 0 {
                 if cursor.node().is_missing() {
                     // println!("{} {}:{}","Missing Node:".red(),cursor.node().start_position().row+1,cursor.node().start_position().column+1);
                     let node = cursor.node();
-                    missing_nodes.push((
-                        node.start_position(),
-                        node.end_position(),
-                    ));
+                    missing_nodes.push(node.start_position());
                 }
             } else {
                 // Go to the first child, then recur
@@ -87,25 +78,34 @@ impl ErrorFinder {
         }
 
         recur_missing(&mut cursor, &mut missing_nodes);
-        self.syntax_errors.extend(missing_nodes
-            .iter()
-            .map(|(start_position, end_position)| {
-                SyntaxError {
-                    text: "Missing Node".to_string(),
+        self.syntax_errors
+            .extend(missing_nodes.iter().map(|start_position| {
+                SyntaxError::MissingToken(MissingToken {
                     start: *start_position,
-                    end: *end_position,
-                }
-            })
-            );
+                })
+            }));
 
         Ok(&self.syntax_errors)
     }
 }
 
+#[derive(Error, Debug, PartialEq, Eq, Clone, Hash)]
+#[error("{0}")]
+pub enum SyntaxError {
+    MissingToken(MissingToken),
+    ParseError(ParseError),
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Error)]
 #[error("{}:{}: {} `{}`",start.row+1,start.column+1,"Invalid Syntax".bright_red(),text)]
-pub struct SyntaxError {
+pub struct ParseError {
     pub text: String,
     pub start: Point,
     pub end: Point,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Hash, Error)]
+#[error("{}:{}: {} {}",start.row+1,start.column+1,"Invalid Syntax".bright_red(),"Missing Token")]
+pub struct MissingToken {
+    pub start: Point,
 }
