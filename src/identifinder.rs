@@ -1,58 +1,93 @@
 use anyhow::Result;
-use std::{collections::HashSet, hash::Hash};
-use tree_sitter::{Node, Point, Query, Tree, QueryCursor};
+use owo_colors::OwoColorize;
+use std::{collections::HashSet, fmt::Display, hash::Hash};
+use thiserror::Error;
+use tree_sitter::{Node, Point, Query, QueryCursor, Tree};
 
 pub struct IdentiFinder {
     pub query_def: Query,
     pub query_ref: Query,
-    cursor : QueryCursor,
+    cursor: QueryCursor,
     ident_defs: HashSet<Ident>,
     ident_refs: Vec<Ident>,
 }
 
 impl IdentiFinder {
-    pub fn new() -> Result<Self> {
+    pub fn new(tree: &Tree, text: &[u8]) -> Result<Self> {
         let query_def = Query::new(
             tree_sitter_lammps::language(),
-            " (fix (fix_id ) @definition.fix) (compute (compute_id) @definition.compute)",
+            " (fix (fix_id ) @definition.fix) (compute (compute_id) @definition.compute) (variable_def (variable) @definition.variable )",
         )?;
 
         let query_ref = Query::new(
             tree_sitter_lammps::language(),
-            " (fix_id) @reference.fix  (compute_id) @reference.compute",
+            " (fix_id) @reference.fix  (compute_id) @reference.compute (variable) @reference.variable",
         )?;
 
-        Ok( IdentiFinder {  query_def, query_ref,cursor:QueryCursor::new(),ident_defs: HashSet::new(), ident_refs: Vec::new(),})
+        let mut i = IdentiFinder {
+            query_def,
+            query_ref,
+            cursor: QueryCursor::new(),
+            ident_defs: HashSet::new(),
+            ident_refs: Vec::new(),
+        };
+
+        i.find_refs(tree, text)?;
+        i.find_defs(tree, text)?;
+
+        Ok(i)
     }
 
     pub fn find_refs(&mut self, tree: &Tree, text: &[u8]) -> Result<&Vec<Ident>> {
-       
-        let captures = self.cursor.captures(&self.query_ref, tree.root_node(), text);
-        
-        self.ident_refs.extend(captures.map(|(mtch,cap_id)| {
-            
-            
-            todo!("find_refs");
-            todo!("Convert capture name into IdentType");
+        let captures = self
+            .cursor
+            .captures(&self.query_ref, tree.root_node(), text);
 
-        } ));
+        self.ident_refs.extend(captures.map(|(mtch, _cap_id)| {
+            let node = mtch.captures[0].node;
+
+            // TODO Properly handle errors
+            Ident::new(&node, text).unwrap()
+        }));
 
         Ok(&self.ident_refs)
     }
 
-
     pub fn find_defs(&mut self, tree: &Tree, text: &[u8]) -> Result<&HashSet<Ident>> {
-       
-        let captures = self.cursor.captures(&self.query_ref, tree.root_node(), text);
+        let captures = self
+            .cursor
+            .captures(&self.query_def, tree.root_node(), text);
 
-        todo!("find_defs");
+        self.ident_defs.extend(captures.map(|(mtch, _cap_id)| {
+            let node = mtch.captures[0].node;
+
+            // TODO perhaps better to check for this in another way?
+            Ident::new(&node, text).unwrap()
+        }));
+
         Ok(&self.ident_defs)
     }
 
+    /// Check for symbols that have been used without being defined
+    /// TODO: Does not currently verify order or if the fix has been deleted at point of definition
+    /// TODO Return the Vec or an option, not an error
+    pub fn check_symbols(&mut self) -> Result<(), Vec<UndefinedIdent>> {
+        let used_fixes: HashSet<_> = self.ident_refs.iter().collect();
 
+        let undefined_fixes: Vec<_> = used_fixes
+            .difference(&self.ident_defs.iter().collect())
+            .map(|&x| UndefinedIdent { ident: x.clone() })
+            .collect();
+        assert_ne!(undefined_fixes.len(), used_fixes.len());
+        if undefined_fixes.is_empty() {
+            Ok(())
+        } else {
+            Err(undefined_fixes)
+        }
+    }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Identifiers for LAMMPS fixes, computes, and variables
 /// Hashing only uses the name and type, not locations
 pub struct Ident {
@@ -60,16 +95,21 @@ pub struct Ident {
     pub ident_type: IdentType,
     pub start: Point,
     pub end: Point,
+    pub start_byte: usize,
+    pub end_byte: usize,
 }
 impl Ident {
+    /// Parses the node and text into an Ident
+    /// Uses the node kind to determine the identifinder type
+    /// Uses the text to extract the name of the identifier
     pub fn new(node: &Node, text: &[u8]) -> Result<Self> {
         let name = node.utf8_text(text)?.to_string();
 
         let ident_type = match node.kind() {
             "fix_id" => IdentType::Fix,
             "compute_id" => IdentType::Compute,
-            "var" => IdentType::Variable,
-            _ => panic!("Unknown identifier type"), // TODO Make this not panic
+            "variable" => IdentType::Variable,
+            x => panic!("Unknown identifier type {x}"), // TODO Make this not panic
         };
 
         Ok(Ident {
@@ -77,6 +117,8 @@ impl Ident {
             ident_type,
             start: node.start_position(),
             end: node.end_position(),
+            start_byte: node.start_byte(),
+            end_byte: node.end_byte(),
         })
     }
 }
@@ -95,7 +137,7 @@ impl Hash for Ident {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy)]
 pub enum IdentType {
     Fix,
     Variable,
@@ -103,21 +145,40 @@ pub enum IdentType {
 }
 
 impl From<&str> for IdentType {
-   fn from(value: &str) -> Self {
-        todo!("Match these!!!!") 
-   } 
+    /// Converts from capture name to IdentType
+    /// Panics if the string does not end with "fix", "compute", or "variable"
+    fn from(value: &str) -> Self {
+        if value.to_lowercase().ends_with("compute") {
+            IdentType::Compute
+        } else if value.to_lowercase().ends_with("fix") {
+            IdentType::Fix
+        } else if value.to_lowercase().ends_with("variable") {
+            IdentType::Variable
+        } else {
+            panic!("Unknown identifier type")
+        }
+    }
 }
 
+impl Display for IdentType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                IdentType::Fix => "fix",
+                IdentType::Compute => "compute",
+                IdentType::Variable => "variable",
+            }
+        )
+    }
+}
+
+#[derive(Debug, Error, Clone)]
+#[error("{}:{}: {} {} `{}`",ident.start.row+1,ident.start.column+1,"Undefined".bright_red(),ident.ident_type.bright_red(),ident.name)]
+pub struct UndefinedIdent {
+    pub ident: Ident,
+}
 
 #[cfg(test)]
-mod tests {
-    use super::IdentiFinder;
-
-
-    #[test]
-    fn new() {
-       let identifinder = IdentiFinder::new().unwrap();
-        assert!(false)
-    }
-
-}
+mod tests {}
