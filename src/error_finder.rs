@@ -1,7 +1,10 @@
-use anyhow::{Ok, Result};
-use owo_colors::OwoColorize;
+use anyhow::Result;
+use lsp_types::{Diagnostic, DiagnosticSeverity, Position};
+use owo_colors::{OwoColorize, Stream::Stdout};
+use std::fmt::Debug;
 use thiserror::Error;
 use tree_sitter::{Point, Query, QueryCursor, Tree, TreeCursor};
+
 pub struct ErrorFinder {
     pub query: Query,
     cursor: QueryCursor,
@@ -34,8 +37,9 @@ impl ErrorFinder {
     pub fn find_syntax_errors(
         &mut self,
         tree: &Tree,
-        source_code: &[u8],
+        source_code: impl AsRef<[u8]>,
     ) -> Result<&[SyntaxError]> {
+        let source_code = source_code.as_ref();
         let matches = self
             .cursor
             .matches(&self.query, tree.root_node(), source_code);
@@ -89,15 +93,62 @@ impl ErrorFinder {
     }
 }
 
+impl Debug for ErrorFinder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ErrorFinder")
+            .field("syntax_errors", &self.syntax_errors)
+            .finish()
+    }
+}
+
 #[derive(Error, Debug, PartialEq, Eq, Clone, Hash)]
 #[error("{0}")]
 pub enum SyntaxError {
     MissingToken(MissingToken),
     ParseError(ParseError),
 }
+fn point_to_position(point: Point) -> Position {
+    Position {
+        line: point.row as u32,
+        character: point.column as u32,
+    }
+}
 
+impl From<SyntaxError> for Diagnostic {
+    fn from(value: SyntaxError) -> Self {
+        match value {
+            SyntaxError::ParseError(parse_error) => Diagnostic::new(
+                lsp_types::Range {
+                    start: point_to_position(parse_error.start),
+                    end: point_to_position(parse_error.end),
+                },
+                Some(DiagnosticSeverity::ERROR),
+                None,
+                None,
+                parse_error.to_string(),
+                None,
+                None,
+            ),
+            SyntaxError::MissingToken(missing_token) => Diagnostic::new(
+                lsp_types::Range {
+                    start: point_to_position(missing_token.start),
+                    end: point_to_position(missing_token.start),
+                },
+                Some(DiagnosticSeverity::ERROR),
+                None,
+                None,
+                missing_token.to_string(),
+                None,
+                None,
+            ),
+        }
+    }
+}
+
+// TODO: Work out how to get rid of the colour tags when not in a terminal
+// Perhaps store message into this
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Error)]
-#[error("{}:{}: {} `{}`",start.row+1,start.column+1,"Invalid Syntax".bright_red(),text)]
+#[error("{}:{}: {} `{}`",start.row+1,start.column+1,"Invalid Syntax".if_supports_color(Stdout,|text|text.bright_red()),text)]
 pub struct ParseError {
     pub text: String,
     pub start: Point,
@@ -105,7 +156,7 @@ pub struct ParseError {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Error)]
-#[error("{}:{}: {} {}",start.row+1,start.column+1,"Invalid Syntax".bright_red(),"Missing Token")]
+#[error("{}:{}: {} {}",start.row+1,start.column+1,"Invalid Syntax".if_supports_color(Stdout,|text|text.bright_red()),"Missing Token")]
 pub struct MissingToken {
     pub start: Point,
 }

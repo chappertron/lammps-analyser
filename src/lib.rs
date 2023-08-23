@@ -4,3 +4,8 @@ pub mod fix_styles;
 pub mod identifinder;
 pub mod lammps_errors;
 pub mod parse_command;
+
+pub mod lsp;
+
+
+
