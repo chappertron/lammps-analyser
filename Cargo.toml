@@ -11,6 +11,7 @@ cc="*"
 
 [dependencies]
 anyhow = "1.0.72"
+ariadne = "0.3.0"
 clap = { version = "4.3.19", features = ["derive"] }
 dashmap = "5.5.1"
 lsp-server = "0.7.3"

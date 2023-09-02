@@ -1,17 +1,29 @@
 use dashmap::DashMap;
-use lammps_analyser::error_finder::{self, ErrorFinder};
+use lammps_analyser::error_finder::ErrorFinder;
+use lammps_analyser::identifinder::IdentiFinder;
 ///! Alternative implementation for the lsp using the `tower-lsp` crate.
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
 use tree_sitter::{Parser, Tree};
-use tree_sitter_lammps;
+
+/// Core LSP Application
+/// TODO:
+/// - [ ] Add Symbols
+/// - [ ] Add Scemantic Tokens
+///     - [ ] Create a token map using identifinder
+///     - [ ] Add convinence methods for converting from this map to an LSP Scemantic Token
+/// - [ ] Add Goto Definitions
 #[derive(Debug)]
 struct Backend {
     client: Client,
     document_map: DashMap<String, String>,
     tree_map: DashMap<String, Tree>,
+    // TODO Symbols Map
 }
+
+use SemanticTokenType as ST;
+pub const TOKEN_TYPES: [SemanticTokenType; 3] = [ST::KEYWORD, ST::TYPE, ST::FUNCTION];
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
@@ -36,7 +48,6 @@ impl LanguageServer for Backend {
                 //     commands: vec!["dummy.do_something".to_string()],
                 //     work_done_progress_options: Default::default(),
                 // }),
-
                 workspace: Some(WorkspaceServerCapabilities {
                     workspace_folders: Some(WorkspaceFoldersServerCapabilities {
                         supported: Some(true),
@@ -44,11 +55,22 @@ impl LanguageServer for Backend {
                     }),
                     file_operations: None,
                 }),
-                semantic_tokens_provider: None,
+                // TODO Consider adding more options like in the tower-lsp boilerplate example
+                semantic_tokens_provider: Some(
+                    SemanticTokensServerCapabilities::SemanticTokensOptions(
+                        SemanticTokensOptions {
+                            legend: SemanticTokensLegend {
+                                token_types: TOKEN_TYPES.to_vec(),
+                                token_modifiers: vec![],
+                            },
+                            ..Default::default()
+                        },
+                    ),
+                ),
                 // definition: Some(GotoCapability::default()),
-                definition_provider: Some(OneOf::Left(true)),
-                references_provider: Some(OneOf::Left(true)),
-                rename_provider: Some(OneOf::Left(true)),
+                // definition_provider: Some(OneOf::Left(true)),
+                // references_provider: Some(OneOf::Left(true)),
+                // rename_provider: Some(OneOf::Left(true)),
                 ..ServerCapabilities::default()
             },
         })
@@ -72,12 +94,11 @@ impl LanguageServer for Backend {
             )
             .await;
 
-        // Not sure about this interface or method name, but it's in the template I'm hacking apart
-        self.on_change(TextDocumentItem {
-            uri: params.text_document.uri,
-            text: params.text_document.text,
-            version: params.text_document.version,
-        })
+        self.on_change(
+            params.text_document.uri,
+            params.text_document.text,
+            params.text_document.version,
+        )
         .await
     }
     async fn did_change(&self, mut params: DidChangeTextDocumentParams) {
@@ -89,64 +110,71 @@ impl LanguageServer for Backend {
             .await;
         //
         // Not sure about this interface or method name, but it's in the template I'm hacking apart
-        self.on_change(TextDocumentItem {
-            uri: params.text_document.uri,
-            text: std::mem::take(&mut params.content_changes[0].text),
-            version: params.text_document.version,
-        })
+        self.on_change(
+            params.text_document.uri,
+            std::mem::take(&mut params.content_changes[0].text),
+            params.text_document.version,
+        )
         .await
     }
 }
-struct TextDocumentItem {
-    uri: Url,
-    text: String,
-    version: i32,
-}
+
+// struct TextDocumentItem {
+//     uri: Url,
+//     text: String,
+//     version: i32,
+// }
 impl Backend {
-    async fn on_change(&self, params: TextDocumentItem) {
+    // async fn on_change(&self, params: TextDocumentItem) {
+    async fn on_change(&self, uri: Url, text: String, version: i32) {
         // example uses a rope, I'm just going to use a u8 vec or str.
         // let rope = ropey::Rope::from_str(&params.text);
-        let text = &params.text;
-        self.document_map
-            .insert(params.uri.to_string(), text.clone());
+        self.document_map.insert(uri.to_string(), text.clone());
         let mut parser = Parser::new();
 
         parser
             .set_language(tree_sitter_lammps::language())
             .expect("Could not load language");
 
-        let tree = parser.parse(text, None).unwrap();
+        let tree = parser.parse(&text, None).unwrap();
         // self.client
         //     .log_message(MessageType::INFO, format!("{:?}", errors))
         //     .await;
+
+        // TODO combine this whole block into a single function
         let mut error_finder = ErrorFinder::new().unwrap();
         error_finder.find_syntax_errors(&tree, &text).unwrap();
         error_finder.find_missing_nodes(&tree).unwrap();
-        // COMPILES BUT INCORRECT BEHAVIOUR
-        let diagnostics = error_finder
+        let mut ident_finder = IdentiFinder::new(&tree, text.as_bytes()).unwrap();
+        ident_finder.find_refs(&tree, text.as_bytes()).unwrap();
+        ident_finder.find_defs(&tree, text.as_bytes()).unwrap();
+
+        let mut diagnostics: Vec<Diagnostic> = error_finder
             .syntax_errors()
             .iter()
             .map(|e| e.clone().into())
             .collect();
 
+        if let Err(v) = ident_finder.check_symbols() {
+            diagnostics.extend(v.iter().map(|e| e.clone().into()))
+        }
         self.client
-            .publish_diagnostics(params.uri.clone(), diagnostics, Some(params.version))
+            .publish_diagnostics(uri.clone(), diagnostics, Some(version))
             .await;
 
-        self.client
-            .log_message(
-                MessageType::INFO,
-                &format!("{}", tree.root_node().to_sexp()),
-            )
-            .await;
+        // To stop a clippy warning about using format, and an async error
+        // DEBUGGING
+        // let sexp = &tree.root_node().to_sexp().to_string();
+        // self.client.log_message(MessageType::INFO, sexp).await;
+
         // TODO pop old tree and update with new one
-        self.tree_map.insert(params.uri.to_string(), tree);
+        self.tree_map.insert(uri.to_string(), tree);
 
         // self.client
         //     .log_message(MessageType::INFO, &format!("{:?}", semantic_tokens))
         //     .await;
         // self.semantic_token_map
-        //     .insert(params.uri.to_string(), semantic_tokens);
+        //     .insert(uri.to_string(), semantic_tokens);
     }
 }
 

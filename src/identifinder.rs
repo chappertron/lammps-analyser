@@ -1,8 +1,14 @@
 use anyhow::Result;
 use owo_colors::OwoColorize;
-use std::{collections::HashSet, fmt::Display, hash::Hash};
+use std::{
+    collections::HashSet,
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 use thiserror::Error;
 use tree_sitter::{Node, Point, Query, QueryCursor, Tree};
+
+use crate::{diagnostic_report::ReportSimple, utils::point_to_position};
 
 pub struct IdentiFinder {
     pub query_def: Query,
@@ -175,10 +181,50 @@ impl Display for IdentType {
 }
 
 #[derive(Debug, Error, Clone)]
-#[error("{}:{}: {} {} `{}`",ident.start.row+1,ident.start.column+1,"Undefined".bright_red(),ident.ident_type.bright_red(),ident.name)]
+#[error("{}:{}: {} {} `{}`",ident.start.row+1,ident.start.column+1,"Undefined",ident.ident_type,ident.name)]
 pub struct UndefinedIdent {
     pub ident: Ident,
 }
+
+impl ReportSimple for UndefinedIdent {
+    fn make_simple_report(&self) -> String {
+        format!(
+            "{}:{}: {} {} `{}`",
+            self.ident.start.row + 1,
+            self.ident.start.column + 1,
+            "Undefined".bright_red(),
+            self.ident.ident_type.bright_red(),
+            self.ident.name
+        )
+    }
+}
+
+impl From<UndefinedIdent> for lsp_types::Diagnostic {
+    fn from(value: UndefinedIdent) -> Self {
+        lsp_types::Diagnostic::new_simple(
+            lsp_types::Range {
+                start: point_to_position(&value.ident.start),
+                end: point_to_position(&value.ident.end),
+            },
+            value.to_string(),
+        )
+    }
+}
+
+// use crate::diagnostic_report::ReportDiagnostic;
+// use ariadne::{Label, ReportKind,Span};
+
+// impl<S:Span> ReportDiagnostic<S> for UndefinedIdent {
+//     fn make_report(&self, source_id: &str) -> ariadne::Report<'_,S>
+//     {
+//         ariadne::Report::build(ReportKind::Error, source_id, self.ident.start_byte)
+//             .with_label(
+//                 Label::new((source_id, self.ident.start_byte..self.ident.end_byte))
+//                     .with_message(format!("{}", self)),
+//             )
+//             .finish()
+//     }
+// }
 
 #[cfg(test)]
 mod tests {}

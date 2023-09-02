@@ -5,20 +5,20 @@
 /// - [ ] Add file snippets to show where errors are
 /// - [ ] Add a test suite
 /// - [ ] Create an issue abstraction to handle all errors and warnings
+/// - [ ] Extract core behaviour into a library
 use anyhow::Result;
+use ariadne::{Label, Report, ReportKind, Source};
 use clap::Parser as ClapParser;
 use lammps_analyser::{
-    compute_styles::ComputeStyle, error_finder::ErrorFinder, fix_styles::FixStyle,
-    identifinder::IdentiFinder,
+    check_styles::check_styles, diagnostic_report::ReportSimple, error_finder::ErrorFinder,
+    identifinder::IdentiFinder, lammps_errors::LammpsError,
 };
 use owo_colors::OwoColorize;
 use std::{
-    fmt::Display,
     fs::File,
     io::{BufReader, Read},
 };
-use thiserror::Error;
-use tree_sitter::{Parser, Point, Query, QueryCursor, Tree};
+use tree_sitter::Parser;
 
 #[derive(Debug, clap::Parser)]
 
@@ -27,6 +27,9 @@ struct Cli {
     /// Output the parsed tree to a dot file
     #[clap(long)]
     output_tree: bool,
+    /// Prints more complicated reports that highlight error locations
+    #[clap(long)]
+    output_reports: bool,
 }
 
 fn main() -> Result<()> {
@@ -42,6 +45,8 @@ fn main() -> Result<()> {
 
     let source_bytes = source_code.as_bytes();
 
+    let mut issues: Vec<LammpsError> = Vec::new();
+
     let mut parser = Parser::new();
 
     parser
@@ -49,8 +54,6 @@ fn main() -> Result<()> {
         .expect("Could not load language");
 
     let tree = parser.parse(source_bytes, None).unwrap();
-
-    // dbg!(&tree.root_node().to_sexp());
 
     if cli.output_tree {
         let dot_file = File::create("tree.dot")?;
@@ -71,7 +74,7 @@ fn main() -> Result<()> {
 
     for err in syntax_errors {
         // ruff_test.py:3:1: F821 Undefined name `hello`
-        println!("{}:{}", cli.source.bold(), err);
+        println!("{}:{}", cli.source.bold(), err.make_simple_report());
     }
 
     // this doesn't work. Need to compare the names!
@@ -79,17 +82,34 @@ fn main() -> Result<()> {
     for err in &undefined_fixes {
         // ruff_test.py:3:1: F821 Undefined name `hello`
         // println!("{}",std::str::from_utf8(source_code[ident.start_byte..ident.end_byte])?.underline());
-        println!("{}:{}", cli.source.bold(), err);
+        if cli.output_reports {
+            Report::build(ReportKind::Error, &cli.source, err.ident.start_byte)
+                .with_label(
+                    Label::new((&cli.source, err.ident.start_byte..err.ident.end_byte))
+                        .with_message(format!("{}", err)),
+                )
+                .finish()
+                .print((
+                    &cli.source,
+                    Source::from(std::str::from_utf8(source_bytes)?),
+                ))?;
+        }
+        println!("{}:{}", cli.source.bold(), err.make_simple_report());
     }
 
     let invalid_styles = check_styles(&tree, source_bytes)?;
+
     for err in &invalid_styles {
-        println!("{}:{}", cli.source.bold(), err);
+        println!("{}:{}", cli.source.bold(), err.make_simple_report());
     }
     // TODO Check if any warnings or errors are found!!!
 
-    if !syntax_errors.is_empty() || !undefined_fixes.is_empty() || !invalid_styles.is_empty() {
-        let n_errors = syntax_errors.len() + undefined_fixes.len() + invalid_styles.len();
+    issues.extend(syntax_errors.iter().map(|x| x.clone().into()));
+    issues.extend(undefined_fixes.iter().map(|x| x.clone().into()));
+    issues.extend(invalid_styles.iter().map(|x| x.clone().into()));
+
+    if !issues.is_empty() {
+        let n_errors = issues.len();
         println!(
             "{}: {} error{} found 😞",
             cli.source.bold(),
@@ -102,77 +122,3 @@ fn main() -> Result<()> {
         Ok(())
     }
 }
-
-#[derive(Debug, Error)]
-#[error("{}:{}: {} {} `{}`",start.row+1,start.column+1,"Invalid".bright_red(),style_type.bright_red(),name)]
-pub struct InvalidStyle {
-    pub start: Point,
-    pub end: Point,
-    pub name: String,
-    pub style_type: StyleType,
-}
-
-#[derive(Debug, PartialEq, Eq)]
-pub enum StyleType {
-    Fix,
-    Compute,
-    Pair,
-    Kspace,
-    Minimize,
-}
-
-impl Display for StyleType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Fix => write!(f, "fix style"),
-            Self::Compute => write!(f, "compute style"),
-            Self::Pair => write!(f, "pair style"),
-            Self::Kspace => write!(f, "kspace style"),
-            Self::Minimize => write!(f, "minimize style"),
-        }
-    }
-}
-
-fn check_styles(tree: &Tree, text: &[u8]) -> Result<Vec<InvalidStyle>> {
-    let query = Query::new(
-        tree.language(),
-        "(fix (fix_style) @definition.fix) (compute (compute_style) @definition.compute) ",
-    )?;
-
-    let mut query_cursor = QueryCursor::new();
-
-    let matches = query_cursor.matches(&query, tree.root_node(), text);
-
-    Ok(matches
-        .into_iter()
-        .filter_map(|mat| {
-            let style = mat.captures[0].node.utf8_text(text).ok()?;
-            let style_type = match mat.captures[0].node.kind() {
-                "fix_style" => StyleType::Fix,
-                "compute_style" => StyleType::Compute,
-                _ => unreachable!(),
-            };
-
-            if let (StyleType::Fix, FixStyle::InvalidFixStyle) = (&style_type, style.into()) {
-                Some(InvalidStyle {
-                    start: mat.captures[0].node.start_position(),
-                    end: mat.captures[0].node.end_position(),
-                    name: style.to_string(),
-                    style_type: StyleType::Fix,
-                })
-            } else if let (StyleType::Compute, ComputeStyle::InvalidComputeStyle) =
-                (&style_type, style.into())
-            {
-                Some(InvalidStyle {
-                    start: mat.captures[0].node.start_position(),
-                    end: mat.captures[0].node.end_position(),
-                    name: style.to_string(),
-                    style_type: StyleType::Compute,
-                })
-            } else {
-                None
-            }
-        })
-        .collect())
-}
-// fn find_undefined_fix_names() {}
