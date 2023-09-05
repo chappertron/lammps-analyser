@@ -18,11 +18,16 @@ pub struct IdentiFinder {
     ident_refs: Vec<Ident>,
 }
 
+// TODO make this into a new data structure, holding definitions and all references in one hashmap
+// Use `DashMap` for easier use with the LSP Server???
+
 impl IdentiFinder {
     pub fn new(tree: &Tree, text: &[u8]) -> Result<Self> {
         let query_def = Query::new(
             tree_sitter_lammps::language(),
-            " (fix (fix_id ) @definition.fix) (compute (compute_id) @definition.compute) (variable_def (variable) @definition.variable )",
+            "(fix (fix_id ) @definition.fix) 
+                (compute (compute_id) @definition.compute) 
+                (variable_def (variable) @definition.variable )",
         )?;
 
         let query_ref = Query::new(
