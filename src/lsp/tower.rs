@@ -1,4 +1,5 @@
 use dashmap::DashMap;
+use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
 use lammps_analyser::identifinder::IdentiFinder;
 ///! Alternative implementation for the lsp using the `tower-lsp` crate.
@@ -17,7 +18,9 @@ use tree_sitter::{Parser, Tree};
 #[derive(Debug)]
 struct Backend {
     client: Client,
+    /// Map of uri to document text
     document_map: DashMap<String, String>,
+    /// Map of uri to document tree
     tree_map: DashMap<String, Tree>,
     // TODO Symbols Map
 }
@@ -30,7 +33,10 @@ impl LanguageServer for Backend {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
         // Ok(InitializeResult::default())
         Ok(InitializeResult {
-            server_info: None,
+            server_info: Some(ServerInfo {
+                name: "LAMMPS Analyser".into(),
+                version: None,
+            }),
             capabilities: ServerCapabilities {
                 // inlay_hint_provider: Some(OneOf::Left(true)),
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
@@ -78,7 +84,7 @@ impl LanguageServer for Backend {
 
     async fn initialized(&self, _: InitializedParams) {
         self.client
-            .log_message(MessageType::INFO, "server initialized!")
+            .log_message(MessageType::INFO, "Server Initialized!")
             .await;
     }
 
@@ -90,7 +96,7 @@ impl LanguageServer for Backend {
         self.client
             .log_message(
                 MessageType::INFO,
-                format!("file opened: {}", params.text_document.uri),
+                format!("File opened: {}", params.text_document.uri),
             )
             .await;
 
@@ -105,7 +111,7 @@ impl LanguageServer for Backend {
         self.client
             .log_message(
                 MessageType::INFO,
-                format!("file changed: {}", params.text_document.uri),
+                format!("File changed: {}", params.text_document.uri),
             )
             .await;
         //
@@ -129,41 +135,52 @@ impl Backend {
     async fn on_change(&self, uri: Url, text: String, version: i32) {
         // example uses a rope, I'm just going to use a u8 vec or str.
         // let rope = ropey::Rope::from_str(&params.text);
-        self.document_map.insert(uri.to_string(), text.clone());
+        self.document_map.insert(uri.to_string(), text);
+
+        let text = self.document_map.get(&uri.to_string()).unwrap();
+
+        // TODO Store parser in the state
         let mut parser = Parser::new();
 
         parser
             .set_language(tree_sitter_lammps::language())
             .expect("Could not load language");
 
-        let tree = parser.parse(&text, None).unwrap();
+        let tree = parser.parse(&*text, None).unwrap();
         // self.client
         //     .log_message(MessageType::INFO, format!("{:?}", errors))
         //     .await;
 
         // TODO combine this whole block into a single function
         let mut error_finder = ErrorFinder::new().unwrap();
-        error_finder.find_syntax_errors(&tree, &text).unwrap();
+        error_finder.find_syntax_errors(&tree, &*text).unwrap();
         error_finder.find_missing_nodes(&tree).unwrap();
         let mut ident_finder = IdentiFinder::new(&tree, text.as_bytes()).unwrap();
         ident_finder.find_refs(&tree, text.as_bytes()).unwrap();
         ident_finder.find_defs(&tree, text.as_bytes()).unwrap();
 
+        let invalid_styles = check_styles(&tree, text.as_bytes());
+
         let mut diagnostics: Vec<Diagnostic> = error_finder
+            // TODO add methods to create ownership, so clowning isn't needed???
+            // TODO implement into for vec of error
             .syntax_errors()
-            .iter()
+            .into_iter()
             .map(|e| e.clone().into())
             .collect();
 
         if let Err(v) = ident_finder.check_symbols() {
-            diagnostics.extend(v.iter().map(|e| e.clone().into()))
+            diagnostics.extend(v.into_iter().map(|e| e.into()))
+        }
+        if let Ok(v) = invalid_styles {
+            diagnostics.extend(v.into_iter().map(|e| e.into()))
         }
         self.client
             .publish_diagnostics(uri.clone(), diagnostics, Some(version))
             .await;
 
-        // To stop a clippy warning about using format, and an async error
         // DEBUGGING
+        // To stop a clippy warning about using format, and an async error
         // let sexp = &tree.root_node().to_sexp().to_string();
         // self.client.log_message(MessageType::INFO, sexp).await;
 
