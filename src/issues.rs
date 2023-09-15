@@ -1,5 +1,8 @@
 /// Types for LAMMPS issues and errorsmm
-use crate::{diagnostic_report::ReportSimple, lammps_errors::LammpsError};
+use crate::{
+    diagnostic_report::ReportSimple,
+    lammps_errors::{LammpsError, Warnings},
+};
 use owo_colors::OwoColorize;
 use thiserror::Error;
 
@@ -10,10 +13,16 @@ pub enum Issue {
     Error(LammpsError),
     /// TODO NOT CURRENTLY IMPLEMENTED
     #[error("Warning:")]
-    Warning,
+    Warning(Warnings),
     /// TODO: NOT CURRENTLY IMPLEMENTED
     #[error("Info:")]
     Info,
+}
+
+impl From<Warnings> for Issue {
+    fn from(v: Warnings) -> Self {
+        Self::Warning(v)
+    }
 }
 
 impl From<LammpsError> for Issue {
@@ -26,7 +35,9 @@ impl ReportSimple for Issue {
     fn make_simple_report(&self) -> String {
         match self {
             Issue::Error(e) => format!("{} {}", "Error:".bright_red(), e.make_simple_report()),
-            Issue::Warning => "Warning".to_string(),
+            Issue::Warning(e) => {
+                format!("{} {}", "Warning:".bright_yellow(), e.make_simple_report())
+            }
             Issue::Info => "Info".to_string(),
         }
     }

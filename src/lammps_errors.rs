@@ -1,7 +1,7 @@
 use crate::check_styles::InvalidStyle;
 use crate::diagnostic_report::ReportSimple;
 use crate::error_finder::SyntaxError;
-use crate::identifinder::UndefinedIdent;
+use crate::identifinder::{UndefinedIdent, UnusedIdent};
 
 use thiserror::Error;
 
@@ -13,6 +13,26 @@ pub enum LammpsError {
     InvalidStyle(InvalidStyle),
     #[error("{0}")]
     UndefinedIdent(UndefinedIdent),
+}
+
+#[derive(Error, Debug)]
+pub enum Warnings {
+    #[error("{0}")]
+    UnusedIdent(UnusedIdent),
+}
+
+impl From<UnusedIdent> for Warnings {
+    fn from(v: UnusedIdent) -> Self {
+        Self::UnusedIdent(v)
+    }
+}
+
+impl ReportSimple for Warnings {
+    fn make_simple_report(&self) -> String {
+        match self {
+            Warnings::UnusedIdent(e) => e.make_simple_report(),
+        }
+    }
 }
 
 impl ReportSimple for LammpsError {

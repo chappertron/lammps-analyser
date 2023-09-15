@@ -8,4 +8,4 @@ pub mod issues;
 pub mod lammps_errors;
 pub mod lsp;
 pub mod parse_command;
-pub(crate) mod utils;
+pub mod utils;

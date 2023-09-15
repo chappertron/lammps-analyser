@@ -1,7 +1,10 @@
+use std::str::FromStr;
+
 use dashmap::DashMap;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
 use lammps_analyser::identifinder::IdentiFinder;
+use lammps_analyser::utils::point_to_position;
 ///! Alternative implementation for the lsp using the `tower-lsp` crate.
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
@@ -23,9 +26,14 @@ struct Backend {
     /// Map of uri to document tree
     tree_map: DashMap<String, Tree>,
     // TODO Symbols Map
+    /// Finds Symbols maps.
+    /// Wrapped in RwLock for Interior Mutability
+    identifinder: std::sync::RwLock<IdentiFinder>,
 }
 
 use SemanticTokenType as ST;
+// TODO: Update tokens to have all the needed ones
+// Match these to the highlight.scm in the tree-sitter package
 pub const TOKEN_TYPES: [SemanticTokenType; 3] = [ST::KEYWORD, ST::TYPE, ST::FUNCTION];
 
 #[tower_lsp::async_trait]
@@ -40,6 +48,7 @@ impl LanguageServer for Backend {
             capabilities: ServerCapabilities {
                 // inlay_hint_provider: Some(OneOf::Left(true)),
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
+                    // Currently only supports full file update
                     TextDocumentSyncKind::FULL,
                 )),
                 // completion_provider: Some(CompletionOptions {
@@ -66,18 +75,23 @@ impl LanguageServer for Backend {
                     SemanticTokensServerCapabilities::SemanticTokensOptions(
                         SemanticTokensOptions {
                             legend: SemanticTokensLegend {
-                                token_types: TOKEN_TYPES.to_vec(),
+                                token_types: TOKEN_TYPES.into(),
                                 token_modifiers: vec![],
                             },
                             ..Default::default()
                         },
                     ),
                 ),
+                definition_provider: Some(OneOf::Left(true)),
+                // TODO Add options?
+                document_symbol_provider: Some(OneOf::Left(true)),
+                workspace_symbol_provider: Some(OneOf::Left(true)),
+
                 // definition: Some(GotoCapability::default()),
                 // definition_provider: Some(OneOf::Left(true)),
                 // references_provider: Some(OneOf::Left(true)),
                 // rename_provider: Some(OneOf::Left(true)),
-                ..ServerCapabilities::default()
+                ..Default::default()
             },
         })
     }
@@ -123,6 +137,95 @@ impl LanguageServer for Backend {
         )
         .await
     }
+
+    async fn symbol(
+        &self,
+        params: WorkspaceSymbolParams,
+    ) -> Result<Option<Vec<SymbolInformation>>> {
+        // TODO: This should use the query for the document_symbols to find the workspace symbols
+        // TODO: cache the symbols rather than refinding them all?
+        let mut symbols = vec![];
+        for r in self.document_map.iter() {
+            let uri = r.key();
+            let params = DocumentSymbolParams {
+                text_document: TextDocumentIdentifier {
+                    uri: Url::from_str(uri).expect("Invalid uri"),
+                },
+                work_done_progress_params: params.work_done_progress_params.clone(),
+                partial_result_params: params.partial_result_params.clone(),
+            };
+
+            symbols.extend(
+                self.document_symbol(params)
+                    .await?
+                    .into_iter()
+                    .map(|x| match x {
+                        DocumentSymbolResponse::Flat(x) => x,
+                        DocumentSymbolResponse::Nested(_) => {
+                            panic!("Nested symbols not supported???")
+                        }
+                    })
+                    .flatten(),
+            );
+        }
+
+        Ok(Some(symbols))
+    }
+    async fn document_symbol(
+        &self,
+        params: DocumentSymbolParams,
+    ) -> Result<Option<DocumentSymbolResponse>> {
+        // Ok(Some(DocumentSymbolResponse::Flat(vec![])))
+        self.client
+            .log_message(
+                MessageType::ERROR,
+                format!("Tried to find symbols for {}", params.text_document.uri),
+            )
+            .await;
+
+        // Assuming the identifier is properly updated
+        // let symbols = ;
+        // need to flatten???
+        let symbols = self
+            .identifinder
+            .read()
+            .unwrap()
+            .symbols()
+            .into_iter()
+            // TODO properly match this field to the compute/var/fix type
+            // TODO Set correct Positions for the Symbols
+            .flat_map(|(x, v)| {
+                v.defs().iter().map(|s| SymbolInformation {
+                    name: x.name.clone(),
+                    kind: SymbolKind::from(s.ident_type),
+                    location: Location {
+                        uri: params.text_document.uri.clone(),
+                        range: Range {
+                            start: point_to_position(&s.start),
+                            end: point_to_position(&s.end),
+                        },
+                    },
+                    container_name: None,
+                    deprecated: None,
+                    tags: None,
+                })
+                // .collect::<Vec<_>>()
+            })
+            .collect();
+
+        // self.client
+        //     .log_message(
+        //         MessageType::INFO,
+        //         format!(
+        //             "Found Symbols for {}: {:?}",
+        //             params.text_document.uri, &symbols
+        //         ),
+        //     )
+        //     .await;
+
+        Ok(Some(DocumentSymbolResponse::Flat(symbols)))
+        // todo!()
+    }
 }
 
 // struct TextDocumentItem {
@@ -155,9 +258,14 @@ impl Backend {
         let mut error_finder = ErrorFinder::new().unwrap();
         error_finder.find_syntax_errors(&tree, &*text).unwrap();
         error_finder.find_missing_nodes(&tree).unwrap();
-        let mut ident_finder = IdentiFinder::new(&tree, text.as_bytes()).unwrap();
-        ident_finder.find_refs(&tree, text.as_bytes()).unwrap();
-        ident_finder.find_defs(&tree, text.as_bytes()).unwrap();
+        // let mut ident_finder = IdentiFinder::new(&tree, text.as_bytes()).unwrap();
+        // ident_finder.find_refs(&tree, text.as_bytes()).unwrap();
+        // ident_finder.find_defs(&tree, text.as_bytes()).unwrap();
+        self.identifinder
+            .write()
+            .unwrap()
+            .find_symbols(&tree, text.as_bytes())
+            .unwrap();
 
         let invalid_styles = check_styles(&tree, text.as_bytes());
 
@@ -169,7 +277,7 @@ impl Backend {
             .map(|e| e.clone().into())
             .collect();
 
-        if let Err(v) = ident_finder.check_symbols() {
+        if let Err(v) = self.identifinder.read().unwrap().check_symbols() {
             diagnostics.extend(v.into_iter().map(|e| e.into()))
         }
         if let Ok(v) = invalid_styles {
@@ -204,6 +312,7 @@ async fn main() {
         client,
         document_map: DashMap::new(),
         tree_map: DashMap::new(),
+        identifinder: IdentiFinder::new_no_parse().unwrap().into(),
     });
     Server::new(stdin, stdout, socket).serve(service).await;
 }

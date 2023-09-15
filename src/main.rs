@@ -10,8 +10,12 @@ use anyhow::Result;
 use ariadne::{Label, Report, ReportKind, Source};
 use clap::Parser as ClapParser;
 use lammps_analyser::{
-    check_styles::check_styles, diagnostic_report::ReportSimple, error_finder::ErrorFinder,
-    identifinder::IdentiFinder, lammps_errors::LammpsError,
+    check_styles::check_styles,
+    diagnostic_report::ReportSimple,
+    error_finder::ErrorFinder,
+    identifinder::{unused_variables, IdentiFinder},
+    issues::Issue,
+    lammps_errors::{LammpsError, Warnings},
 };
 use owo_colors::OwoColorize;
 use std::{
@@ -45,7 +49,7 @@ fn main() -> Result<()> {
 
     let source_bytes = source_code.as_bytes();
 
-    let mut issues: Vec<LammpsError> = Vec::new();
+    let mut issues: Vec<Issue> = Vec::new();
 
     let mut parser = Parser::new();
 
@@ -60,7 +64,8 @@ fn main() -> Result<()> {
         tree.print_dot_graph(&dot_file);
     }
 
-    let mut identifinder = IdentiFinder::new(&tree, source_bytes)?;
+    let identifinder = IdentiFinder::new(&tree, source_bytes)?;
+    // dbg!(identifinder.find_symbols(&tree, source_bytes)?);
 
     let undefined_fixes = match identifinder.check_symbols() {
         Ok(()) => vec![],
@@ -72,43 +77,63 @@ fn main() -> Result<()> {
     error_finder.find_missing_nodes(&tree)?;
     let syntax_errors = error_finder.syntax_errors();
 
-    for err in syntax_errors {
-        // ruff_test.py:3:1: F821 Undefined name `hello`
-        println!("{}:{}", cli.source.bold(), err.make_simple_report());
-    }
+    // for err in syntax_errors {
+    //     // ruff_test.py:3:1: F821 Undefined name `hello`
+    //     println!("{}:{}", cli.source.bold(), err.make_simple_report());
+    // }
 
-    // this doesn't work. Need to compare the names!
+    // // this doesn't work. Need to compare the names!
 
-    for err in &undefined_fixes {
-        // ruff_test.py:3:1: F821 Undefined name `hello`
-        // println!("{}",std::str::from_utf8(source_code[ident.start_byte..ident.end_byte])?.underline());
-        if cli.output_reports {
-            Report::build(ReportKind::Error, &cli.source, err.ident.start_byte)
-                .with_label(
-                    Label::new((&cli.source, err.ident.start_byte..err.ident.end_byte))
-                        .with_message(format!("{}", err)),
-                )
-                .finish()
-                .print((
-                    &cli.source,
-                    Source::from(std::str::from_utf8(source_bytes)?),
-                ))?;
-        }
-        println!("{}:{}", cli.source.bold(), err.make_simple_report());
-    }
+    // for err in &undefined_fixes {
+    //     // ruff_test.py:3:1: F821 Undefined name `hello`
+    //     // println!("{}",std::str::from_utf8(source_code[ident.start_byte..ident.end_byte])?.underline());
+    //     if cli.output_reports {
+    //         Report::build(ReportKind::Error, &cli.source, err.ident.start_byte)
+    //             .with_label(
+    //                 Label::new((&cli.source, err.ident.start_byte..err.ident.end_byte))
+    //                     .with_message(format!("{}", err)),
+    //             )
+    //             .finish()
+    //             .print((
+    //                 &cli.source,
+    //                 Source::from(std::str::from_utf8(source_bytes)?),
+    //             ))?;
+    //     }
+    //     println!("{}:{}", cli.source.bold(), err.make_simple_report());
+    // }
 
-    let invalid_styles = check_styles(&tree, source_bytes)?;
-
-    for err in &invalid_styles {
-        println!("{}:{}", cli.source.bold(), err.make_simple_report());
-    }
+    // for err in &invalid_styles {
+    //     println!("{}:{}", cli.source.bold(), err.make_simple_report());
+    // }
     // TODO Check if any warnings or errors are found!!!
 
-    issues.extend(syntax_errors.iter().map(|x| x.clone().into()));
-    issues.extend(undefined_fixes.iter().map(|x| x.clone().into()));
-    issues.extend(invalid_styles.iter().map(|x| x.clone().into()));
+    let invalid_styles = check_styles(&tree, source_bytes)?;
+    issues.extend(
+        syntax_errors
+            .into_iter()
+            .map(|x| LammpsError::from(x.clone()).into()),
+    );
+    issues.extend(
+        undefined_fixes
+            .into_iter()
+            .map(|x| LammpsError::from(x.clone()).into()),
+    );
+    issues.extend(
+        invalid_styles
+            .into_iter()
+            .map(|x| LammpsError::from(x.clone()).into()),
+    );
+    issues.extend(
+        unused_variables(identifinder.symbols())
+            .into_iter()
+            .map(|x| Warnings::from(x).into()),
+    );
 
+    for issue in issues.iter() {
+        println!("{}", issue.make_simple_report());
+    }
     if !issues.is_empty() {
+        // TODO  Don't count warnings as errors!!!
         let n_errors = issues.len();
         println!(
             "{}: {} error{} found 😞",
