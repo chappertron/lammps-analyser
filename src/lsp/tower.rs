@@ -5,7 +5,7 @@ use dashmap::DashMap;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
 use lammps_analyser::identifinder::{Ident, IdentiFinder};
-use lammps_analyser::utils::point_to_position;
+use lammps_analyser::utils::{get_symbol_at_point, point_to_position};
 ///! Alternative implementation for the lsp using the `tower-lsp` crate.
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
@@ -232,10 +232,6 @@ impl LanguageServer for Backend {
         &self,
         params: GotoDefinitionParams,
     ) -> Result<Option<GotoDefinitionResponse>> {
-        // TODO this approach kinda works, but is very flakey
-        // - [ ] Migrate to identifinder
-        // - [ ]  Searching seems to find the parent definition.
-
         let uri = params.text_document_position_params.text_document.uri;
         let position = params.text_document_position_params.position;
         let point = tree_sitter::Point::new(position.line as usize, position.character as usize);
@@ -243,59 +239,20 @@ impl LanguageServer for Backend {
         self.client
             .log_message(MessageType::INFO, format!("At point: {point:?}"))
             .await;
-        // Find token at this position??
-        // TODO Use a query to find the token at this point
-        // That way it canbe used in the map!!
-        let doc = self.document_map.get(&uri.to_string()).unwrap();
-        let tree = self.tree_map.get(&uri.to_string()).unwrap();
-        let mut tree_cursor = tree.walk();
-        if let None = tree_cursor.goto_first_child_for_point(point) {
-            return Ok(None);
-        }
-        let query = Query::new(
-            tree_sitter_lammps::language(),
-            // TODO
-            // This might be problematic. `Fix IDs etc. Are used in both
-            // definitions AND references in the TS grammar`
-            "   (fix_id) @reference.fix  
-                (compute_id) @reference.compute 
-                (variable) @reference.variable",
-        )
-        .expect("Bad query");
-
-        let mut cursor = QueryCursor::new();
-        // Constrain query to only be in the node below the cursor!!!
-        cursor.set_point_range(dbg![
-            tree_cursor.node().start_position()..tree_cursor.node().end_position(),
-        ]);
-
-        let matches = cursor.matches(&query, tree_cursor.node(), doc.as_bytes());
-
-        // TODO Match start and end of definition with TS node to see if we can work
-        // it out
-
-        let ident = matches
-            // .take(1)
-            .flat_map(|mtch| {
-                mtch.captures.iter().map(|cap| {
-                    // dbg!(cap.node.utf8_text(&doc.as_bytes()).unwrap());
-                    dbg![Ident::new(&cap.node, doc.as_bytes()).unwrap()]
-                })
-            })
-            // .map(|mtch| {
-            //     let node = mtch.captures[0].node;
-            //     Ident::new(&node, doc.as_bytes()).unwrap()
-            // })
-            .next()
-            .expect("Could not find node");
 
         let identifiers = self.identifinder.read().unwrap();
+
+        let name_and_type = if let Some(x) = get_symbol_at_point(&identifiers, &point) {
+            x
+        } else {
+            return Ok(None);
+        };
 
         let symbol = identifiers
             .symbols()
             .iter()
-            .find(|(x, _)| x.name == ident.name && x.ident_type == ident.ident_type)
-            .expect("Could not find symbol");
+            .find(|(x, _)| *x == name_and_type)
+            .expect("Could not find symbol"); // TODO Bubble this up
 
         Ok(Some(GotoDefinitionResponse::Array(
             symbol
