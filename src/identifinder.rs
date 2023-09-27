@@ -6,7 +6,7 @@ use std::{
     hash::Hash,
 };
 use thiserror::Error;
-use tree_sitter::{Node, Point, Query, QueryCursor, Tree};
+use tree_sitter::{Node, Point, Query, QueryCursor, Range, Tree};
 
 use crate::{diagnostic_report::ReportSimple, utils::point_to_position};
 
@@ -337,6 +337,15 @@ impl Ident {
             start_byte: node.start_byte(),
             end_byte: node.end_byte(),
         })
+    }
+
+    pub fn range(&self) -> Range {
+        Range {
+            start_byte: self.start_byte,
+            end_byte: self.end_byte,
+            start_point: self.start,
+            end_point: self.end,
+        }
     }
 }
 impl PartialEq for Ident {
