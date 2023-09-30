@@ -127,6 +127,10 @@ impl IdentiFinder {
             .cursor
             .captures(&self.query_def, tree.root_node(), text);
 
+        // TODO Clear the symbols in a smarter way, perhaps only removing old ones
+        // Do this for an incremental method
+        self.symbols.clear();
+
         for (mtch, _cap_id) in captures {
             let node = mtch.captures[0].node;
 

@@ -326,9 +326,13 @@ impl Backend {
         if let Ok(v) = invalid_styles {
             diagnostics.extend(v.into_iter().map(|e| e.into()))
         }
+
         self.client
             .publish_diagnostics(uri.clone(), diagnostics, Some(version))
             .await;
+        // TODO Could be excessive
+        // TODO handle result
+        // self.client.workspace_diagnostic_refresh().await;
 
         // DEBUGGING
         // To stop a clippy warning about using format, and an async error
