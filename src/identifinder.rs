@@ -138,7 +138,7 @@ impl IdentiFinder {
 
             let name_and_type = NameAndType {
                 name: ident.name.clone(),
-                ident_type: ident.ident_type.clone(),
+                ident_type: ident.ident_type,
             };
 
             let entry = self.symbols.entry(name_and_type).or_default();
@@ -169,7 +169,7 @@ impl IdentiFinder {
 
             let name_and_type = NameAndType {
                 name: ident.name.clone(),
-                ident_type: ident.ident_type.clone(),
+                ident_type: ident.ident_type,
             };
 
             let entry = self.symbols.entry(name_and_type).or_default();

@@ -7,7 +7,7 @@
 /// - [ ] Create an issue abstraction to handle all errors and warnings
 /// - [ ] Extract core behaviour into a library
 use anyhow::Result;
-use ariadne::{Label, Report, ReportKind, Source};
+
 use clap::Parser as ClapParser;
 use lammps_analyser::{
     check_styles::check_styles,
@@ -110,7 +110,7 @@ fn main() -> Result<()> {
     let invalid_styles = check_styles(&tree, source_bytes)?;
     issues.extend(
         syntax_errors
-            .into_iter()
+            .iter()
             .map(|x| LammpsError::from(x.clone()).into()),
     );
     issues.extend(

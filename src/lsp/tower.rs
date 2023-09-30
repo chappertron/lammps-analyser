@@ -1,16 +1,16 @@
-use std::fmt::format;
+
 use std::str::FromStr;
 
 use dashmap::DashMap;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
-use lammps_analyser::identifinder::{Ident, IdentiFinder};
+use lammps_analyser::identifinder::{IdentiFinder};
 use lammps_analyser::utils::{get_symbol_at_point, point_to_position};
 ///! Alternative implementation for the lsp using the `tower-lsp` crate.
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
-use tree_sitter::{Parser, Query, QueryCursor, Tree};
+use tree_sitter::{Parser, Tree};
 
 /// Core LSP Application
 /// TODO:
@@ -160,13 +160,12 @@ impl LanguageServer for Backend {
                 self.document_symbol(params)
                     .await?
                     .into_iter()
-                    .map(|x| match x {
+                    .flat_map(|x| match x {
                         DocumentSymbolResponse::Flat(x) => x,
                         DocumentSymbolResponse::Nested(_) => {
                             panic!("Nested symbols not supported???")
                         }
-                    })
-                    .flatten(),
+                    }),
             );
         }
 
@@ -192,7 +191,7 @@ impl LanguageServer for Backend {
             .read()
             .unwrap()
             .symbols()
-            .into_iter()
+            .iter()
             // TODO properly match this field to the compute/var/fix type
             // TODO Set correct Positions for the Symbols
             .flat_map(|(x, v)| {
@@ -316,7 +315,7 @@ impl Backend {
             // TODO add methods to create ownership, so clowning isn't needed???
             // TODO implement into for vec of error
             .syntax_errors()
-            .into_iter()
+            .iter()
             .map(|e| e.clone().into())
             .collect();
 
