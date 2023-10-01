@@ -1,11 +1,10 @@
-
 use std::str::FromStr;
 
 use dashmap::DashMap;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
-use lammps_analyser::identifinder::{IdentiFinder};
-use lammps_analyser::utils::{get_symbol_at_point, point_to_position};
+use lammps_analyser::identifinder::IdentiFinder;
+use lammps_analyser::utils::{get_symbol_at_point, point_to_position, position_to_point};
 ///! Alternative implementation for the lsp using the `tower-lsp` crate.
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
@@ -87,6 +86,7 @@ impl LanguageServer for Backend {
                 // TODO Add options?
                 document_symbol_provider: Some(OneOf::Left(true)),
                 workspace_symbol_provider: Some(OneOf::Left(true)),
+                hover_provider: Some(HoverProviderCapability::Simple(true)),
 
                 // definition: Some(GotoCapability::default()),
                 // definition_provider: Some(OneOf::Left(true)),
@@ -267,6 +267,31 @@ impl LanguageServer for Backend {
                 })
                 .collect(),
         )))
+    }
+
+    async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
+        let uri = params.text_document_position_params.text_document.uri;
+        let ts_point = position_to_point(&params.text_document_position_params.position);
+
+        let tree = self.tree_map.get(&uri.to_string()).unwrap();
+        let mut tree_cursor = tree.walk();
+
+        let node = if let Some(_) = tree_cursor.goto_first_child_for_point(ts_point) {
+            tree_cursor.node()
+        } else {
+            return Ok(None);
+        };
+
+        Ok(Some(Hover {
+            contents: HoverContents::Markup(MarkupContent {
+                kind: MarkupKind::Markdown,
+                value: format!(
+                    "**Hovering** over: {:?}",
+                    node // params.text_document_position_params.position
+                ),
+            }),
+            range: None,
+        }))
     }
 }
 
