@@ -46,6 +46,7 @@ pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Ast {
             cursor.goto_parent();
         }
 
+        // If no more commands, break!
         if !cursor.goto_next_sibling() {
             break;
         }
@@ -128,7 +129,7 @@ pub enum Argument {
     /// Expression from LAMMPS
     Int(isize),
     Float(f64),
-    Bool,
+    Bool(bool),
     ArgName(String), // TODO Rename to keyword arg?
     /// Variables within curly braces
     VarCurly(Ident),
@@ -136,15 +137,124 @@ pub enum Argument {
     String,
     Expression(Expression),
     // TODO Remove? Can't know if a group name until further on in the process???
+    // Perhaps make it an identifier that then is decided to be either
     Group,
     /// A variable/fix/compute name prefixed by v_/f_/c_
     /// TODO make this hold and `Ident` struct, from `crate::identifinder` module
     UnderscoreIdent(Ident),
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Clone)]
 /// TODO convert into an enum
-pub struct Expression;
+pub enum Expression {
+    #[default]
+    None,
+    /// LAMMPS Identifier for a fix/compute/variable that is
+    /// proceeded by f_/c_/v_ to indicate the type.
+    UnderscoreIdent(Ident),
+    /// An integer
+    Int(isize),
+    /// A float. Parsed as a 64-bit float
+    Float(f64),
+    /// A binary expression between two other expressions.
+    BinaryOp(Box<Expression>, BinaryOp, Box<Expression>),
+    // TODO MORE EXPRESSIONS
+}
+
+#[derive(Debug)]
+enum ParseExprError {
+    Utf8Error(std::str::Utf8Error),
+    ParseIntError(std::num::ParseIntError),
+    ParseFloatError(std::num::ParseFloatError),
+}
+
+impl From<std::num::ParseFloatError> for ParseExprError {
+    fn from(v: std::num::ParseFloatError) -> Self {
+        Self::ParseFloatError(v)
+    }
+}
+
+impl From<std::num::ParseIntError> for ParseExprError {
+    fn from(v: std::num::ParseIntError) -> Self {
+        Self::ParseIntError(v)
+    }
+}
+
+impl From<std::str::Utf8Error> for ParseExprError {
+    fn from(v: std::str::Utf8Error) -> Self {
+        Self::Utf8Error(v)
+    }
+}
+
+impl Expression {
+    /// TODO Handle Erros
+    fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Expression, ParseExprError> {
+        dbg!(node);
+
+        match node.kind() {
+            "binary_op" => Ok(Self::BinaryOp(
+                Box::new(Self::parse_expression(&node.child(0).unwrap(), text)?),
+                // TODO Find a way to get the operator from teh TS symbol
+                BinaryOp::try_from(node.child(1).unwrap().utf8_text(text)?).unwrap(),
+                Box::new(Self::parse_expression(&node.child(2).unwrap(), text)?),
+            )),
+            "int" => Ok(Self::Int(isize::from_str_radix(
+                &node.utf8_text(text)?,
+                10,
+            )?)),
+
+            "float" => Ok(Self::Float(str::parse(&node.utf8_text(text)?)?)),
+
+            // Just go into next level down
+            "expression" => Ok(Self::parse_expression(&node.child(0).unwrap(), text)?),
+
+            x => unimplemented!("Unknown expression type: {}", x),
+        }
+        // todo!()
+    }
+}
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum BinaryOp {
+    #[default]
+    Add,
+    Subtract,
+    Multiply,
+    Divide,
+    Power,
+    Modulo,
+    Equal,
+    NotEqual,
+    LessThan,
+    LessThanOrEqual,
+    GreaterThan,
+    GreaterThanOrEqual,
+    And,
+    Or,
+    Xor,
+}
+impl TryFrom<&str> for BinaryOp {
+    type Error = String;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "+" => Ok(Self::Add),
+            "-" => Ok(Self::Subtract),
+            "*" => Ok(Self::Multiply),
+            "/" => Ok(Self::Divide),
+            "^" => Ok(Self::Power),
+            "%" => Ok(Self::Modulo),
+            "==" => Ok(Self::Equal),
+            "!=" => Ok(Self::NotEqual),
+            "<" => Ok(Self::LessThan),
+            "<=" => Ok(Self::LessThanOrEqual),
+            ">" => Ok(Self::GreaterThan),
+            ">=" => Ok(Self::GreaterThanOrEqual),
+            "&&" => Ok(Self::And),
+            "||" => Ok(Self::Or),
+            "^|" => Ok(Self::Xor),
+            _ => Err(format!("Unknown binary operator: {}", value)),
+        }
+    }
+}
 
 impl Argument {
     fn from_node(
@@ -159,7 +269,10 @@ impl Argument {
                 isize::from_str_radix(&node.child(0).unwrap().utf8_text(text).unwrap(), 10)
                     .unwrap(),
             )),
-            "expression" => Ok(Self::Expression(Expression)),
+            "expression" => Ok(Self::Expression(
+                // TODO get rid of this unwrap
+                Expression::parse_expression(&node, text).unwrap(),
+            )),
             "string" => Ok(Self::String),
             "group" => Ok(Self::Group),
             "underscore_ident" => Ok(Self::UnderscoreIdent(
@@ -217,20 +330,110 @@ impl TryFrom<&str> for NamedCommand {
 mod tests {
     use tree_sitter::Parser;
 
-    use super::ts_to_ast;
+    use super::{ts_to_ast, BinaryOp, Expression};
 
-    #[test]
-    fn test_ast() {
+    fn setup_parser() -> Parser {
         let mut parser = Parser::new();
 
         parser
             .set_language(tree_sitter_lammps::language())
             .expect("Could not load language");
+        parser
+    }
+
+    #[test]
+    fn test_ast() {
+        let mut parser = setup_parser();
         let source_bytes = include_bytes!("../../fix.lmp");
         let tree = parser.parse(source_bytes, None).unwrap();
 
         let ast = ts_to_ast(&tree, source_bytes);
         dbg!(ast);
         unimplemented!()
+    }
+
+    #[test]
+    fn parse_expr() {
+        let mut parser = setup_parser();
+        let source_bytes = b"variable a equal 1+2";
+
+        let tree = parser.parse(source_bytes, None).unwrap();
+
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let command_node = tree.root_node().child(0).unwrap();
+        dbg!(command_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+
+        dbg!(expr_node.to_sexp());
+        // assert_eq!(ast.commands.len(), 1);
+        assert_eq!(
+            // ast.commands[0],
+            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::BinaryOp(
+                Box::new(Expression::Int(1)),
+                BinaryOp::Add,
+                Box::new(Expression::Int(2))
+            )
+        );
+    }
+
+    #[test]
+    fn parse_expr_floats() {
+        let mut parser = setup_parser();
+        let source_bytes = b"variable a equal 1.0+2.0";
+
+        let tree = parser.parse(source_bytes, None).unwrap();
+
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let command_node = tree.root_node().child(0).unwrap();
+        dbg!(command_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+
+        dbg!(expr_node.to_sexp());
+        // assert_eq!(ast.commands.len(), 1);
+        assert_eq!(
+            // ast.commands[0],
+            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::BinaryOp(
+                Box::new(Expression::Float(1.0)),
+                BinaryOp::Add,
+                Box::new(Expression::Float(2.0))
+            )
+        );
+    }
+
+    #[test]
+    fn parse_nested_expr() {
+        let mut parser = setup_parser();
+        let source_bytes = b"variable a equal 0.5*(1.0+2.0)";
+
+        let tree = parser.parse(source_bytes, None).unwrap();
+
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let command_node = tree.root_node().child(0).unwrap();
+        dbg!(command_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+
+        dbg!(expr_node.to_sexp());
+        // assert_eq!(ast.commands.len(), 1);
+        assert_eq!(
+            // ast.commands[0],
+            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::BinaryOp(
+                Box::new(Expression::Float(0.5)),
+                BinaryOp::Multiply,
+                Box::new(Expression::BinaryOp(
+                    Box::new(Expression::Float(1.0)),
+                    BinaryOp::Add,
+                    Box::new(Expression::Float(2.0))
+                ))
+            )
+        );
     }
 }

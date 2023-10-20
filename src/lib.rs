@@ -1,3 +1,4 @@
+pub mod ast;
 pub mod check_styles;
 pub mod compute_styles;
 pub mod diagnostic_report;
