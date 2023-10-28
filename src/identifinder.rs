@@ -4,6 +4,7 @@ use std::{
     collections::HashMap,
     fmt::{Debug, Display},
     hash::Hash,
+    str::Utf8Error,
 };
 use thiserror::Error;
 use tree_sitter::{Node, Point, Query, QueryCursor, Range, Tree};
@@ -323,7 +324,7 @@ impl Ident {
     /// Parses the node and text into an Ident
     /// Uses the node kind to determine the identifinder type
     /// Uses the text to extract the name of the identifier
-    pub fn new(node: &Node, text: &[u8]) -> Result<Self> {
+    pub fn new(node: &Node, text: &[u8]) -> Result<Self, Utf8Error> {
         let name = node.utf8_text(text)?.to_string();
 
         let ident_type = match node.kind() {

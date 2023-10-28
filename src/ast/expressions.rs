@@ -1,6 +1,7 @@
 use tree_sitter::Node;
 
 use crate::identifinder::Ident;
+use thiserror::Error;
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub enum Expression {
@@ -13,18 +14,27 @@ pub enum Expression {
     Int(isize),
     /// A float. Parsed as a 64-bit float
     Float(f64),
+    /// Boolean Operation
+    Bool(bool),
+    /// Unary operation
+    UnaryOp(UnaryOp, Box<Expression>),
     /// A binary expression between two other expressions.
     BinaryOp(Box<Expression>, BinaryOp, Box<Expression>),
     /// An expression wrapped in brackets.
     /// TODO Perhaps just ignore brackets?
     Parens(Box<Expression>),
-    // TODO MORE EXPRESSIONS
+    /// Thermo keyword
+    /// TODO Use an enum instead
+    ThermoKeyword(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub(crate) enum ParseExprError {
+    #[error("Could not parse text as UTF-8 {0}")]
     Utf8Error(std::str::Utf8Error),
+    #[error("Could not parse text as int {0}")]
     ParseIntError(std::num::ParseIntError),
+    #[error("Could not parse text as float {0}")]
     ParseFloatError(std::num::ParseFloatError),
 }
 
@@ -52,9 +62,14 @@ impl Expression {
         node: &Node<'_>,
         text: &[u8],
     ) -> Result<Expression, ParseExprError> {
-        dbg!(node);
+        // dbg!(node);
 
         match node.kind() {
+            // Child 0 is the v_/f_/c_ prefix
+            "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
+                &node.child(1).unwrap(),
+                text,
+            )?)),
             "binary_op" => Ok(Self::BinaryOp(
                 Box::new(Self::parse_expression(&node.child(0).unwrap(), text)?),
                 // TODO Find a way to get the operator from teh TS symbol
@@ -74,6 +89,12 @@ impl Expression {
                 &node.child(1).unwrap(),
                 text,
             )?))),
+            "bool" => match node.utf8_text(text)? {
+                "true" | "on" | "yes" => Ok(Self::Bool(true)),
+                "false" | "off" | "no" => Ok(Self::Bool(false)),
+                _ => unreachable!(),
+            },
+            "thermo_kwarg" => Ok(Self::ThermoKeyword(node.utf8_text(text)?.to_string())),
 
             x => unimplemented!("Unknown expression type: {}", x),
         }
@@ -125,8 +146,28 @@ impl TryFrom<&str> for BinaryOp {
     }
 }
 
+#[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
+pub enum UnaryOp {
+    #[default]
+    Negate,
+    Not,
+}
+
+impl TryFrom<&str> for UnaryOp {
+    type Error = String;
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value {
+            "-" => Ok(Self::Negate),
+            "!" => Ok(Self::Not),
+            _ => Err(format!("Unknown unary operator: {}", value)),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use crate::identifinder::IdentType;
+
     use super::*;
     use tree_sitter::Parser;
     fn setup_parser() -> Parser {
@@ -218,6 +259,42 @@ mod tests {
                     Box::new(Expression::Float(1.0)),
                     BinaryOp::Add,
                     Box::new(Expression::Float(2.0))
+                ))))
+            )
+        );
+    }
+
+    #[test]
+    fn parse_expr_vars() {
+        let mut parser = setup_parser();
+        let source_bytes = b"variable a equal 0.5*(v_example+temp)";
+
+        let tree = parser.parse(source_bytes, None).unwrap();
+
+        dbg!(tree.root_node().to_sexp());
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let command_node = tree.root_node().child(0).unwrap();
+        dbg!(command_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+
+        dbg!(expr_node.to_sexp());
+        // assert_eq!(ast.commands.len(), 1);
+        assert_eq!(
+            // ast.commands[0],
+            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::BinaryOp(
+                Box::new(Expression::Float(0.5)),
+                BinaryOp::Multiply,
+                Box::new(Expression::Parens(Box::new(Expression::BinaryOp(
+                    Box::new(Expression::UnderscoreIdent(Ident {
+                        name: "example".into(),
+                        ident_type: IdentType::Variable,
+                        ..Default::default()
+                    })),
+                    BinaryOp::Add,
+                    Box::new(Expression::ThermoKeyword("temp".into()))
                 ))))
             )
         );

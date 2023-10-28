@@ -6,69 +6,55 @@
 
 use thiserror::Error;
 
+use crate::ast::FixDef;
 use crate::fix_styles::FixStyle;
 
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum InvalidArguments {
     #[error("Incorrect number of arguments: {provided} expected {expected}")]
     IncorrectNumberArguments { provided: usize, expected: usize },
 }
 
-/// Parse
-pub fn parse_fix(args: &[&str]) -> Result<(), InvalidArguments> {
-    if args.len() < 3 {
-        return Err(InvalidArguments::IncorrectNumberArguments {
-            provided: args.len(),
-            expected: 3,
-        });
-    }
+// /// Parse
+// pub fn parse_fix(args: &[&str]) -> Result<(), InvalidArguments> {
+//     if args.len() < 3 {
+//         return Err(InvalidArguments::IncorrectNumberArguments {
+//             provided: args.len(),
+//             expected: 3,
+//         });
+//     }
 
-    // TODO use these
-    let _name = args[0];
-    let _group = args[1];
-    let style = FixStyle::from(args[2]);
+//     // TODO use these
+//     let _name = args[0];
+//     let _group = args[1];
+//     let style = FixStyle::from(args[2]);
 
-    let rest = &args[3..];
+//     let rest = &args[3..];
 
-    match style {
-        FixStyle::Nve => parse_no_args(rest),
-        FixStyle::Nvt => parse_nh_fixes(rest, style),
+//     match style {
+//         FixStyle::Nve => parse_no_args(rest),
+//         FixStyle::Nvt => parse_nh_fixes(rest, style),
 
-        _ => todo!("Parsing for this fix style is not yet implemented."),
-    }
-}
+//         _ => todo!("Parsing for this fix style is not yet implemented."),
+//     }
+// }
 
-/// Generic Parsing of the Nose-Hoover Fixes
-/// TODO Finish ME
-fn parse_nh_fixes(_rest: &[&str], _fix_style: FixStyle) -> Result<(), InvalidArguments> {
-    todo!()
-}
+// /// Generic Parsing of the Nose-Hoover Fixes
+// /// TODO Finish ME
+// fn parse_nh_fixes(_rest: &[&str], _fix_style: FixStyle) -> Result<(), InvalidArguments> {
+//     todo!()
+// }
 
 /// Parse a fix that does not expect any arguments
-fn parse_no_args(rest: &[&str]) -> Result<(), InvalidArguments> {
-    if !rest.is_empty() {
+pub fn parse_no_args(fix: &FixDef) -> Result<(), InvalidArguments> {
+    if !fix.args.is_empty() {
         Err(InvalidArguments::IncorrectNumberArguments {
-            provided: rest.len() + 3,
+            provided: fix.args.len() + 3,
             expected: 3,
         })
     } else {
         Ok(())
     }
-}
-
-/// Acceptable arguments for LAMMPS commands
-/// TODO Convert from a tree-sitter nodes to avoid reparsing over again!!!
-pub enum Argument {
-    /// Expression from LAMMPS
-    Expression,
-    String,
-    Group,
-    /// A variable/fix/compute name prefixed by v_/f_/c_
-    /// TODO make this hold and `Ident` struct, from `crate::identifinder` module
-    UnderscoreIdent,
-    /// Variables within curly braces
-    /// TODO make this hold and `Ident` struct, from `crate::identifinder` module
-    CurlyVar,
 }
 
 // #[derive(Parser)]
@@ -104,7 +90,51 @@ pub enum Argument {
 
 #[cfg(test)]
 mod tests {
-    use tree_sitter::{Query, QueryCursor};
+    use super::*;
+    use tree_sitter::{Node, Parser, Query, QueryCursor, Tree};
+
+    fn setup_parser() -> Parser {
+        let mut parser = Parser::new();
+        parser.set_language(tree_sitter_lammps::language()).unwrap();
+        parser
+    }
+    #[test]
+    fn valid_zero_arg_fix() {
+        let mut parser = setup_parser();
+        let text = "fix NVE all nve";
+        let tree = parser.parse(text, None).unwrap();
+        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let fix = FixDef::from_node(&node, text.as_bytes());
+
+        assert_eq!(fix.fix_id.name, "NVE");
+        assert_eq!(fix.group_id, "all");
+        assert_eq!(fix.fix_style, FixStyle::Nve);
+        assert!(fix.args.is_empty());
+
+        assert_eq!(parse_no_args(&fix), Ok(()));
+    }
+
+    #[test]
+    fn invalid_zero_arg_fix() {
+        let mut parser = setup_parser();
+        let text = "fix NVE all nve asdfas";
+        let tree = parser.parse(text, None).unwrap();
+        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let fix = FixDef::from_node(&node, text.as_bytes());
+
+        assert_eq!(fix.fix_id.name, "NVE");
+        assert_eq!(fix.group_id, "all");
+        assert_eq!(fix.fix_style, FixStyle::Nve);
+        assert!(!fix.args.is_empty());
+
+        assert_eq!(
+            parse_no_args(&fix),
+            Err(InvalidArguments::IncorrectNumberArguments {
+                provided: 4,
+                expected: 3
+            })
+        );
+    }
 
     #[test]
     fn read_ts_node() {
