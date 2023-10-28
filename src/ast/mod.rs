@@ -1,6 +1,8 @@
 //! Convert the treesiterr trees into an AST.
 
 pub mod expressions;
+use std::fmt::Display;
+
 use tree_sitter::{Node, Point, Tree};
 
 use crate::{fix_styles::FixStyle, identifinder::Ident};
@@ -106,7 +108,7 @@ impl GenericCommand {
 }
 
 /// Acceptable argument types for LAMMPS commands
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Argument {
     /// Expression from LAMMPS
     Int(isize),
@@ -150,6 +152,7 @@ impl Argument {
                     // TODO get rid of unwrap ->  add proper error handling to `from_node`.
                     .map_err(|x| format!("{}", x))?,
             )),
+            // TODO Expressions not wrapped in varround are not valid???
             "expression" => Ok(Self::Expression(
                 // TODO get rid of this unwrap
                 expressions::Expression::parse_expression(node, text)
@@ -172,6 +175,25 @@ impl Argument {
                 node.utf8_text(text).unwrap().to_string(),
             )),
             x => Err(format!("Unknown argument type: {}", x)),
+        }
+    }
+}
+
+impl Display for Argument {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Argument::Int(x) => write!(f, "int: {x}"),
+            Argument::Float(x) => write!(f, "float: {x}"),
+            Argument::Bool(x) => write!(f, "bool: {x}"),
+            Argument::ArgName(x) => write!(f, "argname: {x}"),
+            Argument::VarCurly(x) => write!(f, "var_curly: {x}"),
+            Argument::VarRound(x) => write!(f, "var_round: {x}"),
+            // TODO properly implement string
+            Argument::String => write!(f, "string"),
+
+            Argument::Expression(x) => write!(f, "expression: {x}"),
+            Argument::Group => write!(f, "group"),
+            Argument::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),
         }
     }
 }
@@ -200,7 +222,7 @@ impl NamedCommand {
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Clone)]
 pub struct FixDef {
     pub fix_id: Ident,    // Or just keep as a string?
     pub group_id: String, // TODO  Create group identifiers

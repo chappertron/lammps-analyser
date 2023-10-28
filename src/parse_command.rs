@@ -3,46 +3,128 @@
 // are no -- flags. I think I will need to use a custom parser :(
 
 // use clap::Parser;
+use itertools::Itertools;
 
 use thiserror::Error;
 
-use crate::ast::FixDef;
+use crate::ast::{Argument, FixDef};
+use crate::fix_styles::FixStyle;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum InvalidArguments {
     #[error("Incorrect number of arguments: {provided} expected {expected}")]
     IncorrectNumberArguments { provided: usize, expected: usize },
+    #[error(
+        "Incorrect keyword arguments for `{kwarg}`. 
+         Expected {n_expected} arguments: {expected}. 
+         Only {n_provided} provided."
+    )]
+    MissingKwargField {
+        kwarg: String,
+        expected: String,
+        n_expected: usize,
+        n_provided: usize,
+    },
+    #[error("Incorrect argument type. Expected: {expected}. Provided: {provided}.")]
+    IncorrectType { expected: String, provided: String },
 }
 
-// /// Parse
-// pub fn parse_fix(args: &[&str]) -> Result<(), InvalidArguments> {
-//     if args.len() < 3 {
-//         return Err(InvalidArguments::IncorrectNumberArguments {
-//             provided: args.len(),
-//             expected: 3,
-//         });
-//     }
+/// Parse
+pub fn parse_fix(fix: FixDef) -> Result<(), InvalidArguments> {
+    // if args.len() < 3 {
+    //     return Err(InvalidArguments::IncorrectNumberArguments {
+    //         provided: args.len(),
+    //         expected: 3,
+    //     });
+    // }
 
-//     // TODO use these
-//     let _name = args[0];
-//     let _group = args[1];
-//     let style = FixStyle::from(args[2]);
+    // TODO use these
+    let style = fix.fix_style;
 
-//     let rest = &args[3..];
+    match style {
+        FixStyle::Nve => parse_no_args(&fix),
+        FixStyle::Nvt => parse_nh_fixes(&fix),
 
-//     match style {
-//         FixStyle::Nve => parse_no_args(rest),
-//         FixStyle::Nvt => parse_nh_fixes(rest, style),
+        _ => todo!("Parsing for this fix style is not yet implemented."),
+    }
+}
 
-//         _ => todo!("Parsing for this fix style is not yet implemented."),
-//     }
-// }
+/// Generic Parsing of the Nose-Hoover Fixes
+/// TODO Finish ME
+fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArguments> {
+    let args = &fix.args;
 
-// /// Generic Parsing of the Nose-Hoover Fixes
-// /// TODO Finish ME
-// fn parse_nh_fixes(_rest: &[&str], _fix_style: FixStyle) -> Result<(), InvalidArguments> {
-//     todo!()
-// }
+    // Iterate through and check validity of the argument
+    let mut iter = args.iter().multipeek();
+
+    // for arg in iter {
+    //     match arg {
+    //         Argument::ArgName(kwarg) => {
+    //             if kwarg == "temp" {
+    //                 if let Some(x) = iter.peek() {
+    //                     match x {
+    //                         Argument::Float(_) => Ok(()),
+    //                         Argument::VarRound(_) => Ok(()),
+    //                         Argument::VarCurly(_) => Ok(()),
+    //                         _ => Err(InvalidArguments::IncorrectType {
+    //                             expected: "float".into(),
+    //                             provided: stringify!(x).into(),
+    //                         }),
+    //                     };
+    //                 } else {
+    //                     return Err(InvalidArguments::MissingKwargField {
+    //                         kwarg: "temp".into(),
+    //                         expected: "<Tstart> <Tstop> <Tdamp> ".into(),
+    //                     });
+    //                 }
+    //             } else {
+    //                 todo!()
+    //             }
+    //         }
+
+    //         _ => todo!(),
+    //     }
+    // }
+
+    // Try either the LAMMPS way or to use peek with a while let loop?
+
+    while let Some(arg) = iter.next() {
+        match arg {
+            Argument::ArgName(kwarg) => {
+                // TODO Convert into match block
+                if kwarg == "temp" {
+                    // TODO check if there are 3 more elements
+                    for i in 0..3 {
+                        if let Some(x) = iter.next() {
+                            match x {
+                                Argument::Float(_) => (),
+                                Argument::VarRound(_) => (),
+                                Argument::VarCurly(_) => (),
+                                _ => Err(InvalidArguments::IncorrectType {
+                                    expected: "float".into(),
+                                    provided: x.to_string(),
+                                })?,
+                            };
+                        } else {
+                            Err(InvalidArguments::MissingKwargField {
+                                kwarg: "temp".into(),
+                                n_expected: 3,
+                                n_provided: i,
+                                expected: "<Tstart> <Tstop> <Tdamp> ".into(),
+                            })?
+                        }
+                    }
+                } else {
+                    todo!("Other keyword arguments are not yet implemented.")
+                }
+            }
+
+            _ => todo!(),
+        }
+    }
+
+    Ok(())
+}
 
 /// Parse a fix that does not expect any arguments
 pub fn parse_no_args(fix: &FixDef) -> Result<(), InvalidArguments> {
@@ -134,6 +216,38 @@ mod tests {
                 expected: 3
             })
         );
+    }
+
+    #[test]
+    fn valid_nvt() {
+        let mut parser = setup_parser();
+        let text = "fix NVT all nvt temp 1.0 $(v_T*1.5) $(100*dt)";
+        let tree = parser.parse(text, None).unwrap();
+        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let fix = FixDef::from_node(&node, text.as_bytes());
+
+        assert_eq!(fix.fix_id.name, "NVT");
+        assert_eq!(fix.group_id, "all");
+        assert_eq!(fix.fix_style, FixStyle::Nvt);
+        assert!(!fix.args.is_empty());
+
+        assert_eq!(parse_nh_fixes(&fix), Ok(()));
+    }
+
+    #[test]
+    fn invalid_nvt() {
+        let mut parser = setup_parser();
+        let text = "fix NVT all nvt temp 1.0 $(v_T*1.5) TEMP";
+        let tree = parser.parse(text, None).unwrap();
+        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let fix = FixDef::from_node(&node, text.as_bytes());
+
+        assert_eq!(fix.fix_id.name, "NVT");
+        assert_eq!(fix.group_id, "all");
+        assert_eq!(fix.fix_style, FixStyle::Nvt);
+        assert!(!fix.args.is_empty());
+
+        assert_eq!(parse_nh_fixes(&fix), Ok(()));
     }
 
     #[test]

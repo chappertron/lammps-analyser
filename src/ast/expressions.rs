@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use tree_sitter::Node;
 
 use crate::identifinder::Ident;
@@ -26,6 +28,22 @@ pub enum Expression {
     /// Thermo keyword
     /// TODO Use an enum instead
     ThermoKeyword(String),
+}
+
+impl Display for Expression {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Expression::None => write!(f, ""),
+            Expression::UnderscoreIdent(ident) => write!(f, "{}", ident.underscore_ident()),
+            Expression::Int(i) => write!(f, "{}", i),
+            Expression::Float(fl) => write!(f, "{}", fl),
+            Expression::Bool(b) => write!(f, "{}", b),
+            Expression::UnaryOp(op, expr) => write!(f, "{}{}", op, expr),
+            Expression::BinaryOp(lhs, op, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
+            Expression::Parens(expr) => write!(f, "({})", expr),
+            Expression::ThermoKeyword(kw) => write!(f, "{}", kw),
+        }
+    }
 }
 
 #[allow(clippy::enum_variant_names)]
@@ -144,11 +162,41 @@ impl TryFrom<&str> for BinaryOp {
     }
 }
 
+impl Display for BinaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Add => write!(f, "+"),
+            Self::Subtract => write!(f, "-"),
+            Self::Multiply => write!(f, "*"),
+            Self::Divide => write!(f, "/"),
+            Self::Power => write!(f, "^"),
+            Self::Modulo => write!(f, "%"),
+            Self::Equal => write!(f, "=="),
+            Self::NotEqual => write!(f, "!="),
+            Self::LessThan => write!(f, "<"),
+            Self::LessThanOrEqual => write!(f, "<="),
+            Self::GreaterThan => write!(f, ">"),
+            Self::GreaterThanOrEqual => write!(f, ">="),
+            Self::And => write!(f, "&&"),
+            Self::Or => write!(f, "||"),
+            Self::Xor => write!(f, "^|"),
+        }
+    }
+}
+
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
 pub enum UnaryOp {
     #[default]
     Negate,
     Not,
+}
+impl Display for UnaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            UnaryOp::Negate => write!(f, "-"),
+            UnaryOp::Not => write!(f, "!"),
+        }
+    }
 }
 
 impl TryFrom<&str> for UnaryOp {

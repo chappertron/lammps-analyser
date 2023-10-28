@@ -352,6 +352,25 @@ impl Ident {
             end_point: self.end,
         }
     }
+
+    pub fn underscore_ident(&self) -> String {
+        let prefix = match self.ident_type {
+            IdentType::Fix => "f_",
+            IdentType::Compute => "c_",
+            IdentType::Variable => "v_",
+        };
+
+        format!("{}{}", prefix, self.name)
+    }
+}
+impl Display for Ident {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self.ident_type {
+            IdentType::Fix => write!(f, "fix {}", self.name),
+            IdentType::Compute => write!(f, "compute {}", self.name),
+            IdentType::Variable => write!(f, "variable {}", self.name),
+        }
+    }
 }
 impl PartialEq for Ident {
     fn eq(&self, other: &Self) -> bool {

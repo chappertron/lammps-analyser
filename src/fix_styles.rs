@@ -2,7 +2,7 @@
 
 /// Enum for all the possible styles of a fix.
 /// TODO Seperate by package
-#[derive(Default, Debug, Eq, PartialEq)]
+#[derive(Default, Debug, Eq, PartialEq, Clone, Copy)]
 pub enum FixStyle {
     AccelerateCos,
     Acks2Reaxff,
