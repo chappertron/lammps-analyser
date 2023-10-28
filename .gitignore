@@ -1,1 +1,15 @@
 /target
+.vscode/
+# Until I sort out the docs...
+lammps_docs/
+lammps_hover_docs/
+.*.rs.rustfmt
+docs_filter.py
+docs_example.rst
+docs_example.md
+test.*
+prepare_docs.py
+
+# Example trees
+tree.dot
+tree.svg

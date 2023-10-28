@@ -1,8 +1,8 @@
 #
 # Runs LAMMPS simulation electrolyte solutions
-#
-echo            screen
-variable        dcdfreq index 10000 variable        thermofreq index 100
+# echo            screen
+variable        dcdfreq index 10000 
+variable        thermofreq index 100
 variable        rand equal 990416
 variable        nlayers equal 100
 variable        nsteps index 10000000
@@ -14,6 +14,7 @@ variable        dofh  equal 1.5925
 variable        dofo  equal 2.8151
 variable        seedH equal 35543
 variable        seedC equal 3356
+variable        unused equal 69420
 variable        dz equal 4.0
 variable        inputname  index startnemd
 variable        outputname string nemd1.TH${Thot}.TC${Tcold}
@@ -93,7 +94,7 @@ fix cons_mom all momentum 1 linear 1 1 1
 compute mymom all momentum
 compute mymomwater water momentum
 
-# Reset timestel
+# Reset timestep
 reset_timestep 0
 
 timestep        1
@@ -104,9 +105,12 @@ log ${outputname}.log
 
 fix shakew water rattle 0.00001 200 0 b 1 a 1 # FB Shake Water
 
+fix shakew2 water raatle  0.00001 200 0 b 1 a 1 # FB Shake Water
+
+compute mom all mumentum
 thermo          ${thermofreq}
 
-thermo_style    custom step time etotal pe ke temp press pxx pyy pzz vol lx ly lz atoms density f_thermostatH f_thermostatC c_T_hot c_T_cold  c_mymom[*] c_mymomwater[*]
+thermo_style    custom step time etotal pe ke temp press pxx pyy pzz vol lx ly lz atoms density f_thermostatH f_thermostatC c_T_hot c_T_cold  c_mymom[*] c_mymomwater[*] f_imaginary
 # dump            1 all dcd ${dcdfreq} ${outputname}.dcd
 # dump_modify     1 unwrap yes
 dump            2 all custom ${dcdfreq} ${outputname}.dump id type x y z vx vy vz ix iy iz

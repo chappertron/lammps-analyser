@@ -11,5 +11,6 @@ compute my_chunk all chunk/atom type
 thermo v_s
 thermo 100
 thermo_style custom f_non_existent
+lattice fcc ${lat}
 run 1000    
 

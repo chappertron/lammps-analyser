@@ -20,7 +20,7 @@ variable        inputname  index startnemd
 variable        outputname string nemd1.TH${Thot}.TC${Tcold}
 # variable        outputname index run3-113
 
-# Define simulation conditios
+# Define simulation conditions
 units           real
 boundary        p p p
 atom_style      full
@@ -107,7 +107,7 @@ fix shakew water rattle 0.00001 200 0 b 1 a 1 # FB Shake Water
 
 thermo          ${thermofreq}
 
-thermo_style    custom step time etotal pe ke temp press pxx pyy pzz vol lx ly lz atoms density f_thermostatH f_thermostatC c_T_hot c_T_cold  c_mymom[*] c_mymomwater[*]
+thermo_style    custom step time etotal pe ke temp press pxx pyy pzz vol lx ly lz atoms density f_thermostatH f_thermostatC c_T_hot c_T_cold  c_mymom[*] c_mymomwater[*] v_thermofreq 
 # dump            1 all dcd ${dcdfreq} ${outputname}.dcd
 # dump_modify     1 unwrap yes
 dump            2 all custom ${dcdfreq} ${outputname}.dump id type x y z vx vy vz ix iy iz
