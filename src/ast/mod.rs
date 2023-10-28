@@ -1,6 +1,7 @@
 //! Convert the treesiterr trees into an AST.
 
 pub mod expressions;
+pub mod from_node;
 use std::fmt::Display;
 
 use tree_sitter::{Node, Point, Tree};
@@ -216,8 +217,21 @@ pub enum NamedCommand {
 }
 
 impl NamedCommand {
-    pub fn from_node(_node: &Node, _text: &[u8]) -> NamedCommand {
-        todo!()
+    pub fn from_node(node: &Node, text: &[u8]) -> NamedCommand {
+        match node.kind() {
+            "fix" => NamedCommand::Fix(FixDef::from_node(&node.child(0).unwrap(), text)),
+            "compute" => NamedCommand::Compute,
+            "style" => NamedCommand::Style,
+            "modify" => NamedCommand::Modify,
+            "atom_style" => NamedCommand::AtomStyle,
+            "boundary" => NamedCommand::Boundary,
+            "variable" => NamedCommand::VariableDef,
+            "thermo_style" => NamedCommand::ThermoStyle,
+            "thermo" => NamedCommand::Thermo,
+            "units" => NamedCommand::Units,
+            "run" => NamedCommand::Run,
+            _ => panic!("Unknown named command"),
+        }
     }
 }
 
