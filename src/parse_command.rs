@@ -29,6 +29,15 @@ pub enum InvalidArguments {
     #[error("{0}")]
     /// Error for specific fixes
     Custom(String),
+
+    #[error("{} is not a valid keyword for fix {}", kwarg, fix_style)]
+    InvalidKeyword { kwarg: String, fix_style: FixStyle },
+    #[error("Invalid option `{}` for keyword `{}`. Valid options: [{}].", kwarg, provided,options.join(","))]
+    InvalidOption {
+        kwarg: String,
+        provided: String,
+        options: Vec<String>,
+    },
 }
 
 /// Parse
@@ -46,8 +55,23 @@ pub fn parse_fix(fix: FixDef) -> Result<(), InvalidArguments> {
     match style {
         FixStyle::Nve => parse_no_args(&fix),
         FixStyle::Nvt => parse_nh_fixes(&fix),
+        FixStyle::AveChunk => check_n_positional(&fix, 5),
 
-        _ => todo!("Parsing for this fix style is not yet implemented."),
+        _ => Err(InvalidArguments::Custom(
+            "Parsing for this fix style is not yet implemented.".into(),
+        )),
+    }
+}
+
+/// Parse Fix with at least n positional arguments
+fn check_n_positional(fix: &FixDef, n_args: usize) -> Result<(), InvalidArguments> {
+    if fix.args.len() < n_args {
+        Err(InvalidArguments::IncorrectNumberArguments {
+            provided: n_args + 3,
+            expected: n_args,
+        })
+    } else {
+        Ok(())
     }
 }
 
@@ -59,35 +83,145 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArguments> {
     // Iterate through and check validity of the argument
     let mut iter = args.iter();
 
+    let is_barostatting = matches!(fix.fix_style, FixStyle::Npt | FixStyle::Nph);
     // Try either the LAMMPS way or to use peek with a while let loop?
-
+    let barostat_only = |kwarg: &str| {
+        if !is_barostatting {
+            Err(InvalidArguments::InvalidKeyword {
+                kwarg: kwarg.to_string(),
+                fix_style: fix.fix_style,
+            })
+        } else {
+            Ok(())
+        }
+    };
     while let Some(arg) = iter.next() {
         match arg {
-            Argument::ArgName(kwarg) => {
-                // TODO Convert into match block
-                if kwarg == "temp" {
-                    // TODO check if there are 3 more elements
-                    kwarg_expected_floats(&mut iter, kwarg, 3, "<Tstart> <Tstop> <Tdamp>")?;
-                } else if matches!(
+            Argument::ArgName(kwarg) if kwarg == "temp" => {
+                // TODO check if there are 3 more elements
+                kwarg_expected_floats(&mut iter, kwarg, 3, "<Tstart> <Tstop> <Tdamp>")?;
+            }
+            Argument::ArgName(kwarg)
+                if matches!(
                     kwarg.as_ref(),
                     "iso" | "aniso" | "tri" | "x" | "y" | "z" | "xy" | "xz" | "yz"
-                ) {
-                    if !matches!(fix.fix_style, FixStyle::Npt | FixStyle::Nph) {
-                        Err(InvalidArguments::Custom(format!(
-                            "{} is not a valid keyword for fix {}",
-                            kwarg, fix.fix_style
-                        )))?
-                    }
-                    kwarg_expected_floats(&mut iter, kwarg, 3, "<Pstart> <Pstop> <Pdamp>")?;
-                } else {
-                    todo!("Other keyword arguments are not yet implemented.")
-                }
+                ) =>
+            {
+                kwarg_expected_floats(&mut iter, kwarg, 3, "<Pstart> <Pstop> <Pdamp>")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "couple" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_enum(&mut iter, kwarg, 1, &["none", "xyz", "xy", "xz", "yz"])?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "tchain" => {
+                kwarg_expected_floats(&mut iter, kwarg, 1, "<N> chain.")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "pchain" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_floats(&mut iter, kwarg, 1, "<N> chain.")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "mtk" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "tloop" => {
+                kwarg_expected_floats(&mut iter, kwarg, 1, "<N> sub-cycles")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "ploop" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_floats(&mut iter, kwarg, 1, "<N> sub-cycles")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "nreset" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_floats(&mut iter, kwarg, 1, "<N> reset")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "drag" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_floats(&mut iter, kwarg, 1, "<Df> drag factor")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "ptemp" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_floats(&mut iter, kwarg, 1, "<Ttarget>")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "dilate" => {
+                barostat_only(kwarg)?;
+                // TODO convert to a group
+                kwarg_expected_str(&mut iter, kwarg, 1, "<dilate-group-ID>")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "scalexy" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "scaleyz" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "scalexz" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
             }
 
-            _ => todo!(),
+            Argument::ArgName(kwarg) if kwarg == "flip" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
+            }
+
+            Argument::ArgName(kwarg) if kwarg == "fixedpoint" => {
+                barostat_only(kwarg)?;
+                kwarg_expected_floats(&mut iter, kwarg, 1, "<x> <y> <z>")?;
+            }
+            Argument::ArgName(kwarg) if kwarg == "update" => {
+                kwarg_expected_enum(&mut iter, kwarg, 1, &["dipole", "dipole/dlm"])?
+            }
+
+            Argument::ArgName(kwarg) => Err(InvalidArguments::Custom(format!(
+                "Unknown kwarg argument: {}",
+                kwarg
+            )))?,
+
+            _ => Err(InvalidArguments::Custom(format!(
+                "Unknown argument: {}",
+                arg
+            )))?,
         }
     }
 
+    Ok(())
+}
+
+/// Parse n keywords that match in the provided slice
+fn kwarg_expected_enum<'a>(
+    iter: &mut impl Iterator<Item = &'a Argument>,
+    kwarg: &str,
+    n_args: usize,
+    options: &[&str],
+) -> Result<(), InvalidArguments> {
+    for i in 0..n_args {
+        if let Some(x) = iter.next() {
+            match x {
+                Argument::ArgName(x) => {
+                    if !options.contains(&x.as_ref()) {
+                        Err(InvalidArguments::InvalidOption {
+                            kwarg: kwarg.into(),
+                            provided: x.to_string(),
+                            options: options.iter().map(|x| x.to_string()).collect(),
+                        })?
+                    }
+                }
+                _ => Err(InvalidArguments::IncorrectType {
+                    expected: "string-like".into(),
+                    provided: x.to_string(),
+                })?,
+            }
+        } else {
+            Err(InvalidArguments::MissingKwargField {
+                kwarg: kwarg.into(),
+                expected: format!("One of: {}.", options.join(", ")),
+                n_expected: n_args,
+                n_provided: i,
+            })?
+        }
+    }
     Ok(())
 }
 
@@ -122,6 +256,61 @@ fn kwarg_expected_floats<'a>(
     Ok(())
 }
 
+fn kwarg_expected_bool<'a>(
+    iter: &mut impl Iterator<Item = &'a Argument>,
+    kwarg: &str,
+    n_expected: usize,
+    expected_args: &str,
+) -> Result<(), InvalidArguments> {
+    for i in 0..n_expected {
+        if let Some(x) = iter.next() {
+            match x {
+                Argument::Bool(_) => (),
+                _ => Err(InvalidArguments::IncorrectType {
+                    expected: "bool".into(),
+                    provided: x.to_string(),
+                })?,
+            };
+        } else {
+            Err(InvalidArguments::MissingKwargField {
+                kwarg: kwarg.into(),
+                n_expected,
+                n_provided: i,
+                expected: expected_args.into(),
+            })?
+        }
+    }
+
+    Ok(())
+}
+
+fn kwarg_expected_str<'a>(
+    iter: &mut impl Iterator<Item = &'a Argument>,
+    kwarg: &str,
+    n_expected: usize,
+    expected_args: &str,
+) -> Result<(), InvalidArguments> {
+    for i in 0..n_expected {
+        if let Some(x) = iter.next() {
+            match x {
+                Argument::ArgName(_) => (),
+                _ => Err(InvalidArguments::IncorrectType {
+                    expected: "string".into(),
+                    provided: x.to_string(),
+                })?,
+            };
+        } else {
+            Err(InvalidArguments::MissingKwargField {
+                kwarg: kwarg.into(),
+                n_expected,
+                n_provided: i,
+                expected: expected_args.into(),
+            })?
+        }
+    }
+
+    Ok(())
+}
 // fn kwarg_expected_float_expr(
 //     &mut iter: impl Iterator,
 //     kwarg: &str,
@@ -248,6 +437,22 @@ mod tests {
         assert_eq!(fix.fix_id.name, "NPT");
         assert_eq!(fix.group_id, "all");
         assert_eq!(fix.fix_style, FixStyle::Npt);
+        assert!(!fix.args.is_empty());
+
+        assert_eq!(dbg!(parse_nh_fixes(&fix)), Ok(()));
+    }
+
+    #[test]
+    fn complicated_nph() {
+        let mut parser = setup_parser();
+        let text = "fix 2 ice nph x 1.0 1.0 0.5 y 2.0 2.0 0.5 z 3.0 3.0 0.5 yz 0.1 0.1 0.5 xz 0.2 0.2 0.5 xy 0.3 0.3 0.5 nreset 1000";
+        let tree = parser.parse(text, None).unwrap();
+        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let fix = FixDef::from_node(&node, text.as_bytes());
+
+        assert_eq!(fix.fix_id.name, "2");
+        assert_eq!(fix.group_id, "ice");
+        assert_eq!(fix.fix_style, FixStyle::Nph);
         assert!(!fix.args.is_empty());
 
         assert_eq!(dbg!(parse_nh_fixes(&fix)), Ok(()));
