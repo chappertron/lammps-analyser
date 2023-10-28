@@ -1,8 +1,9 @@
-#[allow(non_camel_case_types)] // For some types
-
+use strum::Display;
 /// Enum for all the possible styles of a fix.
 /// TODO Seperate by package
-#[derive(Default, Debug, Eq, PartialEq, Clone, Copy)]
+/// TODO do proper display, rather than this style
+#[allow(non_camel_case_types)] // For some types
+#[derive(Default, Debug, Eq, PartialEq, Clone, Copy, Display)]
 pub enum FixStyle {
     AccelerateCos,
     Acks2Reaxff,

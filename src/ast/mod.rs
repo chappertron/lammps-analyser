@@ -186,11 +186,10 @@ impl Display for Argument {
             Argument::Float(x) => write!(f, "float: {x}"),
             Argument::Bool(x) => write!(f, "bool: {x}"),
             Argument::ArgName(x) => write!(f, "argname: {x}"),
-            Argument::VarCurly(x) => write!(f, "var_curly: {x}"),
-            Argument::VarRound(x) => write!(f, "var_round: {x}"),
+            Argument::VarCurly(x) => write!(f, "var_curly: ${{{0}}}", x.name),
+            Argument::VarRound(x) => write!(f, "var_round: $({x})"),
             // TODO properly implement string
             Argument::String => write!(f, "string"),
-
             Argument::Expression(x) => write!(f, "expression: {x}"),
             Argument::Group => write!(f, "group"),
             Argument::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),

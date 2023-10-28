@@ -3,7 +3,6 @@
 // are no -- flags. I think I will need to use a custom parser :(
 
 // use clap::Parser;
-use itertools::Itertools;
 
 use thiserror::Error;
 
@@ -27,6 +26,9 @@ pub enum InvalidArguments {
     },
     #[error("Incorrect argument type. Expected: {expected}. Provided: {provided}.")]
     IncorrectType { expected: String, provided: String },
+    #[error("{0}")]
+    /// Error for specific fixes
+    Custom(String),
 }
 
 /// Parse
@@ -55,36 +57,7 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArguments> {
     let args = &fix.args;
 
     // Iterate through and check validity of the argument
-    let mut iter = args.iter().multipeek();
-
-    // for arg in iter {
-    //     match arg {
-    //         Argument::ArgName(kwarg) => {
-    //             if kwarg == "temp" {
-    //                 if let Some(x) = iter.peek() {
-    //                     match x {
-    //                         Argument::Float(_) => Ok(()),
-    //                         Argument::VarRound(_) => Ok(()),
-    //                         Argument::VarCurly(_) => Ok(()),
-    //                         _ => Err(InvalidArguments::IncorrectType {
-    //                             expected: "float".into(),
-    //                             provided: stringify!(x).into(),
-    //                         }),
-    //                     };
-    //                 } else {
-    //                     return Err(InvalidArguments::MissingKwargField {
-    //                         kwarg: "temp".into(),
-    //                         expected: "<Tstart> <Tstop> <Tdamp> ".into(),
-    //                     });
-    //                 }
-    //             } else {
-    //                 todo!()
-    //             }
-    //         }
-
-    //         _ => todo!(),
-    //     }
-    // }
+    let mut iter = args.iter();
 
     // Try either the LAMMPS way or to use peek with a while let loop?
 
@@ -94,26 +67,18 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArguments> {
                 // TODO Convert into match block
                 if kwarg == "temp" {
                     // TODO check if there are 3 more elements
-                    for i in 0..3 {
-                        if let Some(x) = iter.next() {
-                            match x {
-                                Argument::Float(_) => (),
-                                Argument::VarRound(_) => (),
-                                Argument::VarCurly(_) => (),
-                                _ => Err(InvalidArguments::IncorrectType {
-                                    expected: "float".into(),
-                                    provided: x.to_string(),
-                                })?,
-                            };
-                        } else {
-                            Err(InvalidArguments::MissingKwargField {
-                                kwarg: "temp".into(),
-                                n_expected: 3,
-                                n_provided: i,
-                                expected: "<Tstart> <Tstop> <Tdamp> ".into(),
-                            })?
-                        }
+                    kwarg_expected_floats(&mut iter, kwarg, 3, "<Tstart> <Tstop> <Tdamp>")?;
+                } else if matches!(
+                    kwarg.as_ref(),
+                    "iso" | "aniso" | "tri" | "x" | "y" | "z" | "xy" | "xz" | "yz"
+                ) {
+                    if !matches!(fix.fix_style, FixStyle::Npt | FixStyle::Nph) {
+                        Err(InvalidArguments::Custom(format!(
+                            "{} is not a valid keyword for fix {}",
+                            kwarg, fix.fix_style
+                        )))?
                     }
+                    kwarg_expected_floats(&mut iter, kwarg, 3, "<Pstart> <Pstop> <Pdamp>")?;
                 } else {
                     todo!("Other keyword arguments are not yet implemented.")
                 }
@@ -125,6 +90,44 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArguments> {
 
     Ok(())
 }
+
+fn kwarg_expected_floats<'a>(
+    iter: &mut impl Iterator<Item = &'a Argument>,
+    kwarg: &str,
+    n_expected: usize,
+    expected_args: &str,
+) -> Result<(), InvalidArguments> {
+    for i in 0..n_expected {
+        if let Some(x) = iter.next() {
+            match x {
+                Argument::Float(_) => (),
+                Argument::Int(_) => (),
+                Argument::VarRound(_) => (),
+                Argument::VarCurly(_) => (),
+                _ => Err(InvalidArguments::IncorrectType {
+                    expected: "float".into(),
+                    provided: x.to_string(),
+                })?,
+            };
+        } else {
+            Err(InvalidArguments::MissingKwargField {
+                kwarg: kwarg.into(),
+                n_expected,
+                n_provided: i,
+                expected: expected_args.into(),
+            })?
+        }
+    }
+
+    Ok(())
+}
+
+// fn kwarg_expected_float_expr(
+//     &mut iter: impl Iterator,
+//     kwarg: &str,
+//     n_expected: usize,
+// ) -> Result<(), InvalidArguments> {
+// }
 
 /// Parse a fix that does not expect any arguments
 pub fn parse_no_args(fix: &FixDef) -> Result<(), InvalidArguments> {
@@ -221,7 +224,7 @@ mod tests {
     #[test]
     fn valid_nvt() {
         let mut parser = setup_parser();
-        let text = "fix NVT all nvt temp 1.0 $(v_T*1.5) $(100*dt)";
+        let text = "fix NVT all nvt temp 1 $(v_T*1.5) $(100*dt)";
         let tree = parser.parse(text, None).unwrap();
         let node = tree.root_node().child(0).unwrap().child(0).unwrap();
         let fix = FixDef::from_node(&node, text.as_bytes());
@@ -232,6 +235,22 @@ mod tests {
         assert!(!fix.args.is_empty());
 
         assert_eq!(parse_nh_fixes(&fix), Ok(()));
+    }
+
+    #[test]
+    fn valid_npt() {
+        let mut parser = setup_parser();
+        let text = "fix NPT all npt temp 1 $(v_T*1.5) $(100*dt) iso 1 $(v_p*1.5) ${pdamp}";
+        let tree = parser.parse(text, None).unwrap();
+        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let fix = FixDef::from_node(&node, text.as_bytes());
+
+        assert_eq!(fix.fix_id.name, "NPT");
+        assert_eq!(fix.group_id, "all");
+        assert_eq!(fix.fix_style, FixStyle::Npt);
+        assert!(!fix.args.is_empty());
+
+        assert_eq!(dbg!(parse_nh_fixes(&fix)), Ok(()));
     }
 
     #[test]
