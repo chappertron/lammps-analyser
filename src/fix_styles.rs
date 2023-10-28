@@ -2,6 +2,7 @@
 
 /// Enum for all the possible styles of a fix.
 /// TODO Seperate by package
+#[derive(Default, Debug, Eq, PartialEq)]
 pub enum FixStyle {
     AccelerateCos,
     Acks2Reaxff,
@@ -124,6 +125,7 @@ pub enum FixStyle {
     NptSphere,
     Numdiff,
     NumdiffVirial,
+    #[default]
     Nve,
     NveAsphere,
     NveAsphereNoforce,

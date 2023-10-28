@@ -26,6 +26,8 @@ tree-sitter = "0.20.10"
 tree-sitter-lammps = { path = "../tree-sitter-lammps" } # TODO Work out how to de capitalise this
 
 [[bin]]
+# TODO rename to lmp_lsp
+# TODO Or make a subcommand of lammps_analyser bin
 name = "lsp"
 # TODO make this a sensible path.
 path = "./src/lsp/tower.rs"

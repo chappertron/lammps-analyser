@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! A minimal example LSP server that can only respond to the `gotoDefinition` request. To use
 //! this example, execute it and then send an `initialize` request.
 //!
@@ -60,7 +61,7 @@ fn main() -> Result<(), Box<dyn Error + Sync + Send>> {
     let (connection, io_threads) = Connection::stdio();
 
     // Run the server and wait for the two threads to end (typically by trigger LSP Exit event).
-    let server_capabilities = serde_json::to_value(&ServerCapabilities {
+    let server_capabilities = serde_json::to_value(ServerCapabilities {
         // Can only do full parses
         text_document_sync: Some(TextDocumentSyncCapability::Kind(TextDocumentSyncKind::FULL)),
         definition_provider: Some(OneOf::Left(true)),
