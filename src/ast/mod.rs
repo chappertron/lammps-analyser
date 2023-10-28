@@ -152,7 +152,7 @@ impl Argument {
             )),
             "expression" => Ok(Self::Expression(
                 // TODO get rid of this unwrap
-                expressions::Expression::parse_expression(&node, text)
+                expressions::Expression::parse_expression(node, text)
                     .map_err(|x| format!("{}", x))?,
             )),
             "string" => Ok(Self::String),

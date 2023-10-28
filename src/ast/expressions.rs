@@ -28,6 +28,7 @@ pub enum Expression {
     ThermoKeyword(String),
 }
 
+#[allow(clippy::enum_variant_names)]
 #[derive(Debug, Error)]
 pub(crate) enum ParseExprError {
     #[error("Could not parse text as UTF-8 {0}")]
@@ -76,12 +77,9 @@ impl Expression {
                 BinaryOp::try_from(node.child(1).unwrap().utf8_text(text)?).unwrap(),
                 Box::new(Self::parse_expression(&node.child(2).unwrap(), text)?),
             )),
-            "int" => Ok(Self::Int(isize::from_str_radix(
-                &node.utf8_text(text)?,
-                10,
-            )?)),
+            "int" => Ok(Self::Int(node.utf8_text(text)?.parse()?)),
 
-            "float" => Ok(Self::Float(str::parse(&node.utf8_text(text)?)?)),
+            "float" => Ok(Self::Float(node.utf8_text(text)?.parse()?)),
 
             // Just go into next level down
             "expression" => Ok(Self::parse_expression(&node.child(0).unwrap(), text)?),

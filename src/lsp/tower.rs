@@ -1,11 +1,10 @@
-use std::str::FromStr;
-
+//! Alternative implementation for the lsp using the `tower-lsp` crate.
 use dashmap::DashMap;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
 use lammps_analyser::identifinder::IdentiFinder;
 use lammps_analyser::utils::{get_symbol_at_point, point_to_position, position_to_point};
-///! Alternative implementation for the lsp using the `tower-lsp` crate.
+use std::str::FromStr;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
@@ -186,6 +185,7 @@ impl LanguageServer for Backend {
         // Assuming the identifier is properly updated
         // let symbols = ;
         // need to flatten???
+        #[allow(deprecated)] // Used for the `deprecated` field of the `SymbolInformation` struct
         let symbols = self
             .identifinder
             .read()
@@ -206,8 +206,9 @@ impl LanguageServer for Backend {
                         },
                     },
                     container_name: None,
-                    deprecated: None,
                     tags: None,
+
+                    deprecated: None,
                 })
                 // .collect::<Vec<_>>()
             })
@@ -276,7 +277,7 @@ impl LanguageServer for Backend {
         let tree = self.tree_map.get(&uri.to_string()).unwrap();
         let mut tree_cursor = tree.walk();
 
-        let node = if let Some(_) = tree_cursor.goto_first_child_for_point(ts_point) {
+        let node = if tree_cursor.goto_first_child_for_point(ts_point).is_some() {
             tree_cursor.node()
         } else {
             return Ok(None);

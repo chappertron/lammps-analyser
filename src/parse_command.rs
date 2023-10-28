@@ -7,7 +7,6 @@
 use thiserror::Error;
 
 use crate::ast::FixDef;
-use crate::fix_styles::FixStyle;
 
 #[derive(Debug, Error, PartialEq, Eq)]
 pub enum InvalidArguments {
@@ -91,7 +90,8 @@ pub fn parse_no_args(fix: &FixDef) -> Result<(), InvalidArguments> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tree_sitter::{Node, Parser, Query, QueryCursor, Tree};
+    use crate::fix_styles::FixStyle;
+    use tree_sitter::{Parser, Query, QueryCursor};
 
     fn setup_parser() -> Parser {
         let mut parser = Parser::new();
