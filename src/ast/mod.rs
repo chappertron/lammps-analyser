@@ -24,15 +24,15 @@ pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Result<Ast, FromNodeError> {
     // println!("{}", tree.root_node().to_sexp());
     //while cursor.goto_first_child() {
     cursor.goto_first_child();
-    println!("{}", cursor.node().to_sexp());
+    // println!("{}", cursor.node().to_sexp());
     loop {
         // Advance cursor and skip if a comment
         if cursor.goto_first_child() && cursor.node().kind() != "comment" {
-            println!("{}", cursor.node().to_sexp());
-            println!("{}", cursor.node().to_sexp());
+            // println!("{}", cursor.node().to_sexp());
+            // println!("{}", cursor.node().to_sexp());
 
             let cmd = if NamedCommand::try_from(cursor.node().kind()).is_ok() {
-                println!("{}", cursor.node().to_sexp());
+                // println!("{}", cursor.node().to_sexp());
                 // TODO add arguments
                 Command::NamedCommand(NamedCommand::from_node(&cursor.node(), text)?)
             } else {
@@ -79,17 +79,15 @@ impl FromNode for GenericCommand {
         let end_byte = node.end_byte();
 
         let mut args = vec![];
-        println!("Debug GenericCommand");
 
-        assert!(cursor.node() == *node);
+        debug_assert!(cursor.node() == *node);
 
         cursor.goto_first_child();
 
         // TODO use a field in the TS grammar
         let name = cursor.node().utf8_text(text)?.to_string();
-        // dbg!(&name);
+
         while cursor.goto_next_sibling() {
-            // dbg!(cursor.node().to_sexp());
             for node in cursor.node().children(&mut cursor) {
                 args.push(Argument::from_node(&node, text)?);
             }
@@ -243,14 +241,11 @@ impl FromNode for FixDef {
     /// TODO Hand a cursor instead???
     // TODO Remove unwraps
     fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
-        dbg!(node.to_sexp());
         let mut cursor = node.walk();
-        dbg!(cursor.node().to_sexp());
+
         // TODO handle case this is false
         cursor.goto_first_child();
-        dbg!(cursor.node().to_sexp());
         let mut children = node.children(&mut cursor);
-        dbg!(node.to_sexp());
 
         // skip the fix keyword
         children.next();
@@ -264,14 +259,10 @@ impl FromNode for FixDef {
             .unwrap();
 
         let args = if let Some(args) = children.next() {
-            dbg!(args.to_sexp());
             // No longer needed beyond args. Lets us use cursor again
             drop(children);
             args.children(&mut cursor)
-                .map(|x| {
-                    dbg!(x.to_sexp());
-                    Argument::from_node(&x, text)
-                })
+                .map(|x| Argument::from_node(&x, text))
                 .collect::<Result<Vec<_>, _>>()?
         } else {
             vec![]

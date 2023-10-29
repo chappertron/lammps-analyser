@@ -41,7 +41,7 @@ pub enum InvalidArguments {
 }
 
 /// Parse
-pub fn parse_fix(fix: FixDef) -> Result<(), InvalidArguments> {
+pub fn parse_fix(fix: &FixDef) -> Result<(), InvalidArguments> {
     // if args.len() < 3 {
     //     return Err(InvalidArguments::IncorrectNumberArguments {
     //         provided: args.len(),
@@ -53,9 +53,9 @@ pub fn parse_fix(fix: FixDef) -> Result<(), InvalidArguments> {
     let style = fix.fix_style;
 
     match style {
-        FixStyle::Nve => parse_no_args(&fix),
-        FixStyle::Nvt => parse_nh_fixes(&fix),
-        FixStyle::AveChunk => check_n_positional(&fix, 5),
+        FixStyle::Nve => parse_no_args(fix),
+        FixStyle::Nvt => parse_nh_fixes(fix),
+        FixStyle::AveChunk => check_n_positional(fix, 5),
 
         _ => Err(InvalidArguments::Custom(
             "Parsing for this fix style is not yet implemented.".into(),

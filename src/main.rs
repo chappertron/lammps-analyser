@@ -10,12 +10,14 @@ use anyhow::Result;
 
 use clap::Parser as ClapParser;
 use lammps_analyser::{
+    ast::{ts_to_ast, Ast, Command, NamedCommand},
     check_styles::check_styles,
     diagnostic_report::ReportSimple,
     error_finder::ErrorFinder,
     identifinder::{unused_variables, IdentiFinder},
     issues::Issue,
     lammps_errors::{LammpsError, Warnings},
+    parse_command,
 };
 use owo_colors::OwoColorize;
 use std::{
@@ -27,8 +29,10 @@ use tree_sitter::Parser;
 #[derive(Debug, clap::Parser)]
 
 struct Cli {
+    /// LAMMPS input script to check
     source: String,
     /// Output the parsed tree to a dot file
+    /// This can be used to visualise the tree with e.g. graphviz
     #[clap(long)]
     output_tree: bool,
     /// Prints more complicated reports that highlight error locations
@@ -62,6 +66,27 @@ fn main() -> Result<()> {
     if cli.output_tree {
         let dot_file = File::create("tree.dot")?;
         tree.print_dot_graph(&dot_file);
+    }
+
+    let ast = ts_to_ast(&tree, source_bytes)?;
+
+    // Parsing fixes
+
+    let parsed_fixes = ast
+        .commands
+        .iter()
+        .filter_map(|command| {
+            if let Command::NamedCommand(NamedCommand::Fix(fix)) = command {
+                Some(parse_command::parse_fix(&fix))
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    for fix in parsed_fixes {
+        if let Err(err) = fix {
+            dbg!(err);
+        }
     }
 
     let identifinder = IdentiFinder::new(&tree, source_bytes)?;
