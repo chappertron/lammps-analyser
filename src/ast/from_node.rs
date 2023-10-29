@@ -1,19 +1,34 @@
 use thiserror::Error;
 use tree_sitter::{Node, TreeCursor};
 
-trait FromNode: Sized {
+use super::expressions::ParseExprError;
+
+pub trait FromNode: Sized {
     fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError>;
 }
 
 // TODO: Just wrap expression parse error??
 #[derive(Debug, Error, Clone)]
-enum FromNodeError {
+pub enum FromNodeError {
     #[error("Could not parse text as UTF-8 {0}")]
     Utf8Error(std::str::Utf8Error),
     #[error("Could not parse text as int {0}")]
     ParseIntError(std::num::ParseIntError),
     #[error("Could not parse text as float {0}")]
     ParseFloatError(std::num::ParseFloatError),
+    #[error("Unknown command {0}")]
+    UnknownCommand(&'static str),
+    #[error("Unknown {kind}: {name}")]
+    UnknownCustom { kind: String, name: String },
+
+    #[error("{0}")]
+    ParseExpression(ParseExprError),
+}
+
+impl From<ParseExprError> for FromNodeError {
+    fn from(v: ParseExprError) -> Self {
+        Self::ParseExpression(v)
+    }
 }
 
 impl From<std::num::ParseFloatError> for FromNodeError {

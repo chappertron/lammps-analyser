@@ -47,8 +47,8 @@ impl Display for Expression {
 }
 
 #[allow(clippy::enum_variant_names)]
-#[derive(Debug, Error)]
-pub(crate) enum ParseExprError {
+#[derive(Debug, Error, Clone)]
+pub enum ParseExprError {
     #[error("Could not parse text as UTF-8 {0}")]
     Utf8Error(std::str::Utf8Error),
     #[error("Could not parse text as int {0}")]

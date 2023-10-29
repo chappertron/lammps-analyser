@@ -8,7 +8,16 @@ use tree_sitter::{Node, Point, Tree};
 
 use crate::{fix_styles::FixStyle, identifinder::Ident};
 
-pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Ast {
+use self::from_node::{FromNode, FromNodeError};
+
+#[derive(Debug, Clone, PartialEq)]
+/// A list of commands
+/// Perhaps not truly an AST
+pub struct Ast {
+    pub commands: Vec<Command>,
+}
+
+pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Result<Ast, FromNodeError> {
     let mut cursor = tree.walk();
 
     let mut commands = vec![];
@@ -20,14 +29,14 @@ pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Ast {
         // Advance cursor and skip if a comment
         if cursor.goto_first_child() && cursor.node().kind() != "comment" {
             println!("{}", cursor.node().to_sexp());
+            println!("{}", cursor.node().to_sexp());
 
-            let cmd = if let Ok(cmd_type) = NamedCommand::try_from(cursor.node().kind()) {
+            let cmd = if NamedCommand::try_from(cursor.node().kind()).is_ok() {
+                println!("{}", cursor.node().to_sexp());
                 // TODO add arguments
-                Command::NamedCommand(cmd_type)
+                Command::NamedCommand(NamedCommand::from_node(&cursor.node(), text)?)
             } else {
-                Command::GenericCommand(
-                    GenericCommand::from_node(&cursor.node(), &mut cursor, text).unwrap(),
-                )
+                Command::GenericCommand(GenericCommand::from_node(&cursor.node(), text)?)
             };
 
             commands.push(cmd);
@@ -41,23 +50,16 @@ pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Ast {
         }
     }
 
-    Ast { commands }
+    Ok(Ast { commands })
 }
 
-#[derive(Debug)]
-/// A list of commands
-/// Perhaps not truly an AST
-pub struct Ast {
-    pub commands: Vec<Command>,
-}
-
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Command {
     GenericCommand(GenericCommand),
     NamedCommand(NamedCommand),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct GenericCommand {
     pub name: String,
     pub args: Vec<Argument>,
@@ -67,12 +69,9 @@ pub struct GenericCommand {
     pub end_byte: usize,
 }
 
-impl GenericCommand {
-    fn from_node(
-        node: &Node,
-        cursor: &mut tree_sitter::TreeCursor,
-        text: &[u8],
-    ) -> Result<Self, String> {
+impl FromNode for GenericCommand {
+    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+        let mut cursor = node.walk();
         // let kind = node.kind().to_string();
         let start = node.start_position();
         let end = node.end_position();
@@ -87,11 +86,11 @@ impl GenericCommand {
         cursor.goto_first_child();
 
         // TODO use a field in the TS grammar
-        let name = cursor.node().utf8_text(text).unwrap().to_string();
+        let name = cursor.node().utf8_text(text)?.to_string();
         // dbg!(&name);
         while cursor.goto_next_sibling() {
             // dbg!(cursor.node().to_sexp());
-            for node in cursor.node().children(cursor) {
+            for node in cursor.node().children(&mut cursor) {
                 args.push(Argument::from_node(&node, text)?);
             }
         }
@@ -129,53 +128,49 @@ pub enum Argument {
     UnderscoreIdent(Ident),
 }
 
-impl Argument {
+impl FromNode for Argument {
     fn from_node(
         node: &Node,
         // _cursor: &mut tree_sitter::TreeCursor,
         text: &[u8],
-    ) -> Result<Self, String> {
+    ) -> Result<Self, FromNodeError> {
         // TODO make these variants more complete.
         //.child(0).unwrap()
         // Did removing above from match fix things???
         match node.kind() {
-            "int" => Ok(Self::Int(
-                node.utf8_text(text)
-                    .map_err(|x| format!("{}", x))?
-                    .parse::<isize>()
-                    // TODO get rid of unwrap ->  add proper error handling to `from_node`.
-                    .map_err(|x| format!("{}", x))?,
-            )),
-            "float" => Ok(Self::Float(
-                node.utf8_text(text)
-                    .map_err(|x| format!("{}", x))?
-                    .parse::<f64>()
-                    // TODO get rid of unwrap ->  add proper error handling to `from_node`.
-                    .map_err(|x| format!("{}", x))?,
-            )),
+            "int" => Ok(Self::Int(node.utf8_text(text)?.parse::<isize>()?)),
+            "float" => Ok(Self::Float(node.utf8_text(text)?.parse::<f64>()?)),
+            "bool" => Ok(Self::Bool(match node.utf8_text(text)? {
+                "on" | "yes" | "true" => true,
+                "off" | "no" | "false" => false,
+                name => Err(FromNodeError::UnknownCustom {
+                    kind: "Bool Variant".to_owned(),
+                    name: format!("{name}"),
+                })?,
+            })),
             // TODO Expressions not wrapped in varround are not valid???
-            "expression" => Ok(Self::Expression(
-                // TODO get rid of this unwrap
-                expressions::Expression::parse_expression(node, text)
-                    .map_err(|x| format!("{}", x))?,
-            )),
+            "expression" => Ok(Self::Expression(expressions::Expression::parse_expression(
+                node, text,
+            )?)),
             "string" => Ok(Self::String),
             "group" => Ok(Self::Group),
-            "underscore_ident" => Ok(Self::UnderscoreIdent(
-                Ident::new(&node.child(0).unwrap(), text).map_err(|x| format!("{}", x))?,
-            )),
-            "var_curly" => Ok(Self::VarCurly(
-                Ident::new(&node.child(1).unwrap(), text).map_err(|x| format!("{}", x))?,
-            )),
-            "var_round" => Ok(Self::VarRound(
-                expressions::Expression::parse_expression(&node.child(1).unwrap(), text)
-                    .map_err(|x| format!("{}", x))?,
-            )),
+            "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
+                &node.child(0).unwrap(),
+                text,
+            )?)),
+            "var_curly" => Ok(Self::VarCurly(Ident::new(&node.child(1).unwrap(), text)?)),
+            "var_round" => Ok(Self::VarRound(expressions::Expression::parse_expression(
+                &node.child(1).unwrap(),
+                text,
+            )?)),
             "argname" => Ok(Self::ArgName(
                 //.child(0).unwrap()
                 node.utf8_text(text).unwrap().to_string(),
             )),
-            x => Err(format!("Unknown argument type: {}", x)),
+            x => Err(FromNodeError::UnknownCustom {
+                kind: "argument type".to_string(),
+                name: x.to_string(),
+            }),
         }
     }
 }
@@ -201,7 +196,7 @@ impl Display for Argument {
 /// Commands that have a special form in the tree sitter grammar
 /// TODO add arguments
 /// TODO Add command location
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum NamedCommand {
     Fix(FixDef),
     Compute,
@@ -216,21 +211,21 @@ pub enum NamedCommand {
     Run,
 }
 
-impl NamedCommand {
-    pub fn from_node(node: &Node, text: &[u8]) -> NamedCommand {
+impl FromNode for NamedCommand {
+    fn from_node(node: &Node, text: &[u8]) -> Result<NamedCommand, FromNodeError> {
         match node.kind() {
-            "fix" => NamedCommand::Fix(FixDef::from_node(&node.child(0).unwrap(), text)),
-            "compute" => NamedCommand::Compute,
-            "style" => NamedCommand::Style,
-            "modify" => NamedCommand::Modify,
-            "atom_style" => NamedCommand::AtomStyle,
-            "boundary" => NamedCommand::Boundary,
-            "variable" => NamedCommand::VariableDef,
-            "thermo_style" => NamedCommand::ThermoStyle,
-            "thermo" => NamedCommand::Thermo,
-            "units" => NamedCommand::Units,
-            "run" => NamedCommand::Run,
-            _ => panic!("Unknown named command"),
+            "fix" => Ok(NamedCommand::Fix(FixDef::from_node(&node, text)?)),
+            "compute" => Ok(NamedCommand::Compute),
+            "style" => Ok(NamedCommand::Style),
+            "modify" => Ok(NamedCommand::Modify),
+            "atom_style" => Ok(NamedCommand::AtomStyle),
+            "boundary" => Ok(NamedCommand::Boundary),
+            "variable" => Ok(NamedCommand::VariableDef),
+            "thermo_style" => Ok(NamedCommand::ThermoStyle),
+            "thermo" => Ok(NamedCommand::Thermo),
+            "units" => Ok(NamedCommand::Units),
+            "run" => Ok(NamedCommand::Run),
+            _ => Err(FromNodeError::UnknownCommand(node.kind())),
         }
     }
 }
@@ -244,24 +239,27 @@ pub struct FixDef {
     pub args: Vec<Argument>,
 }
 
-impl FixDef {
+impl FromNode for FixDef {
     /// TODO Hand a cursor instead???
     // TODO Remove unwraps
-    pub fn from_node(node: &Node, text: &[u8]) -> Self {
+    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+        dbg!(node.to_sexp());
         let mut cursor = node.walk();
+        dbg!(cursor.node().to_sexp());
         // TODO handle case this is false
         cursor.goto_first_child();
+        dbg!(cursor.node().to_sexp());
         let mut children = node.children(&mut cursor);
+        dbg!(node.to_sexp());
 
         // skip the fix keyword
         children.next();
-        let fix_id = Ident::new(&children.next().unwrap(), text).unwrap();
-        let group_id = children.next().unwrap().utf8_text(text).unwrap().into();
+        let fix_id = Ident::new(&children.next().unwrap(), text)?;
+        let group_id = children.next().unwrap().utf8_text(text)?.into();
         let fix_style = children
             .next()
             .unwrap()
-            .utf8_text(text)
-            .unwrap()
+            .utf8_text(text)?
             .try_into()
             .unwrap();
 
@@ -272,19 +270,19 @@ impl FixDef {
             args.children(&mut cursor)
                 .map(|x| {
                     dbg!(x.to_sexp());
-                    Argument::from_node(&x, text).unwrap()
+                    Argument::from_node(&x, text)
                 })
-                .collect()
+                .collect::<Result<Vec<_>, _>>()?
         } else {
             vec![]
         };
 
-        FixDef {
+        Ok(FixDef {
             fix_id,
             group_id,
             fix_style,
             args,
-        }
+        })
     }
 }
 
@@ -314,6 +312,7 @@ mod tests {
     use tree_sitter::Parser;
 
     use crate::ast::expressions::{BinaryOp, Expression};
+    use crate::ast::from_node::FromNode;
     use crate::ast::{Argument, FixDef};
     use crate::fix_styles::FixStyle;
     use crate::identifinder::{Ident, IdentType};
@@ -332,11 +331,14 @@ mod tests {
     #[test]
     fn test_ast() {
         let mut parser = setup_parser();
-        let source_bytes = include_bytes!("../../fix.lmp");
+        // let source_bytes = include_bytes!("../../fix.lmp");
+        let source_bytes = include_bytes!("../../in.nemd");
         let tree = parser.parse(source_bytes, None).unwrap();
 
         let ast = ts_to_ast(&tree, source_bytes);
-        dbg!(ast);
+        dbg!(ast.unwrap());
+
+        unimplemented!()
     }
 
     #[test]
@@ -357,7 +359,7 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            FixDef::from_node(&fix_node, source_bytes.as_slice()),
+            FixDef::from_node(&fix_node, source_bytes.as_slice()).unwrap(),
             FixDef {
                 fix_id: Ident {
                     name: "NVE".into(),
@@ -389,7 +391,7 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            FixDef::from_node(&fix_node, source_bytes.as_slice()),
+            FixDef::from_node(&fix_node, source_bytes.as_slice()).unwrap(),
             FixDef {
                 fix_id: Ident {
                     name: "NVT".into(),
