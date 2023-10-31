@@ -29,7 +29,7 @@ pub fn get_symbol_at_point<'a>(
     // Might've created something a little slow here...
     for (k, v) in symbols {
         for r in v.refs().iter() {
-            if *point >= r.start && *point <= r.end {
+            if *point >= r.start() && *point <= r.end() {
                 // TODO Return multiple if they exist here????
                 return Some(k);
             }

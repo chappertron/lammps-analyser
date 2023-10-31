@@ -274,8 +274,8 @@ pub fn unused_variables(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<Un
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[error(
             "{}:{}: {} {} `{}`",
-            ident.start.row + 1,
-            ident.start.column + 1,
+            ident.start().row + 1,
+            ident.start().column + 1,
             "Unused",
             ident.ident_type,
             ident.name
@@ -288,8 +288,8 @@ impl ReportSimple for UnusedIdent {
     fn make_simple_report(&self) -> String {
         format!(
             "{}:{}: {} {} `{}`",
-            self.ident.start.row + 1,
-            self.ident.start.column + 1,
+            self.ident.start().row + 1,
+            self.ident.start().column + 1,
             "Unused".bright_yellow(),
             self.ident.ident_type.bright_yellow(),
             self.ident.name
@@ -309,16 +309,17 @@ pub struct NameAndType {
     pub ident_type: IdentType,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 /// Identifiers for LAMMPS fixes, computes, and variables
 /// Hashing only uses the name and type, not locations
 pub struct Ident {
     pub name: String,
     pub ident_type: IdentType,
-    pub start: Point,
-    pub end: Point,
-    pub start_byte: usize,
-    pub end_byte: usize,
+    // pub start: Point,
+    // pub end: Point,
+    // pub start_byte: usize,
+    // pub end_byte: usize,
+    pub span: Range,
 }
 impl Ident {
     /// Parses the node and text into an Ident
@@ -337,20 +338,20 @@ impl Ident {
         Ok(Ident {
             name,
             ident_type,
-            start: node.start_position(),
-            end: node.end_position(),
-            start_byte: node.start_byte(),
-            end_byte: node.end_byte(),
+            span: node.range(),
         })
     }
 
     pub fn range(&self) -> Range {
-        Range {
-            start_byte: self.start_byte,
-            end_byte: self.end_byte,
-            start_point: self.start,
-            end_point: self.end,
-        }
+        self.span
+    }
+
+    pub fn start(&self) -> Point {
+        self.span.start_point
+    }
+
+    pub fn end(&self) -> Point {
+        self.span.end_point
     }
 
     pub fn underscore_ident(&self) -> String {
@@ -363,6 +364,22 @@ impl Ident {
         format!("{}{}", prefix, self.name)
     }
 }
+
+impl Default for Ident {
+    fn default() -> Self {
+        Ident {
+            name: Default::default(),
+            ident_type: Default::default(),
+            span: Range {
+                start_byte: 0,
+                end_byte: 0,
+                start_point: Default::default(),
+                end_point: Default::default(),
+            },
+        }
+    }
+}
+
 impl Display for Ident {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self.ident_type {
@@ -436,7 +453,11 @@ impl From<IdentType> for lsp_types::SymbolKind {
 }
 
 #[derive(Debug, Error, Clone)]
-#[error("{}:{}: {} {} `{}`",ident.start.row+1,ident.start.column+1,"Undefined",ident.ident_type,ident.name)]
+#[error("{}:{}: {} {} `{}`",
+        ident.span.start_point.row+1,
+        ident.span.start_point.column+1,
+        "Undefined",
+        ident.ident_type,ident.name)]
 pub struct UndefinedIdent {
     pub ident: Ident,
 }
@@ -445,8 +466,8 @@ impl ReportSimple for UndefinedIdent {
     fn make_simple_report(&self) -> String {
         format!(
             "{}:{}: {} {} `{}`",
-            self.ident.start.row + 1,
-            self.ident.start.column + 1,
+            self.ident.span.start_point.row + 1,
+            self.ident.span.start_point.column + 1,
             "Undefined".bright_red(),
             self.ident.ident_type.bright_red(),
             self.ident.name
@@ -458,8 +479,8 @@ impl From<UndefinedIdent> for lsp_types::Diagnostic {
     fn from(value: UndefinedIdent) -> Self {
         lsp_types::Diagnostic::new_simple(
             lsp_types::Range {
-                start: point_to_position(&value.ident.start),
-                end: point_to_position(&value.ident.end),
+                start: point_to_position(&value.ident.span.start_point),
+                end: point_to_position(&value.ident.span.end_point),
             },
             value.to_string(),
         )

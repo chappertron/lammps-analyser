@@ -82,12 +82,8 @@ fn main() -> Result<()> {
                 None
             }
         })
+        .filter_map(|x| x.err())
         .collect::<Vec<_>>();
-    for fix in parsed_fixes {
-        if let Err(err) = fix {
-            dbg!(err);
-        }
-    }
 
     let identifinder = IdentiFinder::new(&tree, source_bytes)?;
     // dbg!(identifinder.find_symbols(&tree, source_bytes)?);
@@ -152,6 +148,12 @@ fn main() -> Result<()> {
         unused_variables(identifinder.symbols())
             .into_iter()
             .map(|x| Warnings::from(x).into()),
+    );
+
+    issues.extend(
+        parsed_fixes
+            .into_iter()
+            .map(|x| LammpsError::from(x).into()),
     );
 
     for issue in issues.iter() {

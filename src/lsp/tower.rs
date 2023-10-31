@@ -201,8 +201,8 @@ impl LanguageServer for Backend {
                     location: Location {
                         uri: params.text_document.uri.clone(),
                         range: Range {
-                            start: point_to_position(&s.start),
-                            end: point_to_position(&s.end),
+                            start: point_to_position(&s.start()),
+                            end: point_to_position(&s.end()),
                         },
                     },
                     container_name: None,
@@ -262,8 +262,8 @@ impl LanguageServer for Backend {
                 .map(|def| Location {
                     uri: uri.clone(),
                     range: Range {
-                        start: point_to_position(&def.start),
-                        end: point_to_position(&def.end),
+                        start: point_to_position(&def.start()),
+                        end: point_to_position(&def.end()),
                     },
                 })
                 .collect(),

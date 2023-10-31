@@ -4,7 +4,7 @@ pub mod expressions;
 pub mod from_node;
 use std::fmt::Display;
 
-use tree_sitter::{Node, Point, Tree};
+use tree_sitter::{Node, Point, Range, Tree};
 
 use crate::{fix_styles::FixStyle, identifinder::Ident};
 
@@ -235,6 +235,12 @@ pub struct FixDef {
     pub fix_style: FixStyle,
     // Arguments for fix command
     pub args: Vec<Argument>,
+}
+
+impl FixDef {
+    pub fn range(&self) -> Range {
+        self.fix_id.range()
+    }
 }
 
 impl FromNode for FixDef {

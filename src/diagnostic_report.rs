@@ -20,6 +20,7 @@ pub trait ReportDiagnostic<S: Span> {
 
 /// Trait to impl on errors for colourising the output
 pub trait ReportSimple {
+    /// Simply output a string that is printed to the screen.
     fn make_simple_report(&self) -> String;
 }
 
