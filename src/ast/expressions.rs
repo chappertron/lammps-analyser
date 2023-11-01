@@ -91,9 +91,15 @@ impl Expression {
             )?)),
             "binary_op" => Ok(Self::BinaryOp(
                 Box::new(Self::parse_expression(&node.child(0).unwrap(), text)?),
-                // TODO Find a way to get the operator from teh TS symbol
+                // TODO Find a way to get the operator from the TS symbol
                 BinaryOp::try_from(node.child(1).unwrap().utf8_text(text)?).unwrap(),
                 Box::new(Self::parse_expression(&node.child(2).unwrap(), text)?),
+            )),
+
+            "unary_op" => Ok(Self::UnaryOp(
+                // TODO Can the operator be parsed with the kind??
+                UnaryOp::try_from(node.child(0).unwrap().utf8_text(text)?).unwrap(),
+                Self::parse_expression(&node.child(1).unwrap(), text)?.into(),
             )),
             "int" => Ok(Self::Int(node.utf8_text(text)?.parse()?)),
 
@@ -111,7 +117,6 @@ impl Expression {
                 _ => unreachable!(),
             },
             "thermo_kwarg" => Ok(Self::ThermoKeyword(node.utf8_text(text)?.to_string())),
-
             x => unimplemented!("Unknown expression type: {}", x),
         }
         // todo!()
