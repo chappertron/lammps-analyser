@@ -207,6 +207,7 @@ pub enum NamedCommand {
     Thermo,
     Units,
     Run,
+    Shell,
 }
 
 impl FromNode for NamedCommand {
@@ -223,6 +224,7 @@ impl FromNode for NamedCommand {
             "thermo" => Ok(NamedCommand::Thermo),
             "units" => Ok(NamedCommand::Units),
             "run" => Ok(NamedCommand::Run),
+            "shell" => Ok(NamedCommand::Shell),
             _ => Err(FromNodeError::UnknownCommand(node.kind())),
         }
     }

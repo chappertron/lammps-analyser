@@ -10,7 +10,7 @@ use anyhow::Result;
 
 use clap::Parser as ClapParser;
 use lammps_analyser::{
-    ast::{ts_to_ast, Ast, Command, NamedCommand},
+    ast::{ts_to_ast, Command, NamedCommand},
     check_styles::check_styles,
     diagnostic_report::ReportSimple,
     error_finder::ErrorFinder,
