@@ -77,7 +77,7 @@ fn main() -> Result<()> {
         .iter()
         .filter_map(|command| {
             if let Command::NamedCommand(NamedCommand::Fix(fix)) = command {
-                Some(parse_command::parse_fix(&fix))
+                Some(parse_command::parse_fix(fix))
             } else {
                 None
             }

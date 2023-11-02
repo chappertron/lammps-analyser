@@ -143,7 +143,7 @@ impl FromNode for Argument {
                 "off" | "no" | "false" => false,
                 name => Err(FromNodeError::UnknownCustom {
                     kind: "Bool Variant".to_owned(),
-                    name: format!("{name}"),
+                    name: name.to_string(),
                 })?,
             })),
             // TODO Expressions not wrapped in varround are not valid???
@@ -213,7 +213,7 @@ pub enum NamedCommand {
 impl FromNode for NamedCommand {
     fn from_node(node: &Node, text: &[u8]) -> Result<NamedCommand, FromNodeError> {
         match node.kind() {
-            "fix" => Ok(NamedCommand::Fix(FixDef::from_node(&node, text)?)),
+            "fix" => Ok(NamedCommand::Fix(FixDef::from_node(node, text)?)),
             "compute" => Ok(NamedCommand::Compute),
             "style" => Ok(NamedCommand::Style),
             "modify" => Ok(NamedCommand::Modify),
