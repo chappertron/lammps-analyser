@@ -145,7 +145,7 @@ impl LanguageServer for Backend {
         // TODO: This should use the query for the document_symbols to find the workspace symbols
         // TODO: cache the symbols rather than refinding them all?
         let mut symbols = vec![];
-        for r in self.document_map.iter() {
+        for r in &self.document_map {
             let uri = r.key();
             let params = DocumentSymbolParams {
                 text_document: TextDocumentIdentifier {
@@ -242,9 +242,7 @@ impl LanguageServer for Backend {
 
         let identifiers = self.identifinder.read().unwrap();
 
-        let name_and_type = if let Some(x) = get_symbol_at_point(&identifiers, &point) {
-            x
-        } else {
+        let Some(name_and_type) = get_symbol_at_point(&identifiers, &point) else {
             return Ok(None);
         };
 

@@ -218,10 +218,11 @@ impl IdentiFinder {
             .symbols
             .iter()
             .filter_map(|(_k, v)| {
-                if !v.defs.is_none() {
-                    None
-                } else {
+                // TODO Double check this? Seems opposite to what
+                if v.defs.is_none() {
                     Some(v.refs.iter())
+                } else {
+                    None
                 }
             })
             .flatten()
@@ -325,6 +326,8 @@ impl Ident {
     /// Parses the node and text into an Ident
     /// Uses the node kind to determine the identifinder type
     /// Uses the text to extract the name of the identifier
+    ///
+    /// # Panics if the node matches an invalid identifier type.
     pub fn new(node: &Node, text: &[u8]) -> Result<Self, Utf8Error> {
         let name = node.utf8_text(text)?.to_string();
 
@@ -368,13 +371,13 @@ impl Ident {
 impl Default for Ident {
     fn default() -> Self {
         Ident {
-            name: Default::default(),
-            ident_type: Default::default(),
+            name: String::default(),
+            ident_type: IdentType::default(),
             span: Range {
                 start_byte: 0,
                 end_byte: 0,
-                start_point: Default::default(),
-                end_point: Default::default(),
+                start_point: Point::default(),
+                end_point: Point::default(),
             },
         }
     }
@@ -413,7 +416,7 @@ pub enum IdentType {
 }
 
 impl From<&str> for IdentType {
-    /// Converts from capture name to IdentType
+    /// Converts from capture name to `IdentType`
     /// Panics if the string does not end with "fix", "compute", or "variable"
     fn from(value: &str) -> Self {
         if value.to_lowercase().ends_with("compute") {

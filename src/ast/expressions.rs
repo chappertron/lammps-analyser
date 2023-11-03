@@ -33,15 +33,15 @@ pub enum Expression {
 impl Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Expression::None => write!(f, ""),
-            Expression::UnderscoreIdent(ident) => write!(f, "{}", ident.underscore_ident()),
-            Expression::Int(i) => write!(f, "{}", i),
-            Expression::Float(fl) => write!(f, "{}", fl),
-            Expression::Bool(b) => write!(f, "{}", b),
-            Expression::UnaryOp(op, expr) => write!(f, "{}{}", op, expr),
-            Expression::BinaryOp(lhs, op, rhs) => write!(f, "{} {} {}", lhs, op, rhs),
-            Expression::Parens(expr) => write!(f, "({})", expr),
-            Expression::ThermoKeyword(kw) => write!(f, "{}", kw),
+            Self::None => write!(f, ""),
+            Self::UnderscoreIdent(ident) => write!(f, "{}", ident.underscore_ident()),
+            Self::Int(i) => write!(f, "{i}"),
+            Self::Float(fl) => write!(f, "{fl}"),
+            Self::Bool(b) => write!(f, "{b}"),
+            Self::UnaryOp(op, expr) => write!(f, "{op}{expr}"),
+            Self::BinaryOp(lhs, op, rhs) => write!(f, "{lhs} {op} {rhs}"),
+            Self::Parens(expr) => write!(f, "({expr})"),
+            Self::ThermoKeyword(kw) => write!(f, "{kw}"),
         }
     }
 }
@@ -77,10 +77,7 @@ impl From<std::str::Utf8Error> for ParseExprError {
 
 impl Expression {
     /// TODO Handle Erros
-    pub(crate) fn parse_expression(
-        node: &Node<'_>,
-        text: &[u8],
-    ) -> Result<Expression, ParseExprError> {
+    pub(crate) fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Self, ParseExprError> {
         // dbg!(node);
 
         match node.kind() {
@@ -162,7 +159,7 @@ impl TryFrom<&str> for BinaryOp {
             "&&" => Ok(Self::And),
             "||" => Ok(Self::Or),
             "^|" => Ok(Self::Xor),
-            _ => Err(format!("Unknown binary operator: {}", value)),
+            _ => Err(format!("Unknown binary operator: {value}")),
         }
     }
 }
@@ -210,7 +207,7 @@ impl TryFrom<&str> for UnaryOp {
         match value {
             "-" => Ok(Self::Negate),
             "!" => Ok(Self::Not),
-            _ => Err(format!("Unknown unary operator: {}", value)),
+            _ => Err(format!("Unknown unary operator: {value}")),
         }
     }
 }

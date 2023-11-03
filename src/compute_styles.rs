@@ -167,6 +167,7 @@ pub enum ComputeStyle {
 
 impl From<&str> for ComputeStyle {
     fn from(value: &str) -> Self {
+        #[allow(clippy::enum_glob_use)]
         use ComputeStyle::*;
         match value {
             "ackland/atom" => AcklandAtom,

@@ -267,6 +267,7 @@ pub enum FixStyle {
 
 impl From<&str> for FixStyle {
     fn from(value: &str) -> Self {
+        #[allow(clippy::enum_glob_use)]
         use FixStyle::*;
         match value {
             "accelerate/cos" => AccelerateCos,

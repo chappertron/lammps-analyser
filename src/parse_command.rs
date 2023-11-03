@@ -246,13 +246,11 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
             }
 
             Argument::ArgName(kwarg) => Err(InvalidArgumentsType::Custom(format!(
-                "Unknown kwarg argument: {}",
-                kwarg
+                "Unknown kwarg argument: {kwarg}",
             )))?,
 
             _ => Err(InvalidArgumentsType::Custom(format!(
-                "Unknown argument: {}",
-                arg
+                "Unknown argument: {arg}",
             )))?,
         }
     }
@@ -275,7 +273,7 @@ fn kwarg_expected_enum<'a>(
                         Err(InvalidArgumentsType::InvalidOption {
                             kwarg: kwarg.into(),
                             provided: x.to_string(),
-                            options: options.iter().map(|x| x.to_string()).collect(),
+                            options: options.iter().map(|&x| x.to_string()).collect(),
                         })?
                     }
                 }

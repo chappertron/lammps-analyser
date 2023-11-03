@@ -156,7 +156,7 @@ fn main() -> Result<()> {
             .map(|x| LammpsError::from(x).into()),
     );
 
-    for issue in issues.iter() {
+    for issue in &issues {
         println!("{}", issue.make_simple_report());
     }
     if !issues.is_empty() {
@@ -166,11 +166,10 @@ fn main() -> Result<()> {
             "{}: {} error{} found 😞",
             cli.source.bold(),
             n_errors.bright_red(),
-            if n_errors != 1 { "s" } else { "" },
+            if n_errors == 1 { "" } else { "s" },
         );
-        Ok(())
     } else {
         println!("All Good 😊");
-        Ok(())
     }
+    Ok(())
 }
