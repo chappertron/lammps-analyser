@@ -81,7 +81,7 @@ impl SymbolDef {
     }
 }
 
-// TODO make this into a new data structure, holding definitions and all references in one hashmap
+// TODO: make this into a new data structure, holding definitions and all references in one hashmap
 // Use `DashMap` for easier use with the LSP Server???
 
 impl IdentiFinder {
@@ -128,7 +128,7 @@ impl IdentiFinder {
             .cursor
             .captures(&self.query_def, tree.root_node(), text);
 
-        // TODO Clear the symbols in a smarter way, perhaps only removing old ones
+        // TODO: Clear the symbols in a smarter way, perhaps only removing old ones
         // Do this for an incremental method
         self.symbols.clear();
 
@@ -188,7 +188,7 @@ impl IdentiFinder {
     //     self.ident_refs.extend(captures.map(|(mtch, _cap_id)| {
     //         let node = mtch.captures[0].node;
 
-    //         // TODO Properly handle errors
+    //         // TODO: Properly handle errors
     //         Ident::new(&node, text).unwrap()
     //     }));
 
@@ -203,7 +203,7 @@ impl IdentiFinder {
     //     self.ident_defs.extend(captures.map(|(mtch, _cap_id)| {
     //         let node = mtch.captures[0].node;
 
-    //         // TODO perhaps better to check for this in another way?
+    //         // TODO: perhaps better to check for this in another way?
     //         Ident::new(&node, text).unwrap()
     //     }));
 
@@ -212,13 +212,13 @@ impl IdentiFinder {
 
     /// Check for symbols that have been used without being defined
     /// TODO: Does not currently verify order or if the fix has been deleted at point of definition
-    /// TODO Return the Vec or an option, not an error
+    /// TODO: Return the Vec or an option, not an error
     pub fn check_symbols(&self) -> Result<(), Vec<UndefinedIdent>> {
         let undefined_fixes: Vec<_> = self
             .symbols
             .iter()
             .filter_map(|(_k, v)| {
-                // TODO Double check this? Seems opposite to what
+                // TODO: Double check this? Seems opposite to what
                 if v.defs.is_none() {
                     Some(v.refs.iter())
                 } else {
@@ -259,7 +259,7 @@ impl IdentiFinder {
 pub fn unused_variables(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<UnusedIdent> {
     map.iter()
         .filter_map(|(k, v)| {
-            // TODO don't include defintions as references???
+            // TODO: don't include defintions as references???
             if v.refs().len() == v.defs().defs.len() && k.ident_type == IdentType::Variable {
                 Some(v.refs())
             } else {
@@ -335,7 +335,7 @@ impl Ident {
             "fix_id" => IdentType::Fix,
             "compute_id" => IdentType::Compute,
             "variable" => IdentType::Variable,
-            x => panic!("Unknown identifier type {x}"), // TODO Make this not panic
+            x => panic!("Unknown identifier type {x}"), // TODO: Make this not panic
         };
 
         Ok(Ident {

@@ -61,7 +61,7 @@ impl ErrorFinder {
 
     /// Tree-sitter can't currently query for missing nodes, so recursivley walking the tree instead
     /// Missing nodes are also not reported as errors, so this is needed?
-    /// TODO Walk back from missing nodes to work out the proper node?
+    /// TODO: Walk back from missing nodes to work out the proper node?
     pub fn find_missing_nodes(&mut self, tree: &Tree) -> Result<&Vec<SyntaxError>> {
         fn recur_missing(cursor: &mut TreeCursor, missing_nodes: &mut Vec<Point>) {
             if cursor.node().child_count() == 0 {

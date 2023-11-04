@@ -23,10 +23,10 @@ pub enum Expression {
     /// A binary expression between two other expressions.
     BinaryOp(Box<Expression>, BinaryOp, Box<Expression>),
     /// An expression wrapped in brackets.
-    /// TODO Perhaps just ignore brackets?
+    /// TODO: Perhaps just ignore brackets?
     Parens(Box<Expression>),
     /// Thermo keyword
-    /// TODO Use an enum instead
+    /// TODO: Use an enum instead
     ThermoKeyword(String),
 }
 
@@ -76,7 +76,7 @@ impl From<std::str::Utf8Error> for ParseExprError {
 }
 
 impl Expression {
-    /// TODO Handle Erros
+    /// TODO: Handle Erros
     pub(crate) fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Self, ParseExprError> {
         // dbg!(node);
 
@@ -88,13 +88,13 @@ impl Expression {
             )?)),
             "binary_op" => Ok(Self::BinaryOp(
                 Box::new(Self::parse_expression(&node.child(0).unwrap(), text)?),
-                // TODO Find a way to get the operator from the TS symbol
+                // TODO: Find a way to get the operator from the TS symbol
                 BinaryOp::try_from(node.child(1).unwrap().utf8_text(text)?).unwrap(),
                 Box::new(Self::parse_expression(&node.child(2).unwrap(), text)?),
             )),
 
             "unary_op" => Ok(Self::UnaryOp(
-                // TODO Can the operator be parsed with the kind??
+                // TODO: Can the operator be parsed with the kind??
                 UnaryOp::try_from(node.child(0).unwrap().utf8_text(text)?).unwrap(),
                 Self::parse_expression(&node.child(1).unwrap(), text)?.into(),
             )),

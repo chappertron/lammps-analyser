@@ -126,7 +126,7 @@ fn main() -> Result<()> {
     // for err in &invalid_styles {
     //     println!("{}:{}", cli.source.bold(), err.make_simple_report());
     // }
-    // TODO Check if any warnings or errors are found!!!
+    // TODO: Check if any warnings or errors are found!!!
 
     let invalid_styles = check_styles(&tree, source_bytes)?;
     issues.extend(
@@ -160,7 +160,7 @@ fn main() -> Result<()> {
         println!("{}", issue.make_simple_report());
     }
     if !issues.is_empty() {
-        // TODO  Don't count warnings as errors!!!
+        // TODO:  Don't count warnings as errors!!!
         let n_errors = issues.len();
         println!(
             "{}: {} error{} found 😞",

@@ -33,7 +33,7 @@ pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Result<Ast, FromNodeError> {
 
             let cmd = if NamedCommand::try_from(cursor.node().kind()).is_ok() {
                 // println!("{}", cursor.node().to_sexp());
-                // TODO add arguments
+                // TODO: add arguments
                 Command::NamedCommand(NamedCommand::from_node(&cursor.node(), text)?)
             } else {
                 Command::GenericCommand(GenericCommand::from_node(&cursor.node(), text)?)
@@ -84,7 +84,7 @@ impl FromNode for GenericCommand {
 
         cursor.goto_first_child();
 
-        // TODO use a field in the TS grammar
+        // TODO: use a field in the TS grammar
         let name = cursor.node().utf8_text(text)?.to_string();
 
         while cursor.goto_next_sibling() {
@@ -112,17 +112,17 @@ pub enum Argument {
     Int(isize),
     Float(f64),
     Bool(bool),
-    ArgName(String), // TODO Rename to keyword arg?
+    ArgName(String), // TODO: Rename to keyword arg?
     /// Variables within curly braces
     VarCurly(Ident),
     VarRound(expressions::Expression),
     String,
     Expression(expressions::Expression),
-    // TODO Remove? Can't know if a group name until further on in the process???
+    // TODO: Remove? Can't know if a group name until further on in the process???
     // Perhaps make it an identifier that then is decided to be either
     Group,
     /// A variable/fix/compute name prefixed by v_/f_/c_
-    /// TODO make this hold and `Ident` struct, from `crate::identifinder` module
+    /// TODO: make this hold and `Ident` struct, from `crate::identifinder` module
     UnderscoreIdent(Ident),
 }
 
@@ -132,7 +132,7 @@ impl FromNode for Argument {
         // _cursor: &mut tree_sitter::TreeCursor,
         text: &[u8],
     ) -> Result<Self, FromNodeError> {
-        // TODO make these variants more complete.
+        // TODO: make these variants more complete.
         //.child(0).unwrap()
         // Did removing above from match fix things???
         match node.kind() {
@@ -146,7 +146,7 @@ impl FromNode for Argument {
                     name: name.to_string(),
                 })?,
             })),
-            // TODO Expressions not wrapped in varround are not valid???
+            // TODO: Expressions not wrapped in varround are not valid???
             "expression" => Ok(Self::Expression(expressions::Expression::parse_expression(
                 node, text,
             )?)),
@@ -182,7 +182,7 @@ impl Display for Argument {
             Argument::ArgName(x) => write!(f, "argname: {x}"),
             Argument::VarCurly(x) => write!(f, "var_curly: ${{{0}}}", x.name),
             Argument::VarRound(x) => write!(f, "var_round: $({x})"),
-            // TODO properly implement string
+            // TODO: properly implement string
             Argument::String => write!(f, "string"),
             Argument::Expression(x) => write!(f, "expression: {x}"),
             Argument::Group => write!(f, "group"),
@@ -192,8 +192,8 @@ impl Display for Argument {
 }
 
 /// Commands that have a special form in the tree sitter grammar
-/// TODO add arguments
-/// TODO Add command location
+/// TODO: add arguments
+/// TODO: Add command location
 #[derive(Debug, PartialEq, Clone)]
 pub enum NamedCommand {
     Fix(FixDef),
@@ -233,7 +233,7 @@ impl FromNode for NamedCommand {
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct FixDef {
     pub fix_id: Ident,    // Or just keep as a string?
-    pub group_id: String, // TODO  Create group identifiers
+    pub group_id: String, // TODO:  Create group identifiers
     pub fix_style: FixStyle,
     // Arguments for fix command
     pub args: Vec<Argument>,
@@ -246,12 +246,12 @@ impl FixDef {
 }
 
 impl FromNode for FixDef {
-    /// TODO Hand a cursor instead???
-    // TODO Remove unwraps
+    /// TODO: Hand a cursor instead???
+    // TODO: Remove unwraps
     fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
         let mut cursor = node.walk();
 
-        // TODO handle case this is false
+        // TODO: handle case this is false
         cursor.goto_first_child();
         let mut children = node.children(&mut cursor);
 

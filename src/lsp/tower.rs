@@ -24,7 +24,7 @@ struct Backend {
     document_map: DashMap<String, String>,
     /// Map of uri to document tree
     tree_map: DashMap<String, Tree>,
-    // TODO Symbols Map
+    // TODO: Symbols Map
     /// Finds Symbols maps.
     /// Wrapped in RwLock for Interior Mutability
     identifinder: std::sync::RwLock<IdentiFinder>,
@@ -52,7 +52,7 @@ impl LanguageServer for Backend {
                 )),
                 // completion_provider: Some(CompletionOptions {
                 //     resolve_provider: Some(false),
-                //     trigger_characters: Some(vec![".".to_string()]), // TODO make ${ a trigger
+                //     trigger_characters: Some(vec![".".to_string()]), // TODO: make ${ a trigger
                 //     // character
                 //     work_done_progress_options: Default::default(),
                 //     all_commit_characters: None,
@@ -69,7 +69,7 @@ impl LanguageServer for Backend {
                     }),
                     file_operations: None,
                 }),
-                // TODO Consider adding more options like in the tower-lsp boilerplate example
+                // TODO: Consider adding more options like in the tower-lsp boilerplate example
                 semantic_tokens_provider: Some(
                     SemanticTokensServerCapabilities::SemanticTokensOptions(
                         SemanticTokensOptions {
@@ -82,7 +82,7 @@ impl LanguageServer for Backend {
                     ),
                 ),
                 definition_provider: Some(OneOf::Left(true)),
-                // TODO Add options?
+                // TODO: Add options?
                 document_symbol_provider: Some(OneOf::Left(true)),
                 workspace_symbol_provider: Some(OneOf::Left(true)),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
@@ -192,8 +192,8 @@ impl LanguageServer for Backend {
             .unwrap()
             .symbols()
             .iter()
-            // TODO properly match this field to the compute/var/fix type
-            // TODO Set correct Positions for the Symbols
+            // TODO: properly match this field to the compute/var/fix type
+            // TODO: Set correct Positions for the Symbols
             .flat_map(|(x, v)| {
                 v.defs().iter().map(|s| SymbolInformation {
                     name: x.name.clone(),
@@ -250,7 +250,7 @@ impl LanguageServer for Backend {
             .symbols()
             .iter()
             .find(|(x, _)| *x == name_and_type)
-            .expect("Could not find symbol"); // TODO Bubble this up
+            .expect("Could not find symbol"); // TODO: Bubble this up
 
         Ok(Some(GotoDefinitionResponse::Array(
             symbol
@@ -308,7 +308,7 @@ impl Backend {
 
         let text = self.document_map.get(&uri.to_string()).unwrap();
 
-        // TODO Store parser in the state
+        // TODO: Store parser in the state
         let mut parser = Parser::new();
 
         parser
@@ -320,7 +320,7 @@ impl Backend {
         //     .log_message(MessageType::INFO, format!("{:?}", errors))
         //     .await;
 
-        // TODO combine this whole block into a single function
+        // TODO: combine this whole block into a single function
         let mut error_finder = ErrorFinder::new().unwrap();
         error_finder.find_syntax_errors(&tree, &*text).unwrap();
         error_finder.find_missing_nodes(&tree).unwrap();
@@ -336,8 +336,8 @@ impl Backend {
         let invalid_styles = check_styles(&tree, text.as_bytes());
 
         let mut diagnostics: Vec<Diagnostic> = error_finder
-            // TODO add methods to create ownership, so clowning isn't needed???
-            // TODO implement into for vec of error
+            // TODO: add methods to create ownership, so clowning isn't needed???
+            // TODO: implement into for vec of error
             .syntax_errors()
             .iter()
             .map(|e| e.clone().into())
@@ -353,8 +353,8 @@ impl Backend {
         self.client
             .publish_diagnostics(uri.clone(), diagnostics, Some(version))
             .await;
-        // TODO Could be excessive
-        // TODO handle result
+        // TODO: Could be excessive
+        // TODO: handle result
         // self.client.workspace_diagnostic_refresh().await;
 
         // DEBUGGING
@@ -362,7 +362,7 @@ impl Backend {
         // let sexp = &tree.root_node().to_sexp().to_string();
         // self.client.log_message(MessageType::INFO, sexp).await;
 
-        // TODO pop old tree and update with new one
+        // TODO: pop old tree and update with new one
         self.tree_map.insert(uri.to_string(), tree);
 
         // self.client

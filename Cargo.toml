@@ -25,11 +25,11 @@ thiserror = "1.0.44"
 tokio = { version = "1.32.0", features = ["io-std", "rt", "macros", "rt-multi-thread"] }
 tower-lsp = "0.20.0"
 tree-sitter = "0.20.10"
-tree-sitter-lammps = { path = "../tree-sitter-lammps" } # TODO Work out how to de capitalise this
+tree-sitter-lammps = { path = "../tree-sitter-lammps" } # TODO: Work out how to de capitalise this
 
 [[bin]]
-# TODO rename to lmp_lsp
-# TODO Or make a subcommand of lammps_analyser bin
+# TODO: rename to lmp_lsp
+# TODO: Or make a subcommand of lammps_analyser bin
 name = "lsp"
-# TODO make this a sensible path.
+# TODO: make this a sensible path.
 path = "./src/lsp/tower.rs"

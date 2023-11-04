@@ -1,5 +1,5 @@
 // Parse LAMMPS commands into a struct using Clap?
-// TODO I am not sure this will work. Primarily because there
+// TODO: I am not sure this will work. Primarily because there
 // are no -- flags. I think I will need to use a custom parser :(
 
 // use clap::Parser;
@@ -107,7 +107,7 @@ pub fn parse_fix(fix: &FixDef) -> Result<(), InvalidArguments> {
     //     });
     // }
 
-    // TODO use these
+    // TODO: use these
     let style = fix.fix_style;
 
     match style {
@@ -147,7 +147,7 @@ fn check_n_positional(fix: &FixDef, n_args: usize) -> Result<(), InvalidArgument
 }
 
 /// Generic Parsing of the Nose-Hoover Fixes
-/// TODO Finish ME
+/// TODO: Finish ME
 fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
     let args = &fix.args;
 
@@ -169,7 +169,7 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
     while let Some(arg) = iter.next() {
         match arg {
             Argument::ArgName(kwarg) if kwarg == "temp" => {
-                // TODO check if there are 3 more elements
+                // TODO: check if there are 3 more elements
                 kwarg_expected_floats(&mut iter, kwarg, 3, "<Tstart> <Tstop> <Tdamp>")?;
             }
             Argument::ArgName(kwarg)
@@ -216,7 +216,7 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
             }
             Argument::ArgName(kwarg) if kwarg == "dilate" => {
                 barostat_only(kwarg)?;
-                // TODO convert to a group
+                // TODO: convert to a group
                 kwarg_expected_str(&mut iter, kwarg, 1, "<dilate-group-ID>")?;
             }
             Argument::ArgName(kwarg) if kwarg == "scalexy" => {

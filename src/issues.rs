@@ -11,7 +11,7 @@ pub enum Issue {
     /// Error in LAMMPS input file
     #[error("Error: {0}")]
     Error(LammpsError),
-    /// TODO NOT CURRENTLY IMPLEMENTED
+    /// TODO: NOT CURRENTLY IMPLEMENTED
     #[error("Warning:")]
     Warning(Warnings),
     /// TODO: NOT CURRENTLY IMPLEMENTED

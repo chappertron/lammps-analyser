@@ -13,3 +13,8 @@ prepare_docs.py
 # Example trees
 tree.dot
 tree.svg
+
+
+
+# sed backups
+*.rs-r
