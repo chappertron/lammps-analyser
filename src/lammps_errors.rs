@@ -1,8 +1,8 @@
+use crate::check_commands::InvalidArguments;
 use crate::check_styles::InvalidStyle;
 use crate::diagnostic_report::ReportSimple;
 use crate::error_finder::SyntaxError;
 use crate::identifinder::{UndefinedIdent, UnusedIdent};
-use crate::parse_command::InvalidArguments;
 
 use thiserror::Error;
 

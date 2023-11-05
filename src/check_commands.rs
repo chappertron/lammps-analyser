@@ -1,8 +1,4 @@
-// Parse LAMMPS commands into a struct using Clap?
-// TODO: I am not sure this will work. Primarily because there
-// are no -- flags. I think I will need to use a custom parser :(
-
-// use clap::Parser;
+// Checks the validity of fix arguments
 
 use lsp_types::DiagnosticSeverity;
 use owo_colors::OwoColorize;
@@ -100,17 +96,23 @@ pub enum InvalidArgumentsType {
     InvalidStyle(String),
 }
 
-/// Parse
-pub fn parse_fix(fix: &FixDef) -> Result<(), InvalidArguments> {
+/// Check the arguments of a fix
+pub fn check_fix(fix: &FixDef) -> Result<(), InvalidArguments> {
     let style = fix.fix_style;
 
+    // TODO: Check group of the fix
+
     match style {
-        // TODO: Report the invalid styles name
-        FixStyle::InvalidFixStyle => Err(InvalidArguments {
-            err_type: InvalidArgumentsType::InvalidStyle(fix.fix_style.to_string()),
-            range: fix.range(),
-            fix_style: fix.fix_style,
-        }),
+        //  TODO: Report the invalid styles name
+
+        // FixStyle::InvalidFixStyle => Err(InvalidArguments {
+        //     err_type: InvalidArgumentsType::InvalidStyle(fix.fix_style.to_string()),
+        //     range: fix.range(),
+        //     fix_style: fix.fix_style,
+        // }),
+
+        // `Ok`, so duplicates aren't raised
+        FixStyle::InvalidFixStyle => Ok(()),
 
         FixStyle::Nve => parse_no_args(fix).map_err(|x| InvalidArguments {
             err_type: x,
@@ -556,7 +558,7 @@ mod tests {
 
         dbg!(&fix);
 
-        assert!(parse_fix(&fix).is_ok())
+        assert!(check_fix(&fix).is_ok())
     }
 
     #[test]
@@ -567,7 +569,7 @@ mod tests {
         let node = tree.root_node().child(0).unwrap().child(0).unwrap();
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
-        assert!(dbg!(parse_fix(&fix)).is_err())
+        assert!(dbg!(check_fix(&fix)).is_err())
     }
 
     #[test]

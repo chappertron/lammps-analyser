@@ -1,4 +1,5 @@
 pub mod ast;
+pub mod check_commands;
 pub mod check_styles;
 pub mod compute_styles;
 pub mod diagnostic_report;
@@ -9,5 +10,4 @@ pub mod identifinder;
 pub mod issues;
 pub mod lammps_errors;
 pub mod lsp;
-pub mod parse_command;
 pub mod utils;

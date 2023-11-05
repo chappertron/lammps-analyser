@@ -11,13 +11,13 @@ use anyhow::Result;
 use clap::Parser as ClapParser;
 use lammps_analyser::{
     ast::{ts_to_ast, Command, NamedCommand},
+    check_commands,
     check_styles::check_styles,
     diagnostic_report::ReportSimple,
     error_finder::ErrorFinder,
     identifinder::{unused_variables, IdentiFinder},
     issues::Issue,
     lammps_errors::{LammpsError, Warnings},
-    parse_command,
 };
 use owo_colors::OwoColorize;
 use std::{
@@ -77,7 +77,7 @@ fn main() -> Result<()> {
         .iter()
         .filter_map(|command| {
             if let Command::NamedCommand(NamedCommand::Fix(fix)) = command {
-                Some(parse_command::parse_fix(fix))
+                Some(check_commands::check_fix(fix))
             } else {
                 None
             }
