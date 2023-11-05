@@ -11,6 +11,8 @@ use tree_sitter::{Node, Point, Query, QueryCursor, Range, Tree};
 
 use crate::{diagnostic_report::ReportSimple, utils::point_to_position};
 
+pub type IdentMap = HashMap<NameAndType, SymbolDefsAndRefs>;
+
 pub struct IdentiFinder {
     pub query_def: Query,
     pub query_ref: Query,
@@ -64,7 +66,7 @@ impl SymbolDefsAndRefs {
 
 #[derive(Debug, Clone, Default)]
 pub struct SymbolDef {
-    defs: Vec<Ident>,
+    pub defs: Vec<Ident>,
 }
 
 impl SymbolDef {

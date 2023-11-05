@@ -11,3 +11,5 @@ pub mod issues;
 pub mod lammps_errors;
 pub mod lsp;
 pub mod utils;
+
+pub mod lints;
