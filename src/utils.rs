@@ -19,7 +19,7 @@ pub fn position_to_point(pos: &lsp_types::Position) -> tree_sitter::Point {
     }
 }
 
-/// Find the symbol at the given point in the file
+/// Find the symbol under the given point in the file
 pub fn get_symbol_at_point<'a>(
     identifinder: &'a IdentiFinder,
     point: &Point,
@@ -27,6 +27,8 @@ pub fn get_symbol_at_point<'a>(
     let symbols = identifinder.symbols();
 
     // Might've created something a little slow here...
+    // TODO: Sort the symbols by start/end point and do a binary search
+    // Perhaps in a BTree Map?
     for (k, v) in symbols {
         for r in v.refs().iter() {
             if *point >= r.start() && *point <= r.end() {

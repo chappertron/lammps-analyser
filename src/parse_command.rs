@@ -96,21 +96,22 @@ pub enum InvalidArgumentsType {
         provided: String,
         options: Vec<String>,
     },
+    #[error("Invalid style for fix: {0}")]
+    InvalidStyle(String),
 }
 
 /// Parse
 pub fn parse_fix(fix: &FixDef) -> Result<(), InvalidArguments> {
-    // if args.len() < 3 {
-    //     return Err(InvalidArguments::IncorrectNumberArguments {
-    //         provided: args.len(),
-    //         expected: 3,
-    //     });
-    // }
-
-    // TODO: use these
     let style = fix.fix_style;
 
     match style {
+        // TODO: Report the invalid styles name
+        FixStyle::InvalidFixStyle => Err(InvalidArguments {
+            err_type: InvalidArgumentsType::InvalidStyle(fix.fix_style.to_string()),
+            range: fix.range(),
+            fix_style: fix.fix_style,
+        }),
+
         FixStyle::Nve => parse_no_args(fix).map_err(|x| InvalidArguments {
             err_type: x,
             range: fix.range(),
@@ -121,16 +122,16 @@ pub fn parse_fix(fix: &FixDef) -> Result<(), InvalidArguments> {
             range: fix.range(),
             fix_style: style,
         }),
-        FixStyle::AveChunk => check_n_positional(fix, 5).map_err(|x| InvalidArguments {
+        // Fallback to checking only positional arguments
+        style => check_n_positional(fix, style.n_positional_args()).map_err(|x| InvalidArguments {
             err_type: x,
             range: fix.range(),
             fix_style: style,
         }),
-
-        _ => Ok(()), // Ignore unchecked fixes
-                     // _ => Err(InvalidArguments::Custom(
-                     //     "Parsing for this fix style is not yet implemented.".into(),
-                     // )),
+        // _ => Ok(()), // Ignore unchecked fixes
+        // _ => Err(InvalidArguments::Custom(
+        //     "Parsing for this fix style is not yet implemented.".into(),
+        // )),
     }
 }
 
@@ -138,7 +139,7 @@ pub fn parse_fix(fix: &FixDef) -> Result<(), InvalidArguments> {
 fn check_n_positional(fix: &FixDef, n_args: usize) -> Result<(), InvalidArgumentsType> {
     if fix.args.len() < n_args {
         Err(InvalidArgumentsType::IncorrectNumberArguments {
-            provided: n_args + 3,
+            provided: fix.args.len(),
             expected: n_args,
         })
     } else {
@@ -391,8 +392,8 @@ fn kwarg_expected_str<'a>(
 pub fn parse_no_args(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
     if !fix.args.is_empty() {
         Err(InvalidArgumentsType::IncorrectNumberArguments {
-            provided: fix.args.len() + 3,
-            expected: 3,
+            provided: fix.args.len(),
+            expected: 0,
         })
     } else {
         Ok(())
@@ -474,8 +475,8 @@ mod tests {
         assert_eq!(
             parse_no_args(&fix),
             Err(InvalidArgumentsType::IncorrectNumberArguments {
-                provided: 4,
-                expected: 3
+                provided: 1,
+                expected: 0
             })
         );
     }
@@ -541,7 +542,32 @@ mod tests {
         assert_eq!(fix.fix_style, FixStyle::Nvt);
         assert!(!fix.args.is_empty());
 
-        assert_eq!(parse_nh_fixes(&fix), Ok(()));
+        // TODO: Turn into an error...
+        assert!(parse_nh_fixes(&fix).is_err());
+    }
+
+    #[test]
+    fn check_n_args() {
+        let mut parser = setup_parser();
+        let text = "fix profw water  ave/chunk 1 $(v_nsteps) $(v_nsteps) lwater  density/number density/mass  temp file ${outputname}water.profiles adof 2";
+        let tree = parser.parse(text, None).unwrap();
+        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
+
+        dbg!(&fix);
+
+        assert!(parse_fix(&fix).is_ok())
+    }
+
+    #[test]
+    fn bad_check_n_args() {
+        let mut parser = setup_parser();
+        let text = "fix profw water  ave/chunk 1 $(v_nsteps) $(v_nsteps)";
+        let tree = parser.parse(text, None).unwrap();
+        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
+
+        assert!(dbg!(parse_fix(&fix)).is_err())
     }
 
     #[test]

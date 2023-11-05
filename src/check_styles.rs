@@ -61,7 +61,6 @@ impl Display for StyleType {
 }
 
 /// Checks the tree for different fix and compute styles and checks if they exist or not!!!
-/// TODO: Migrate to a different file
 pub fn check_styles(tree: &Tree, text: &[u8]) -> Result<Vec<InvalidStyle>> {
     let query = Query::new(
         tree.language(),
