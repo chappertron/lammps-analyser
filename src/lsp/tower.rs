@@ -1,5 +1,7 @@
 //! Alternative implementation for the lsp using the `tower-lsp` crate.
 use dashmap::DashMap;
+use lammps_analyser::ast::{ts_to_ast, Command, NamedCommand};
+use lammps_analyser::check_commands;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
 use lammps_analyser::identifinder::IdentiFinder;
@@ -320,6 +322,24 @@ impl Backend {
         //     .log_message(MessageType::INFO, format!("{:?}", errors))
         //     .await;
 
+        // WARNING: Unwrap here may be dangerous. Remove
+        let ast = ts_to_ast(&tree, &*text.as_bytes()).unwrap();
+
+        // Parsing fixes
+
+        let parsed_fixes = ast
+            .commands
+            .iter()
+            .filter_map(|command| {
+                if let Command::NamedCommand(NamedCommand::Fix(fix)) = command {
+                    Some(check_commands::check_fix(fix))
+                } else {
+                    None
+                }
+            })
+            .filter_map(|x| x.err())
+            .collect::<Vec<_>>();
+
         // TODO: combine this whole block into a single function
         let mut error_finder = ErrorFinder::new().unwrap();
         error_finder.find_syntax_errors(&tree, &*text).unwrap();
@@ -350,9 +370,13 @@ impl Backend {
             diagnostics.extend(v.into_iter().map(|e| e.into()))
         }
 
+        // Zero or more
+        diagnostics.extend(parsed_fixes.into_iter().map(|e| e.into()));
+
         self.client
             .publish_diagnostics(uri.clone(), diagnostics, Some(version))
             .await;
+
         // TODO: Could be excessive
         // TODO: handle result
         // self.client.workspace_diagnostic_refresh().await;

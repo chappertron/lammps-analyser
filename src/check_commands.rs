@@ -46,6 +46,8 @@ impl From<InvalidArguments> for lsp_types::Diagnostic {
                 end: point_to_position(&(value.end())),
             },
             severity: Some(DiagnosticSeverity::ERROR),
+            message: value.to_string(),
+
             ..Default::default()
         }
     }
