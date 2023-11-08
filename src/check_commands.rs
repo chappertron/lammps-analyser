@@ -121,11 +121,14 @@ pub fn check_fix(fix: &FixDef) -> Result<(), InvalidArguments> {
             range: fix.range(),
             fix_style: style,
         }),
-        FixStyle::Nvt => parse_nh_fixes(fix).map_err(|x| InvalidArguments {
-            err_type: x,
-            range: fix.range(),
-            fix_style: style,
-        }),
+        // TODO: See if other fix styles share the same arguments
+        FixStyle::Nvt | FixStyle::Npt | FixStyle::Nph => {
+            parse_nh_fixes(fix).map_err(|x| InvalidArguments {
+                err_type: x,
+                range: fix.range(),
+                fix_style: style,
+            })
+        }
         // Fallback to checking only positional arguments
         style => check_n_positional(fix, style.n_positional_args()).map_err(|x| InvalidArguments {
             err_type: x,
