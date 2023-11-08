@@ -163,6 +163,7 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
     let mut iter = args.iter();
 
     let is_barostatting = matches!(fix.fix_style, FixStyle::Npt | FixStyle::Nph);
+    let is_thermostatting = matches!(fix.fix_style, FixStyle::Npt | FixStyle::Nvt);
     // Try either the LAMMPS way or to use peek with a while let loop?
     let barostat_only = |kwarg: &str| {
         if !is_barostatting {
@@ -174,10 +175,23 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
             Ok(())
         }
     };
+
+    let thermostast_only = |kwarg: &str| {
+        if !is_thermostatting {
+            Err(InvalidArgumentsType::InvalidKeyword {
+                kwarg: kwarg.to_string(),
+                fix_style: fix.fix_style,
+            })
+        } else {
+            Ok(())
+        }
+    };
+
     while let Some(arg) = iter.next() {
         match arg {
             Argument::ArgName(kwarg) if kwarg == "temp" => {
                 // TODO: check if there are 3 more elements
+                thermostast_only(kwarg)?;
                 kwarg_expected_floats(&mut iter, kwarg, 3, "<Tstart> <Tstop> <Tdamp>")?;
             }
             Argument::ArgName(kwarg)
@@ -186,6 +200,7 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
                     "iso" | "aniso" | "tri" | "x" | "y" | "z" | "xy" | "xz" | "yz"
                 ) =>
             {
+                barostat_only(kwarg)?;
                 kwarg_expected_floats(&mut iter, kwarg, 3, "<Pstart> <Pstop> <Pdamp>")?;
             }
             Argument::ArgName(kwarg) if kwarg == "couple" => {
@@ -193,6 +208,7 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
                 kwarg_expected_enum(&mut iter, kwarg, 1, &["none", "xyz", "xy", "xz", "yz"])?;
             }
             Argument::ArgName(kwarg) if kwarg == "tchain" => {
+                thermostast_only(kwarg)?;
                 kwarg_expected_floats(&mut iter, kwarg, 1, "<N> chain.")?;
             }
             Argument::ArgName(kwarg) if kwarg == "pchain" => {
