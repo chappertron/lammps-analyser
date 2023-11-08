@@ -14,7 +14,7 @@ use self::from_node::{FromNode, FromNodeError};
 /// A list of commands
 /// Perhaps not truly an AST
 pub struct Ast {
-    pub commands: Vec<Command>,
+    pub commands: Vec<CommandNode>,
 }
 
 pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Result<Ast, FromNodeError> {
@@ -31,13 +31,15 @@ pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Result<Ast, FromNodeError> {
             // println!("{}", cursor.node().to_sexp());
             // println!("{}", cursor.node().to_sexp());
 
-            let cmd = if NamedCommand::try_from(cursor.node().kind()).is_ok() {
-                // println!("{}", cursor.node().to_sexp());
-                // TODO: add arguments
-                Command::NamedCommand(NamedCommand::from_node(&cursor.node(), text)?)
-            } else {
-                Command::GenericCommand(GenericCommand::from_node(&cursor.node(), text)?)
-            };
+            // let cmd = if NamedCommand::try_from(cursor.node().kind()).is_ok() {
+            //     // println!("{}", cursor.node().to_sexp());
+            //     // TODO: add arguments
+            //     CommandType::NamedCommand(NamedCommand::from_node(&cursor.node(), text)?)
+            // } else {
+            //     CommandType::GenericCommand(GenericCommand::from_node(&cursor.node(), text)?)
+            // };
+            //
+            let cmd = CommandNode::from_node(&cursor.node(), text)?;
 
             commands.push(cmd);
 
@@ -53,10 +55,51 @@ pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Result<Ast, FromNodeError> {
     Ok(Ast { commands })
 }
 
+/// A command in the LAMMPS Input Script
+///  TODO rename this to be a command node???
 #[derive(Debug, PartialEq, Clone)]
-pub enum Command {
+pub struct CommandNode {
+    pub command_type: CommandType,
+    range: Range,
+}
+
+impl CommandNode {
+    pub fn range(&self) -> Range {
+        self.range
+    }
+}
+
+impl FromNode for CommandNode {
+    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+        let range = node.range();
+
+        let command_type = CommandType::from_node(node, text)?;
+
+        Ok(CommandNode {
+            command_type,
+            range,
+        })
+    }
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub enum CommandType {
     GenericCommand(GenericCommand),
     NamedCommand(NamedCommand),
+}
+
+impl FromNode for CommandType {
+    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+        let cmd = if NamedCommand::try_from(node.kind()).is_ok() {
+            // println!("{}", cursor.node().to_sexp());
+            // TODO: add arguments
+            CommandType::NamedCommand(NamedCommand::from_node(&node, text)?)
+        } else {
+            CommandType::GenericCommand(GenericCommand::from_node(&node, text)?)
+        };
+
+        Ok(cmd)
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]

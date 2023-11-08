@@ -10,7 +10,7 @@ use anyhow::Result;
 
 use clap::Parser as ClapParser;
 use lammps_analyser::{
-    ast::{ts_to_ast, Command, NamedCommand},
+    ast::{ts_to_ast, CommandType, NamedCommand},
     check_commands,
     check_styles::check_styles,
     diagnostic_report::ReportSimple,
@@ -76,7 +76,7 @@ fn main() -> Result<()> {
         .commands
         .iter()
         .filter_map(|command| {
-            if let Command::NamedCommand(NamedCommand::Fix(fix)) = command {
+            if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
                 Some(check_commands::check_fix(fix))
             } else {
                 None

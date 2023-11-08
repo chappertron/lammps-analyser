@@ -1,6 +1,6 @@
 //! Alternative implementation for the lsp using the `tower-lsp` crate.
 use dashmap::DashMap;
-use lammps_analyser::ast::{ts_to_ast, Command, NamedCommand};
+use lammps_analyser::ast::{ts_to_ast, CommandType, NamedCommand};
 use lammps_analyser::check_commands;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
@@ -331,7 +331,7 @@ impl Backend {
             .commands
             .iter()
             .filter_map(|command| {
-                if let Command::NamedCommand(NamedCommand::Fix(fix)) = command {
+                if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
                     Some(check_commands::check_fix(fix))
                 } else {
                     None

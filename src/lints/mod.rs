@@ -1,7 +1,7 @@
 use tree_sitter::Tree;
 
 use crate::{
-    ast::{Ast, Command, NamedCommand},
+    ast::{Ast, CommandType, NamedCommand},
     identifinder::IdentMap,
 };
 
@@ -19,8 +19,8 @@ pub fn fix_redef_before_run(tree: &Tree, text: &[u8], ast: &Ast, indents: &Ident
 
     for command in &ast.commands {
         dbg!(command);
-        match command {
-            Command::NamedCommand(NamedCommand::Run) => {
+        match command.command_type {
+            CommandType::NamedCommand(NamedCommand::Run) => {
                 dbg!("run");
             }
             _ => (),
