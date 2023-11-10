@@ -165,8 +165,8 @@ pub enum Argument {
     // Perhaps make it an identifier that then is decided to be either
     Group,
     /// A variable/fix/compute name prefixed by v_/f_/c_
-    /// TODO: make this hold and `Ident` struct, from `crate::identifinder` module
     UnderscoreIdent(Ident),
+    Word(String),
 }
 
 impl FromNode for Argument {
@@ -208,6 +208,10 @@ impl FromNode for Argument {
                 //.child(0).unwrap()
                 node.utf8_text(text).unwrap().to_string(),
             )),
+            "word" => Ok(Self::Word(
+                //.child(0).unwrap()
+                node.utf8_text(text).unwrap().to_string(),
+            )),
             x => Err(FromNodeError::UnknownCustom {
                 kind: "argument type".to_string(),
                 name: x.to_string(),
@@ -230,6 +234,7 @@ impl Display for Argument {
             Argument::Expression(x) => write!(f, "expression: {x}"),
             Argument::Group => write!(f, "group"),
             Argument::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),
+            Argument::Word(x) => write!(f, "word: {x}"),
         }
     }
 }
@@ -359,7 +364,7 @@ mod tests {
     use crate::fix_styles::FixStyle;
     use crate::identifinder::{Ident, IdentType};
 
-    use super::ts_to_ast;
+    use super::{ts_to_ast, Ast};
 
     fn setup_parser() -> Parser {
         let mut parser = Parser::new();
@@ -413,6 +418,24 @@ mod tests {
                 args: vec![],
             }
         );
+    }
+
+    #[test]
+    fn parse_index_variable() {
+        let mut parser = setup_parser();
+        let text = b"variable index step4.1.aatm";
+
+        let tree = parser.parse(text, None).unwrap();
+
+        let ast = ts_to_ast(&tree, text);
+
+        if ast.is_err() {
+            dbg!(ast.unwrap_err());
+        } else {
+            dbg!(ast.unwrap());
+        }
+
+        unimplemented!()
     }
 
     #[test]

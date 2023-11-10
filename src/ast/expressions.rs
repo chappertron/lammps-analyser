@@ -28,6 +28,8 @@ pub enum Expression {
     /// Thermo keyword
     /// TODO: Use an enum instead
     ThermoKeyword(String),
+    /// TODO: Word might not actually be implemented for expr
+    Word(String),
 }
 
 impl Display for Expression {
@@ -42,6 +44,7 @@ impl Display for Expression {
             Self::BinaryOp(lhs, op, rhs) => write!(f, "{lhs} {op} {rhs}"),
             Self::Parens(expr) => write!(f, "({expr})"),
             Self::ThermoKeyword(kw) => write!(f, "{kw}"),
+            Self::Word(word) => write!(f, "{word}"),
         }
     }
 }
@@ -114,6 +117,7 @@ impl Expression {
                 _ => unreachable!(),
             },
             "thermo_kwarg" => Ok(Self::ThermoKeyword(node.utf8_text(text)?.to_string())),
+            "word" => Ok(Self::Word(node.utf8_text(text)?.to_string())),
             x => unimplemented!("Unknown expression type: {}", x),
         }
         // todo!()
