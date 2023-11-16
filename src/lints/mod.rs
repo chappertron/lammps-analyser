@@ -127,9 +127,9 @@ mod tests {
         if let Err(v) = fix_redef_before_run(&ast, idents.symbols()) {
             assert_eq!(v.len(), 1);
             dbg!(v);
+        } else {
+            panic!("Error was expected")
         }
-
-        unimplemented!()
     }
 
     #[test]
@@ -149,8 +149,6 @@ mod tests {
             .expect("Failed to Find Symbols");
 
         assert!(fix_redef_before_run(&ast, idents.symbols()).is_ok());
-
-        unimplemented!()
     }
 
     #[test]
@@ -176,7 +174,5 @@ mod tests {
         } else {
             panic!("Error was expected")
         }
-
-        unimplemented!()
     }
 }

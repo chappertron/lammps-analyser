@@ -1,11 +1,22 @@
+use owo_colors::OwoColorize;
 use thiserror::Error;
-use tree_sitter::{Node, TreeCursor};
+use tree_sitter::{Node, Point, TreeCursor};
+
+use crate::diagnostic_report::ReportSimple;
 
 use super::expressions::ParseExprError;
 
 pub trait FromNode: Sized {
     fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError>;
 }
+
+// #[derive(Debug, Error, Clone)]
+// #[error("Could not parse node from {start} to {end}: {kind}")]
+// pub struct FromNodeError {
+//     pub start: Point,
+//     pub end: Point,
+//     pub kind: FromNodeErrorType,
+// }
 
 // TODO: Just wrap expression parse error??
 #[derive(Debug, Error, Clone)]
@@ -16,13 +27,42 @@ pub enum FromNodeError {
     ParseIntError(std::num::ParseIntError),
     #[error("Could not parse text as float {0}")]
     ParseFloatError(std::num::ParseFloatError),
-    #[error("Unknown command {0}")]
-    UnknownCommand(&'static str),
-    #[error("Unknown {kind}: {name}")]
-    UnknownCustom { kind: String, name: String },
+    #[error("{}:{}: Unknown command {name} at",start.row+1, start.column+1)]
+    UnknownCommand { name: &'static str, start: Point },
+    #[error("{}:{}: Unknown {kind}: {name} ",start.row+1, start.column+1)]
+    UnknownCustom {
+        kind: String,
+        name: String,
+        start: Point,
+    },
 
     #[error("{0}")]
     ParseExpression(ParseExprError),
+}
+
+impl ReportSimple for FromNodeError {
+    fn make_simple_report(&self) -> String {
+        match self {
+            Self::Utf8Error(e) => format!("Could not parse text as UTF-8 {}", e.bright_red()),
+            Self::ParseIntError(e) => format!("Could not parse text as int {}", e.bright_red()),
+            Self::ParseFloatError(e) => format!("Could not parse text as float {}", e.bright_red()),
+            Self::UnknownCommand { name, start } => format!(
+                "{}:{}: Unknown command {} at",
+                start.row + 1,
+                start.column + 1,
+                name.bright_red(),
+            ),
+            Self::UnknownCustom { kind, name, start } => format!(
+                "{}:{}: Unknown {}: {} ",
+                start.row + 1,
+                start.column + 1,
+                kind.bright_red(),
+                name.bright_red(),
+            ),
+
+            Self::ParseExpression(e) => format!("{}", e.bright_red()),
+        }
+    }
 }
 
 impl From<ParseExprError> for FromNodeError {

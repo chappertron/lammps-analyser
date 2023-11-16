@@ -199,6 +199,7 @@ impl FromNode for Argument {
                 name => Err(FromNodeError::UnknownCustom {
                     kind: "Bool Variant".to_owned(),
                     name: name.to_string(),
+                    start: node.start_position(),
                 })?,
             })),
             // TODO: Expressions not wrapped in varround are not valid???
@@ -218,7 +219,7 @@ impl FromNode for Argument {
             )?)),
             "argname" => Ok(Self::ArgName(
                 //.child(0).unwrap()
-                node.utf8_text(text).unwrap().to_string(),
+                node.utf8_text(text)?.to_string(),
             )),
             "word" => Ok(Self::Word(
                 //.child(0).unwrap()
@@ -227,6 +228,7 @@ impl FromNode for Argument {
             x => Err(FromNodeError::UnknownCustom {
                 kind: "argument type".to_string(),
                 name: x.to_string(),
+                start: node.start_position(),
             }),
         }
     }
@@ -285,7 +287,10 @@ impl FromNode for NamedCommand {
             "units" => Ok(NamedCommand::Units),
             "run" => Ok(NamedCommand::Run),
             "shell" => Ok(NamedCommand::Shell),
-            _ => Err(FromNodeError::UnknownCommand(node.kind())),
+            _ => Err(FromNodeError::UnknownCommand {
+                name: node.kind(),
+                start: node.start_position(),
+            }),
         }
     }
 }

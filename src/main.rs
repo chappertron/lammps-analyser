@@ -68,7 +68,13 @@ fn main() -> Result<()> {
         tree.print_dot_graph(&dot_file);
     }
 
-    let ast = ts_to_ast(&tree, source_bytes)?;
+    let ast = ts_to_ast(&tree, source_bytes);
+
+    // Somewhat gracefully exit
+    if let Err(e) = &ast {
+        println!("{}:{}", cli.source.bold(), e.make_simple_report());
+    }
+    let ast = ast?;
 
     // Parsing fixes
 

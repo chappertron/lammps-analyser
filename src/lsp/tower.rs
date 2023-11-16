@@ -324,7 +324,27 @@ impl Backend {
         //     .await;
 
         // WARNING: Unwrap here may be dangerous. Remove
-        let ast = ts_to_ast(&tree, &*text.as_bytes()).unwrap();
+        let ast = ts_to_ast(&tree, &*text.as_bytes());
+
+        if let Err(e) = &ast {
+            println!("{}", e);
+
+            self.client
+                .publish_diagnostics(
+                    uri.clone(),
+                    vec![Diagnostic {
+                        severity: Some(DiagnosticSeverity::ERROR),
+                        message: format!("Error Parsing TS To AST: {}", e),
+                        ..Default::default()
+                    }],
+                    None,
+                )
+                .await;
+
+            // Wait for the next call.
+            return ();
+        }
+        let ast = ast.unwrap();
 
         // Parsing fixes
 
