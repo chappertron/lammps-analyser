@@ -71,7 +71,7 @@ impl InTSRange for tree_sitter::Range {
 /// TODO: Perhaps mixing TS and LSP points/positions will get confusing...
 impl InTSRange for lsp_types::Position {
     fn in_range(&self, range: &tree_sitter::Range) -> bool {
-        let ts_point = position_to_point(&self);
+        let ts_point = position_to_point(self);
         range.start_point <= ts_point && ts_point <= range.end_point
     }
 }

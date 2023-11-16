@@ -324,7 +324,7 @@ impl Backend {
         //     .await;
 
         // WARNING: Unwrap here may be dangerous. Remove
-        let ast = ts_to_ast(&tree, &*text.as_bytes());
+        let ast = ts_to_ast(&tree, text.as_bytes());
 
         if let Err(e) = &ast {
             println!("{}", e);
@@ -342,7 +342,7 @@ impl Backend {
                 .await;
 
             // Wait for the next call.
-            return ();
+            return;
         }
         let ast = ast.unwrap();
 

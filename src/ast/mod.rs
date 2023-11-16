@@ -20,12 +20,9 @@ pub struct Ast {
 impl Ast {
     /// Find the command corresponding to a given point
     pub fn find_point(&self, point: &Point) -> Option<&CommandNode> {
-        for cmd in &self.commands {
-            if cmd.range.start_point <= *point && cmd.range.end_point >= *point {
-                return Some(cmd);
-            }
-        }
-        None
+        self.commands
+            .iter()
+            .find(|cmd| cmd.range.start_point <= *point && cmd.range.end_point >= *point)
     }
 }
 
@@ -105,9 +102,9 @@ impl FromNode for CommandType {
         let cmd = if NamedCommand::try_from(node.kind()).is_ok() {
             // println!("{}", cursor.node().to_sexp());
             // TODO: add arguments
-            CommandType::NamedCommand(NamedCommand::from_node(&node, text)?)
+            CommandType::NamedCommand(NamedCommand::from_node(node, text)?)
         } else {
-            CommandType::GenericCommand(GenericCommand::from_node(&node, text)?)
+            CommandType::GenericCommand(GenericCommand::from_node(node, text)?)
         };
 
         Ok(cmd)
@@ -179,6 +176,8 @@ pub enum Argument {
     /// A variable/fix/compute name prefixed by v_/f_/c_
     UnderscoreIdent(Ident),
     Word(String),
+    /// Indicates an invalid node in the  TreeSitter grammar
+    Error,
 }
 
 impl FromNode for Argument {
@@ -196,9 +195,9 @@ impl FromNode for Argument {
             "bool" => Ok(Self::Bool(match node.utf8_text(text)? {
                 "on" | "yes" | "true" => true,
                 "off" | "no" | "false" => false,
-                name => Err(FromNodeError::UnknownCustom {
+                invalid_name => Err(FromNodeError::UnknownCustom {
                     kind: "Bool Variant".to_owned(),
-                    name: name.to_string(),
+                    name: invalid_name.to_string(),
                     start: node.start_position(),
                 })?,
             })),
@@ -225,6 +224,8 @@ impl FromNode for Argument {
                 //.child(0).unwrap()
                 node.utf8_text(text).unwrap().to_string(),
             )),
+            // TODO: It seems weird sending something called error through ok.
+            "ERROR" => Ok(Self::Error),
             x => Err(FromNodeError::UnknownCustom {
                 kind: "argument type".to_string(),
                 name: x.to_string(),
@@ -249,6 +250,7 @@ impl Display for Argument {
             Argument::Group => write!(f, "group"),
             Argument::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),
             Argument::Word(x) => write!(f, "word: {x}"),
+            Argument::Error => write!(f, "ERROR"),
         }
     }
 }
@@ -381,7 +383,7 @@ mod tests {
     use crate::fix_styles::FixStyle;
     use crate::identifinder::{Ident, IdentType};
 
-    use super::{ts_to_ast, Ast};
+    use super::ts_to_ast;
 
     fn setup_parser() -> Parser {
         let mut parser = Parser::new();
