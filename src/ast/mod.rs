@@ -17,6 +17,18 @@ pub struct Ast {
     pub commands: Vec<CommandNode>,
 }
 
+impl Ast {
+    /// Find the command corresponding to a given point
+    pub fn find_point(&self, point: &Point) -> Option<&CommandNode> {
+        for cmd in &self.commands {
+            if cmd.range.start_point <= *point && cmd.range.end_point >= *point {
+                return Some(cmd);
+            }
+        }
+        None
+    }
+}
+
 pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Result<Ast, FromNodeError> {
     let mut cursor = tree.walk();
 

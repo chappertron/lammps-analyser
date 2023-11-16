@@ -38,6 +38,14 @@ impl ReportSimple for Warnings {
     }
 }
 
+impl From<Warnings> for lsp_types::Diagnostic {
+    fn from(value: Warnings) -> Self {
+        match value {
+            Warnings::UnusedIdent(e) => e.into(),
+        }
+    }
+}
+
 impl ReportSimple for LammpsError {
     fn make_simple_report(&self) -> String {
         match self {

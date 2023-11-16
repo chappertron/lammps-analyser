@@ -9,7 +9,10 @@ use std::{
 use thiserror::Error;
 use tree_sitter::{Node, Point, Query, QueryCursor, Range, Tree};
 
-use crate::{diagnostic_report::ReportSimple, utils::point_to_position};
+use crate::{
+    diagnostic_report::ReportSimple,
+    utils::{point_to_position, ts_range_to_lsp_range},
+};
 
 pub type IdentMap = HashMap<NameAndType, SymbolDefsAndRefs>;
 
@@ -285,6 +288,16 @@ pub fn unused_variables(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<Un
 )]
 pub struct UnusedIdent {
     pub ident: Ident,
+}
+
+impl From<UnusedIdent> for lsp_types::Diagnostic {
+    fn from(value: UnusedIdent) -> Self {
+        lsp_types::Diagnostic {
+            range: ts_range_to_lsp_range(&value.ident.range()),
+            severity: Some(lsp_types::DiagnosticSeverity::WARNING),
+            ..Default::default()
+        }
+    }
 }
 
 impl ReportSimple for UnusedIdent {

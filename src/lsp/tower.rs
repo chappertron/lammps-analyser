@@ -4,7 +4,8 @@ use lammps_analyser::ast::{ts_to_ast, CommandType, NamedCommand};
 use lammps_analyser::check_commands;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
-use lammps_analyser::identifinder::IdentiFinder;
+use lammps_analyser::identifinder::{unused_variables, IdentiFinder};
+use lammps_analyser::lammps_errors::Warnings;
 use lammps_analyser::utils::{get_symbol_at_point, point_to_position, position_to_point};
 use std::str::FromStr;
 use tower_lsp::jsonrpc::Result;
@@ -369,6 +370,13 @@ impl Backend {
         if let Ok(v) = invalid_styles {
             diagnostics.extend(v.into_iter().map(|e| e.into()))
         }
+
+        // Add unused symbols
+        diagnostics.extend(
+            unused_variables(self.identifinder.read().unwrap().symbols())
+                .into_iter()
+                .map(|x| Warnings::from(x).into()),
+        );
 
         // Zero or more
         diagnostics.extend(parsed_fixes.into_iter().map(|e| e.into()));
