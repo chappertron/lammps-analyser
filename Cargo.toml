@@ -27,6 +27,11 @@ tower-lsp = "0.20.0"
 tree-sitter = "0.20.10"
 tree-sitter-lammps = { path = "../tree-sitter-lammps" } # TODO: Work out how to de capitalise this
 
+[lints.clippy]
+enum_glob_use = "deny"
+missing_panics_doc = "warn"
+redundant_clone = "warn"
+ref_option_ref = "warn"
 [[bin]]
 # TODO: rename to lmp_lsp
 # TODO: Or make a subcommand of lammps_analyser bin
