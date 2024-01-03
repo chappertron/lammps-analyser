@@ -92,7 +92,6 @@ fn main() -> Result<()> {
         .collect::<Vec<_>>();
 
     let identifinder = IdentiFinder::new(&tree, source_bytes)?;
-    // dbg!(identifinder.find_symbols(&tree, source_bytes)?);
 
     let undefined_fixes = match identifinder.check_symbols() {
         Ok(()) => vec![],
@@ -104,34 +103,6 @@ fn main() -> Result<()> {
     error_finder.find_missing_nodes(&tree)?;
     let syntax_errors = error_finder.syntax_errors();
 
-    // for err in syntax_errors {
-    //     // ruff_test.py:3:1: F821 Undefined name `hello`
-    //     println!("{}:{}", cli.source.bold(), err.make_simple_report());
-    // }
-
-    // // this doesn't work. Need to compare the names!
-
-    // for err in &undefined_fixes {
-    //     // ruff_test.py:3:1: F821 Undefined name `hello`
-    //     // println!("{}",std::str::from_utf8(source_code[ident.start_byte..ident.end_byte])?.underline());
-    //     if cli.output_reports {
-    //         Report::build(ReportKind::Error, &cli.source, err.ident.start_byte)
-    //             .with_label(
-    //                 Label::new((&cli.source, err.ident.start_byte..err.ident.end_byte))
-    //                     .with_message(format!("{}", err)),
-    //             )
-    //             .finish()
-    //             .print((
-    //                 &cli.source,
-    //                 Source::from(std::str::from_utf8(source_bytes)?),
-    //             ))?;
-    //     }
-    //     println!("{}:{}", cli.source.bold(), err.make_simple_report());
-    // }
-
-    // for err in &invalid_styles {
-    //     println!("{}:{}", cli.source.bold(), err.make_simple_report());
-    // }
     // TODO: Check if any warnings or errors are found!!!
 
     let invalid_styles = check_styles(&tree, source_bytes)?;

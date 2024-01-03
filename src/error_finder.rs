@@ -66,7 +66,6 @@ impl ErrorFinder {
         fn recur_missing(cursor: &mut TreeCursor, missing_nodes: &mut Vec<Point>) {
             if cursor.node().child_count() == 0 {
                 if cursor.node().is_missing() {
-                    // println!("{} {}:{}","Missing Node:".red(),cursor.node().start_position().row+1,cursor.node().start_position().column+1);
                     let node = cursor.node();
                     missing_nodes.push(node.start_position());
                 }
