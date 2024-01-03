@@ -1,4 +1,4 @@
-//! Convert the treesiterr trees into an AST.
+//! Convert the treesitter trees into an AST.
 
 pub mod expressions;
 pub mod from_node;
@@ -6,7 +6,7 @@ use std::fmt::Display;
 
 use tree_sitter::{Node, Point, Range, Tree};
 
-use crate::{fix_styles::FixStyle, identifinder::Ident};
+use crate::{compute_styles::ComputeStyle, fix_styles::FixStyle, identifinder::Ident};
 
 use self::from_node::{FromNode, FromNodeError};
 
@@ -338,6 +338,61 @@ impl FromNode for FixDef {
     }
 }
 
+#[derive(Debug, Default, PartialEq, Clone)]
+pub struct ComputeDef {
+    pub compute_id: Ident, // Or just keep as a string?
+    pub group_id: String,  // TODO:  Create group identifiers
+    pub compute_style: ComputeStyle,
+    // Arguments for fix command
+    pub args: Vec<Argument>,
+}
+
+impl ComputeDef {
+    pub fn range(&self) -> Range {
+        self.compute_id.range()
+    }
+}
+
+impl FromNode for ComputeDef {
+    /// TODO: Hand a cursor instead???
+    // TODO: Remove unwraps
+    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+        let mut cursor = node.walk();
+
+        // TODO: handle case this is false
+        cursor.goto_first_child();
+        let mut children = node.children(&mut cursor);
+
+        // skip the fix keyword
+        children.next();
+        let compute_id = Ident::new(&children.next().unwrap(), text)?;
+        let group_id = children.next().unwrap().utf8_text(text)?.into();
+        let compute_style = children
+            .next()
+            .unwrap()
+            .utf8_text(text)?
+            .try_into()
+            .unwrap();
+
+        let args = if let Some(args) = children.next() {
+            // No longer needed beyond args. Lets us use cursor again
+            drop(children);
+            args.children(&mut cursor)
+                .map(|x| Argument::from_node(&x, text))
+                .collect::<Result<Vec<_>, _>>()?
+        } else {
+            vec![]
+        };
+
+        Ok(ComputeDef {
+            compute_id,
+            group_id,
+            compute_style,
+            args,
+        })
+    }
+}
+
 /// This doesn't work for the new case that the fix has data
 impl TryFrom<&str> for NamedCommand {
     type Error = String;
@@ -365,7 +420,8 @@ mod tests {
 
     use crate::ast::expressions::{BinaryOp, Expression};
     use crate::ast::from_node::FromNode;
-    use crate::ast::{Argument, FixDef};
+    use crate::ast::{Argument, ComputeDef, FixDef};
+    use crate::compute_styles::ComputeStyle;
     use crate::fix_styles::FixStyle;
     use crate::identifinder::{Ident, IdentType};
 
@@ -480,6 +536,39 @@ mod tests {
                         Expression::ThermoKeyword("dt".into()).into(),
                     ))
                 ],
+            }
+        );
+    }
+
+    #[test]
+    fn parse_compute_with_args() {
+        let mut parser = setup_parser();
+        let source_bytes = b"compute T_hot water temp/region hot_region";
+
+        let tree = parser.parse(source_bytes, None).unwrap();
+
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let command_node = tree.root_node().child(0).unwrap();
+        dbg!(command_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let compute_node = dbg!(command_node.child(0)).unwrap();
+
+        dbg!(compute_node.to_sexp());
+        // assert_eq!(ast.commands.len(), 1);
+        assert_eq!(
+            // ast.commands[0],
+            ComputeDef::from_node(&compute_node, source_bytes.as_slice()).unwrap(),
+            ComputeDef {
+                compute_id: Ident {
+                    name: "T_hot".into(),
+                    ident_type: IdentType::Compute,
+                    ..Default::default()
+                },
+                group_id: "water".into(),
+                compute_style: ComputeStyle::TempRegion,
+                // TODO: Change to a more generic word argument
+                args: vec![Argument::ArgName("hot_region".into()),],
             }
         );
     }
