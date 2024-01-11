@@ -1,4 +1,4 @@
-use crate::check_commands::InvalidArguments;
+use crate::check_commands::invalid_arguments::InvalidArguments;
 use crate::check_styles::InvalidStyle;
 use crate::diagnostic_report::ReportSimple;
 use crate::error_finder::SyntaxError;

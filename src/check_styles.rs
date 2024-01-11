@@ -60,6 +60,7 @@ impl Display for StyleType {
     }
 }
 
+// TODO: Check these by using the AST
 /// Checks the tree for different fix and compute styles and checks if they exist or not!!!
 pub fn check_styles(tree: &Tree, text: &[u8]) -> Result<Vec<InvalidStyle>> {
     let query = Query::new(

@@ -1,154 +1,24 @@
 // Checks the validity of fix arguments
 
-use lsp_types::DiagnosticSeverity;
-use owo_colors::OwoColorize;
-use thiserror::Error;
-use tree_sitter::{Point, Range};
-
 use crate::ast::{Argument, FixDef};
-use crate::diagnostic_report::ReportSimple;
 use crate::fix_styles::FixStyle;
-use crate::utils::point_to_position;
 
-#[derive(Debug, Error, PartialEq, Eq)]
-#[error("{}:{}: {err_type} for fix: {fix_style}",range.start_point.row+1,range.start_point.column+1)]
-pub struct InvalidArguments {
-    pub(crate) err_type: InvalidArgumentsType,
-    pub(crate) range: Range,
-    pub(crate) fix_style: FixStyle,
-}
+pub mod invalid_arguments;
 
-impl InvalidArguments {
-    pub fn new(err_type: InvalidArgumentsType, range: Range, fix_style: FixStyle) -> Self {
-        InvalidArguments {
-            err_type,
-            range,
-            fix_style,
-        }
-    }
-
-    pub fn range(&self) -> Range {
-        self.range
-    }
-    pub fn start(&self) -> Point {
-        self.range.start_point
-    }
-    pub fn end(&self) -> Point {
-        self.range.end_point
-    }
-}
-
-impl From<InvalidArguments> for lsp_types::Diagnostic {
-    fn from(value: InvalidArguments) -> Self {
-        lsp_types::Diagnostic {
-            range: lsp_types::Range {
-                start: point_to_position(&(value.start())),
-                end: point_to_position(&(value.end())),
-            },
-            severity: Some(DiagnosticSeverity::ERROR),
-            message: value.to_string(),
-
-            ..Default::default()
-        }
-    }
-}
-
-impl ReportSimple for InvalidArguments {
-    fn make_simple_report(&self) -> String {
-        format!(
-            "{}:{}: {} for fix: {}",
-            self.start().row + 1,
-            self.start().column + 1,
-            self.err_type.bright_red(),
-            self.fix_style.bright_red(),
-        )
-    }
-}
-
-#[derive(Debug, Error, PartialEq, Eq)]
-pub enum InvalidArgumentsType {
-    #[error("Incorrect number of arguments: {provided} expected {expected}")]
-    IncorrectNumberArguments { provided: usize, expected: usize },
-    #[error(
-        "Incorrect keyword arguments for `{kwarg}`. 
-         Expected {n_expected} arguments: {expected}. 
-         Only {n_provided} provided."
-    )]
-    MissingKwargField {
-        kwarg: String,
-        expected: String,
-        n_expected: usize,
-        n_provided: usize,
-    },
-    #[error("Incorrect argument type. Expected: {expected}. Provided: {provided}.")]
-    IncorrectType { expected: String, provided: String },
-    #[error("{0}")]
-    /// Error for specific fixes
-    Custom(String),
-
-    #[error("{} is not a valid keyword for fix {}", kwarg, fix_style)]
-    InvalidKeyword { kwarg: String, fix_style: FixStyle },
-    #[error("Invalid option `{}` for keyword `{}`. Valid options: [{}].", kwarg, provided,options.join(","))]
-    InvalidOption {
-        kwarg: String,
-        provided: String,
-        options: Vec<String>,
-    },
-    #[error("Invalid style for fix: {0}")]
-    InvalidStyle(String),
-}
-
-/// Check the arguments of a fix
-pub fn check_fix(fix: &FixDef) -> Result<(), InvalidArguments> {
-    let style = fix.fix_style;
-
-    // TODO: Check group of the fix
-
-    match style {
-        //  TODO: Report the invalid styles name
-
-        // FixStyle::InvalidFixStyle => Err(InvalidArguments {
-        //     err_type: InvalidArgumentsType::InvalidStyle(fix.fix_style.to_string()),
-        //     range: fix.range(),
-        //     fix_style: fix.fix_style,
-        // }),
-
-        // `Ok`, so duplicates aren't raised
-        FixStyle::InvalidFixStyle => Ok(()),
-
-        FixStyle::Nve => parse_no_args(fix).map_err(|x| InvalidArguments {
-            err_type: x,
-            range: fix.range(),
-            fix_style: style,
-        }),
-        // TODO: See if other fix styles share the same arguments
-        FixStyle::Nvt | FixStyle::Npt | FixStyle::Nph => {
-            parse_nh_fixes(fix).map_err(|x| InvalidArguments {
-                err_type: x,
-                range: fix.range(),
-                fix_style: style,
-            })
-        }
-        // Fallback to checking only positional arguments
-        style => check_n_positional(fix, style.n_positional_args()).map_err(|x| InvalidArguments {
-            err_type: x,
-            range: fix.range(),
-            fix_style: style,
-        }),
-        // _ => Ok(()), // Ignore unchecked fixes
-        // _ => Err(InvalidArguments::Custom(
-        //     "Parsing for this fix style is not yet implemented.".into(),
-        // )),
-    }
-}
+pub mod check_fix;
 
 /// Parse Fix with at least n positional arguments
-fn check_n_positional(fix: &FixDef, n_args: usize) -> Result<(), InvalidArgumentsType> {
+fn check_n_positional(
+    fix: &FixDef,
+    n_args: usize,
+) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     if fix.args.len() < n_args {
-        Err(InvalidArgumentsType::IncorrectNumberArguments {
-            provided: fix.args.len(),
-            expected: n_args,
-        })
+        Err(
+            invalid_arguments::InvalidArgumentsType::IncorrectNumberArguments {
+                provided: fix.args.len(),
+                expected: n_args,
+            },
+        )
     } else {
         Ok(())
     }
@@ -156,7 +26,7 @@ fn check_n_positional(fix: &FixDef, n_args: usize) -> Result<(), InvalidArgument
 
 /// Generic Parsing of the Nose-Hoover Fixes
 /// TODO: Finish ME
-fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
+fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     let args = &fix.args;
 
     // Iterate through and check validity of the argument
@@ -167,7 +37,7 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
     // Try either the LAMMPS way or to use peek with a while let loop?
     let barostat_only = |kwarg: &str| {
         if !is_barostatting {
-            Err(InvalidArgumentsType::InvalidKeyword {
+            Err(invalid_arguments::InvalidArgumentsType::InvalidKeyword {
                 kwarg: kwarg.to_string(),
                 fix_style: fix.fix_style,
             })
@@ -178,7 +48,7 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
 
     let thermostast_only = |kwarg: &str| {
         if !is_thermostatting {
-            Err(InvalidArgumentsType::InvalidKeyword {
+            Err(invalid_arguments::InvalidArgumentsType::InvalidKeyword {
                 kwarg: kwarg.to_string(),
                 fix_style: fix.fix_style,
             })
@@ -269,11 +139,11 @@ fn parse_nh_fixes(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
                 kwarg_expected_enum(&mut iter, kwarg, 1, &["dipole", "dipole/dlm"])?
             }
 
-            Argument::ArgName(kwarg) => Err(InvalidArgumentsType::Custom(format!(
-                "Unknown kwarg argument: {kwarg}",
-            )))?,
+            Argument::ArgName(kwarg) => Err(invalid_arguments::InvalidArgumentsType::Custom(
+                format!("Unknown kwarg argument: {kwarg}",),
+            ))?,
 
-            _ => Err(InvalidArgumentsType::Custom(format!(
+            _ => Err(invalid_arguments::InvalidArgumentsType::Custom(format!(
                 "Unknown argument: {arg}",
             )))?,
         }
@@ -288,26 +158,26 @@ fn kwarg_expected_enum<'a>(
     kwarg: &str,
     n_args: usize,
     options: &[&str],
-) -> Result<(), InvalidArgumentsType> {
+) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     for i in 0..n_args {
         if let Some(x) = iter.next() {
             match x {
                 Argument::ArgName(x) => {
                     if !options.contains(&x.as_ref()) {
-                        Err(InvalidArgumentsType::InvalidOption {
+                        Err(invalid_arguments::InvalidArgumentsType::InvalidOption {
                             kwarg: kwarg.into(),
                             provided: x.to_string(),
                             options: options.iter().map(|&x| x.to_string()).collect(),
                         })?
                     }
                 }
-                _ => Err(InvalidArgumentsType::IncorrectType {
+                _ => Err(invalid_arguments::InvalidArgumentsType::IncorrectType {
                     expected: "string-like".into(),
                     provided: x.to_string(),
                 })?,
             }
         } else {
-            Err(InvalidArgumentsType::MissingKwargField {
+            Err(invalid_arguments::InvalidArgumentsType::MissingKwargField {
                 kwarg: kwarg.into(),
                 expected: format!("One of: {}.", options.join(", ")),
                 n_expected: n_args,
@@ -323,7 +193,7 @@ fn kwarg_expected_floats<'a>(
     kwarg: &str,
     n_expected: usize,
     expected_args: &str,
-) -> Result<(), InvalidArgumentsType> {
+) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     for i in 0..n_expected {
         if let Some(x) = iter.next() {
             match x {
@@ -331,13 +201,13 @@ fn kwarg_expected_floats<'a>(
                 Argument::Int(_) => (),
                 Argument::VarRound(_) => (),
                 Argument::VarCurly(_) => (),
-                _ => Err(InvalidArgumentsType::IncorrectType {
+                _ => Err(invalid_arguments::InvalidArgumentsType::IncorrectType {
                     expected: "float".into(),
                     provided: x.to_string(),
                 })?,
             };
         } else {
-            Err(InvalidArgumentsType::MissingKwargField {
+            Err(invalid_arguments::InvalidArgumentsType::MissingKwargField {
                 kwarg: kwarg.into(),
                 n_expected,
                 n_provided: i,
@@ -354,18 +224,18 @@ fn kwarg_expected_bool<'a>(
     kwarg: &str,
     n_expected: usize,
     expected_args: &str,
-) -> Result<(), InvalidArgumentsType> {
+) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     for i in 0..n_expected {
         if let Some(x) = iter.next() {
             match x {
                 Argument::Bool(_) => (),
-                _ => Err(InvalidArgumentsType::IncorrectType {
+                _ => Err(invalid_arguments::InvalidArgumentsType::IncorrectType {
                     expected: "bool".into(),
                     provided: x.to_string(),
                 })?,
             };
         } else {
-            Err(InvalidArgumentsType::MissingKwargField {
+            Err(invalid_arguments::InvalidArgumentsType::MissingKwargField {
                 kwarg: kwarg.into(),
                 n_expected,
                 n_provided: i,
@@ -382,18 +252,18 @@ fn kwarg_expected_str<'a>(
     kwarg: &str,
     n_expected: usize,
     expected_args: &str,
-) -> Result<(), InvalidArgumentsType> {
+) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     for i in 0..n_expected {
         if let Some(x) = iter.next() {
             match x {
                 Argument::ArgName(_) => (),
-                _ => Err(InvalidArgumentsType::IncorrectType {
+                _ => Err(invalid_arguments::InvalidArgumentsType::IncorrectType {
                     expected: "string".into(),
                     provided: x.to_string(),
                 })?,
             };
         } else {
-            Err(InvalidArgumentsType::MissingKwargField {
+            Err(invalid_arguments::InvalidArgumentsType::MissingKwargField {
                 kwarg: kwarg.into(),
                 n_expected,
                 n_provided: i,
@@ -412,12 +282,14 @@ fn kwarg_expected_str<'a>(
 // }
 
 /// Parse a fix that does not expect any arguments
-pub fn parse_no_args(fix: &FixDef) -> Result<(), InvalidArgumentsType> {
+pub fn parse_no_args(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     if !fix.args.is_empty() {
-        Err(InvalidArgumentsType::IncorrectNumberArguments {
-            provided: fix.args.len(),
-            expected: 0,
-        })
+        Err(
+            invalid_arguments::InvalidArgumentsType::IncorrectNumberArguments {
+                provided: fix.args.len(),
+                expected: 0,
+            },
+        )
     } else {
         Ok(())
     }
@@ -497,10 +369,12 @@ mod tests {
 
         assert_eq!(
             parse_no_args(&fix),
-            Err(InvalidArgumentsType::IncorrectNumberArguments {
-                provided: 1,
-                expected: 0
-            })
+            Err(
+                invalid_arguments::InvalidArgumentsType::IncorrectNumberArguments {
+                    provided: 1,
+                    expected: 0
+                }
+            )
         );
     }
 
@@ -579,7 +453,7 @@ mod tests {
 
         dbg!(&fix);
 
-        assert!(check_fix(&fix).is_ok())
+        assert!(check_fix::check_fix(&fix).is_ok())
     }
 
     #[test]
@@ -590,7 +464,7 @@ mod tests {
         let node = tree.root_node().child(0).unwrap().child(0).unwrap();
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
-        assert!(dbg!(check_fix(&fix)).is_err())
+        assert!(dbg!(check_fix::check_fix(&fix)).is_err())
     }
 
     #[test]
