@@ -2,7 +2,7 @@ use owo_colors::OwoColorize;
 use thiserror::Error;
 use tree_sitter::{Node, Point, TreeCursor};
 
-use crate::diagnostic_report::ReportSimple;
+use crate::{diagnostic_report::ReportSimple, utils::into_error::IntoError};
 
 use super::expressions::ParseExprError;
 
@@ -38,6 +38,26 @@ pub enum FromNodeError {
 
     #[error("{0}")]
     ParseExpression(ParseExprError),
+    #[error("{0}")]
+    // TODO: This perhaps should not be a full error. Or make it incomplete node?
+    PartialNode(String),
+}
+
+#[derive(Debug, Error, Clone)]
+#[error("An expected node was missing.")]
+pub(crate) struct MissingNode;
+
+impl From<MissingNode> for FromNodeError {
+    fn from(_: MissingNode) -> Self {
+        Self::PartialNode("Missing node".to_string())
+    }
+}
+
+impl<'a> IntoError<Node<'a>> for Option<Node<'a>> {
+    type Error = MissingNode;
+    fn into_err(self) -> Result<Node<'a>, Self::Error> {
+        self.ok_or(MissingNode)
+    }
 }
 
 impl ReportSimple for FromNodeError {
@@ -61,6 +81,7 @@ impl ReportSimple for FromNodeError {
             ),
 
             Self::ParseExpression(e) => format!("{}", e.bright_red()),
+            Self::PartialNode(e) => format!("{}", e.bright_red()),
         }
     }
 }

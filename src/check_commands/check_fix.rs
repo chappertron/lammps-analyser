@@ -13,7 +13,7 @@ use crate::ast::FixDef;
 pub fn check_fix(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArguments> {
     let style = fix.fix_style;
 
-    // TODO: Check group of the fix
+    // TODO: Check group of the fix. This qould likely be a separate function
 
     match style {
         //  TODO: Report the invalid styles name

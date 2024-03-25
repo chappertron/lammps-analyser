@@ -1,12 +1,19 @@
 //! Convert the treesitter trees into an AST.
 
+// For denying unwraps and expects in this file
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+
 pub mod expressions;
 pub mod from_node;
 use std::fmt::Display;
 
 use tree_sitter::{Node, Point, Range, Tree};
 
-use crate::{compute_styles::ComputeStyle, fix_styles::FixStyle, identifinder::Ident};
+use crate::{
+    compute_styles::ComputeStyle, fix_styles::FixStyle, identifinder::Ident,
+    utils::into_error::IntoError,
+};
 
 use self::from_node::{FromNode, FromNodeError};
 
@@ -194,21 +201,24 @@ impl FromNode for Argument {
             "string" => Ok(Self::String),
             "group" => Ok(Self::Group),
             "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
-                &node.child(0).unwrap(),
+                &node.child(0).into_err()?,
                 text,
             )?)),
-            "var_curly" => Ok(Self::VarCurly(Ident::new(&node.child(1).unwrap(), text)?)),
+            "var_curly" => Ok(Self::VarCurly(Ident::new(
+                &node.child(1).into_err()?,
+                text,
+            )?)),
             "var_round" => Ok(Self::VarRound(expressions::Expression::parse_expression(
-                &node.child(1).unwrap(),
+                &node.child(1).into_err()?,
                 text,
             )?)),
             "argname" => Ok(Self::ArgName(
-                //.child(0).unwrap()
+                //.child(0).into_err()?
                 node.utf8_text(text)?.to_string(),
             )),
             "word" => Ok(Self::Word(
-                //.child(0).unwrap()
-                node.utf8_text(text).unwrap().to_string(),
+                //.child(0).into_err()?
+                node.utf8_text(text)?.to_string(),
             )),
             // TODO: It seems weird sending something called error through ok.
             "ERROR" => Ok(Self::Error),
@@ -310,14 +320,15 @@ impl FromNode for FixDef {
 
         // skip the fix keyword
         children.next();
-        let fix_id = Ident::new(&children.next().unwrap(), text)?;
-        let group_id = children.next().unwrap().utf8_text(text)?.into();
-        let fix_style = children
-            .next()
-            .unwrap()
-            .utf8_text(text)?
-            .try_into()
-            .unwrap();
+        let fix_id = Ident::new(
+            &children
+                .next()
+                // TODO: This causes issues further up the chain.
+                .ok_or(FromNodeError::PartialNode("Missing identifier".into()))?,
+            text,
+        )?;
+        let group_id = children.next().into_err()?.utf8_text(text)?.into();
+        let fix_style = children.next().into_err()?.utf8_text(text)?.into();
 
         let args = if let Some(args) = children.next() {
             // No longer needed beyond args. Lets us use cursor again
@@ -365,14 +376,9 @@ impl FromNode for ComputeDef {
 
         // skip the fix keyword
         children.next();
-        let compute_id = Ident::new(&children.next().unwrap(), text)?;
-        let group_id = children.next().unwrap().utf8_text(text)?.into();
-        let compute_style = children
-            .next()
-            .unwrap()
-            .utf8_text(text)?
-            .try_into()
-            .unwrap();
+        let compute_id = Ident::new(&children.next().into_err()?, text)?;
+        let group_id = children.next().into_err()?.utf8_text(text)?.into();
+        let compute_style = children.next().into_err()?.utf8_text(text)?.into();
 
         let args = if let Some(args) = children.next() {
             // No longer needed beyond args. Lets us use cursor again
@@ -415,6 +421,9 @@ impl TryFrom<&str> for NamedCommand {
 }
 
 #[cfg(test)]
+// Allow unwraps in the tests module, but not in the parent module.
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::expect_used)]
 mod tests {
     use tree_sitter::Parser;
 

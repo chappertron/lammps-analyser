@@ -76,9 +76,8 @@ fn main() -> Result<()> {
     }
     let ast = ast?;
 
-    // Parsing fixes
-
-    let parsed_fixes = ast
+    // Checking fix arguments
+    let fix_errors = ast
         .commands
         .iter()
         .filter_map(|command| {
@@ -127,11 +126,7 @@ fn main() -> Result<()> {
             .map(|x| Warnings::from(x).into()),
     );
 
-    issues.extend(
-        parsed_fixes
-            .into_iter()
-            .map(|x| LammpsError::from(x).into()),
-    );
+    issues.extend(fix_errors.into_iter().map(|x| LammpsError::from(x).into()));
 
     for issue in &issues {
         println!("{}", issue.make_simple_report());

@@ -70,9 +70,7 @@ pub enum InvalidArgumentsType {
     #[error("Incorrect number of arguments: {provided} expected {expected}")]
     IncorrectNumberArguments { provided: usize, expected: usize },
     #[error(
-        "Incorrect keyword arguments for `{kwarg}`. 
-         Expected {n_expected} arguments: {expected}. 
-         Only {n_provided} provided."
+        "Incorrect keyword arguments for `{kwarg}`. Expected {n_expected} arguments: {expected}. Only {n_provided} provided."
     )]
     MissingKwargField {
         kwarg: String,

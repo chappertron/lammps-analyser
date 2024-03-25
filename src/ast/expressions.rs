@@ -1,9 +1,16 @@
+// For denying unwraps and expects in this file
+#![deny(clippy::unwrap_used)]
+#![deny(clippy::expect_used)]
+
 use std::fmt::Display;
 
 use tree_sitter::Node;
 
-use crate::identifinder::Ident;
+use crate::{identifinder::Ident, utils::into_error::IntoError};
+use std::convert::TryFrom;
 use thiserror::Error;
+
+use super::from_node::MissingNode;
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub enum Expression {
@@ -22,6 +29,9 @@ pub enum Expression {
     UnaryOp(UnaryOp, Box<Expression>),
     /// A binary expression between two other expressions.
     BinaryOp(Box<Expression>, BinaryOp, Box<Expression>),
+    /// A built-in function. Slightly deviates from grammar, by only having one function type.
+    // TODO: Make a cow for name?
+    Function(String, Vec<Expression>),
     /// An expression wrapped in brackets.
     /// TODO: Perhaps just ignore brackets?
     Parens(Box<Expression>),
@@ -42,6 +52,17 @@ impl Display for Expression {
             Self::Bool(b) => write!(f, "{b}"),
             Self::UnaryOp(op, expr) => write!(f, "{op}{expr}"),
             Self::BinaryOp(lhs, op, rhs) => write!(f, "{lhs} {op} {rhs}"),
+            Self::Function(name, args) => {
+                write!(f, "{name}")?;
+                write!(f, "(")?;
+                for (i, arg) in args.iter().enumerate() {
+                    write!(f, "{}", arg)?;
+                    if i != args.len() - 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, ")")
+            }
             Self::Parens(expr) => write!(f, "({expr})"),
             Self::ThermoKeyword(kw) => write!(f, "{kw}"),
             Self::Word(word) => write!(f, "{word}"),
@@ -58,6 +79,16 @@ pub enum ParseExprError {
     ParseIntError(std::num::ParseIntError),
     #[error("Could not parse text as float {0}")]
     ParseFloatError(std::num::ParseFloatError),
+    #[error("Invalid unary operator: {0}")]
+    InvalidUnaryOperator(String), // TODO: make &'a str
+    #[error("Invalid binary operator: {0}")]
+    InvalidBinaryOperator(String), // TODO: Make &'a str
+    #[error("Incomplete Node")]
+    IncompleteNode,
+    #[error("Tree-sitter Error Node Found")]
+    ErrorNode,
+    #[error("Unknown Expression type: {0}")]
+    UnknownExpressionType(String),
 }
 
 impl From<std::num::ParseFloatError> for ParseExprError {
@@ -77,6 +108,11 @@ impl From<std::str::Utf8Error> for ParseExprError {
         Self::Utf8Error(v)
     }
 }
+impl From<MissingNode> for ParseExprError {
+    fn from(_: MissingNode) -> Self {
+        Self::IncompleteNode
+    }
+}
 
 impl Expression {
     /// TODO: Handle Erros
@@ -86,39 +122,62 @@ impl Expression {
         match node.kind() {
             // Child 0 is the v_/f_/c_ prefix
             "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
-                &node.child(1).unwrap(),
+                &node.child(1).into_err()?,
                 text,
             )?)),
             "binary_op" => Ok(Self::BinaryOp(
-                Box::new(Self::parse_expression(&node.child(0).unwrap(), text)?),
+                Box::new(Self::parse_expression(&node.child(0).into_err()?, text)?),
                 // TODO: Find a way to get the operator from the TS symbol
-                BinaryOp::try_from(node.child(1).unwrap().utf8_text(text)?).unwrap(),
-                Box::new(Self::parse_expression(&node.child(2).unwrap(), text)?),
+                BinaryOp::try_from(node.child(1).into_err()?.utf8_text(text)?)?,
+                Box::new(Self::parse_expression(&node.child(2).into_err()?, text)?),
             )),
 
             "unary_op" => Ok(Self::UnaryOp(
                 // TODO: Can the operator be parsed with the kind??
-                UnaryOp::try_from(node.child(0).unwrap().utf8_text(text)?).unwrap(),
-                Self::parse_expression(&node.child(1).unwrap(), text)?.into(),
+                UnaryOp::try_from(node.child(0).into_err()?.utf8_text(text)?)?,
+                Self::parse_expression(&node.child(1).into_err()?, text)?.into(),
             )),
+            "binary_func" | "unary_func" | "ternary_func" | "hexnary_func" | "other_func"
+            | "group_func" | "region_func" => {
+                let mut cursor = node.walk();
+
+                let mut args = Vec::new();
+                let name = &node.child(0).into_err()?.utf8_text(text)?;
+
+                // child 0 = function name
+                // child 1 = opening bracket
+                for node in node.children(&mut cursor).skip(2) {
+                    dbg!(node.utf8_text(text)?);
+                    if node.kind() == ")" {
+                        break;
+                    }
+                    if node.kind() == "," {
+                        continue;
+                    }
+                    args.push(Self::parse_expression(&node, text)?);
+                }
+                Ok(Self::Function(name.to_string(), args))
+            }
+
             "int" => Ok(Self::Int(node.utf8_text(text)?.parse()?)),
 
             "float" => Ok(Self::Float(node.utf8_text(text)?.parse()?)),
 
             // Just go into next level down
-            "expression" => Ok(Self::parse_expression(&node.child(0).unwrap(), text)?),
+            "expression" => Ok(Self::parse_expression(&node.child(0).into_err()?, text)?),
             "parens" => Ok(Self::Parens(Box::new(Self::parse_expression(
-                &node.child(1).unwrap(),
+                &node.child(1).into_err()?,
                 text,
             )?))),
             "bool" => match node.utf8_text(text)? {
                 "true" | "on" | "yes" => Ok(Self::Bool(true)),
                 "false" | "off" | "no" => Ok(Self::Bool(false)),
-                _ => unreachable!(),
+                _ => unreachable!(), // TODO: Verify this is the case?
             },
             "thermo_kwarg" => Ok(Self::ThermoKeyword(node.utf8_text(text)?.to_string())),
             "word" => Ok(Self::Word(node.utf8_text(text)?.to_string())),
-            x => unimplemented!("Unknown expression type: {}", x),
+            "ERROR" => Err(ParseExprError::ErrorNode),
+            x => Err(ParseExprError::UnknownExpressionType(x.to_owned())),
         }
         // todo!()
     }
@@ -145,7 +204,7 @@ pub enum BinaryOp {
 }
 
 impl TryFrom<&str> for BinaryOp {
-    type Error = String;
+    type Error = ParseExprError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "+" => Ok(Self::Add),
@@ -163,7 +222,7 @@ impl TryFrom<&str> for BinaryOp {
             "&&" => Ok(Self::And),
             "||" => Ok(Self::Or),
             "^|" => Ok(Self::Xor),
-            _ => Err(format!("Unknown binary operator: {value}")),
+            _ => Err(ParseExprError::InvalidBinaryOperator(value.to_owned())),
         }
     }
 }
@@ -206,18 +265,22 @@ impl Display for UnaryOp {
 }
 
 impl TryFrom<&str> for UnaryOp {
-    type Error = String;
+    type Error = ParseExprError;
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "-" => Ok(Self::Negate),
             "!" => Ok(Self::Not),
-            _ => Err(format!("Unknown unary operator: {value}")),
+            value => Err(Self::Error::InvalidUnaryOperator(value.to_owned())),
         }
     }
 }
 
 #[cfg(test)]
+// Allow unwraps in the tests module, but not in the parent module.
+#[allow(clippy::unwrap_used)]
+#[allow(clippy::expect_used)]
 mod tests {
+
     use crate::identifinder::IdentType;
 
     use super::*;
@@ -350,5 +413,103 @@ mod tests {
                 ))))
             )
         );
+    }
+
+    #[test]
+    fn parse_unary_func() {
+        let mut parser = setup_parser();
+        let source_bytes = b"variable a equal abs(v_example)";
+
+        let tree = parser.parse(source_bytes, None).unwrap();
+
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let command_node = tree.root_node().child(0).unwrap();
+        dbg!(command_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+
+        dbg!(expr_node.to_sexp());
+        // assert_eq!(ast.commands.len(), 1);
+        assert_eq!(
+            // ast.commands[0],
+            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::Function(
+                "abs".into(),
+                vec!(Expression::UnderscoreIdent(Ident {
+                    name: "example".into(),
+                    ident_type: IdentType::Variable,
+                    ..Default::default()
+                })),
+            )
+        );
+    }
+
+    #[test]
+    fn parse_binary_func() {
+        let mut parser = setup_parser();
+        let source_bytes = b"variable a equal ramp(v_example, 3.0)";
+
+        let tree = parser.parse(source_bytes, None).unwrap();
+
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let command_node = tree.root_node().child(0).unwrap();
+        dbg!(command_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+
+        dbg!(expr_node.to_sexp());
+        // assert_eq!(ast.commands.len(), 1);
+        assert_eq!(
+            // ast.commands[0],
+            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::Function(
+                "ramp".into(),
+                vec![
+                    Expression::UnderscoreIdent(Ident {
+                        name: "example".into(),
+                        ident_type: IdentType::Variable,
+                        ..Default::default()
+                    }),
+                    Expression::Float(3.0)
+                ],
+            )
+        );
+    }
+
+    #[test]
+    fn func_display() {
+        let mut parser = setup_parser();
+        let source_bytes = b"variable a equal ramp(v_example, 3.0)";
+
+        let tree = parser.parse(source_bytes, None).unwrap();
+
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let command_node = tree.root_node().child(0).unwrap();
+        dbg!(command_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+
+        dbg!(expr_node.to_sexp());
+        // assert_eq!(ast.commands.len(), 1);
+        let func = Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap();
+        assert_eq!(
+            // ast.commands[0],
+            func,
+            Expression::Function(
+                "ramp".into(),
+                vec![
+                    Expression::UnderscoreIdent(Ident {
+                        name: "example".into(),
+                        ident_type: IdentType::Variable,
+                        ..Default::default()
+                    }),
+                    Expression::Float(3.0)
+                ],
+            )
+        );
+        assert_eq!(func.to_string(), "ramp(v_example, 3)")
     }
 }

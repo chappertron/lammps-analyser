@@ -323,7 +323,6 @@ impl Backend {
         //     .log_message(MessageType::INFO, format!("{:?}", errors))
         //     .await;
 
-        // WARNING: Unwrap here may be dangerous. Remove
         let ast = ts_to_ast(&tree, text.as_bytes());
 
         if let Err(e) = &ast {
@@ -335,6 +334,7 @@ impl Backend {
                     vec![Diagnostic {
                         severity: Some(DiagnosticSeverity::ERROR),
                         message: format!("Error Parsing TS To AST: {}", e),
+                        // TODO: Don't just push this to the top of the file.
                         ..Default::default()
                     }],
                     None,
@@ -345,21 +345,6 @@ impl Backend {
             return;
         }
         let ast = ast.unwrap();
-
-        // Parsing fixes
-
-        let parsed_fixes = ast
-            .commands
-            .iter()
-            .filter_map(|command| {
-                if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
-                    Some(check_commands::check_fix::check_fix(fix))
-                } else {
-                    None
-                }
-            })
-            .filter_map(|x| x.err())
-            .collect::<Vec<_>>();
 
         // TODO: combine this whole block into a single function
         let mut error_finder = ErrorFinder::new().unwrap();
@@ -375,6 +360,23 @@ impl Backend {
             .unwrap();
 
         let invalid_styles = check_styles(&tree, text.as_bytes());
+
+        // Parsing fixes
+
+        let fix_errors = ast
+            .commands
+            .iter()
+            .filter_map(|command| {
+                if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
+                    Some(check_commands::check_fix::check_fix(fix))
+                } else {
+                    None
+                }
+            })
+            .filter_map(|x| x.err())
+            .collect::<Vec<_>>();
+
+        dbg!(&fix_errors);
 
         let mut diagnostics: Vec<Diagnostic> = error_finder
             // TODO: add methods to create ownership, so clowning isn't needed???
@@ -399,7 +401,7 @@ impl Backend {
         );
 
         // Zero or more
-        diagnostics.extend(parsed_fixes.into_iter().map(|e| e.into()));
+        diagnostics.extend(fix_errors.into_iter().map(|e| e.into()));
 
         self.client
             .publish_diagnostics(uri.clone(), diagnostics, Some(version))
