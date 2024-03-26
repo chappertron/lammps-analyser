@@ -293,6 +293,7 @@ pub struct UnusedIdent {
 impl From<UnusedIdent> for lsp_types::Diagnostic {
     fn from(value: UnusedIdent) -> Self {
         lsp_types::Diagnostic {
+            message: format!("Unused {}: {}", value.ident.ident_type, value.ident.name),
             range: ts_range_to_lsp_range(&value.ident.range()),
             severity: Some(lsp_types::DiagnosticSeverity::WARNING),
             ..Default::default()
