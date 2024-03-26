@@ -27,7 +27,6 @@ use std::{
 use tree_sitter::Parser;
 
 #[derive(Debug, clap::Parser)]
-
 struct Cli {
     /// LAMMPS input script to check
     source: String,
@@ -61,7 +60,9 @@ fn main() -> Result<()> {
         .set_language(tree_sitter_lammps::language())
         .expect("Could not load language");
 
-    let tree = parser.parse(source_bytes, None).unwrap();
+    let tree = parser
+        .parse(source_bytes, None)
+        .expect("Failed to load the TS grammar.");
 
     if cli.output_tree {
         let dot_file = File::create("tree.dot")?;
@@ -82,7 +83,7 @@ fn main() -> Result<()> {
         .iter()
         .filter_map(|command| {
             if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
-                Some(check_commands::check_fix::check_fix(fix))
+                Some(check_commands::fixes::check_fix(fix))
             } else {
                 None
             }

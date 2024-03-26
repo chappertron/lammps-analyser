@@ -90,6 +90,17 @@ pub(crate) mod into_error {
 }
 
 #[cfg(test)]
+pub(crate) mod testing {
+    use tree_sitter::Parser;
+
+    pub fn setup_parser() -> Parser {
+        let mut parser = Parser::new();
+        parser.set_language(tree_sitter_lammps::language()).unwrap();
+        parser
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

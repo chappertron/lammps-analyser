@@ -368,7 +368,7 @@ impl Backend {
             .iter()
             .filter_map(|command| {
                 if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
-                    Some(check_commands::check_fix::check_fix(fix))
+                    Some(check_commands::fixes::check_fix(fix))
                 } else {
                     None
                 }

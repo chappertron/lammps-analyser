@@ -32,6 +32,7 @@ enum_glob_use = "deny"
 missing_panics_doc = "warn"
 redundant_clone = "warn"
 ref_option_ref = "warn"
+
 [[bin]]
 # TODO: rename to lmp_lsp
 # TODO: Or make a subcommand of lammps_analyser bin
