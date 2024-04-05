@@ -34,8 +34,9 @@ impl Ast {
     }
 }
 
-pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Result<Ast, FromNodeError> {
+pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, FromNodeError> {
     let mut cursor = tree.walk();
+    let text = text.as_ref();
 
     let mut commands = vec![];
     cursor.goto_first_child();
@@ -74,7 +75,7 @@ impl CommandNode {
 }
 
 impl FromNode for CommandNode {
-    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
         let range = node.range().into();
 
         let command_type = CommandType::from_node(node, text)?;
@@ -93,7 +94,7 @@ pub enum CommandType {
 }
 
 impl FromNode for CommandType {
-    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
         let cmd = if NamedCommand::try_from(node.kind()).is_ok() {
             // TODO: add arguments
             CommandType::NamedCommand(NamedCommand::from_node(node, text)?)
@@ -116,13 +117,15 @@ pub struct GenericCommand {
 }
 
 impl FromNode for GenericCommand {
-    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
         let mut cursor = node.walk();
         // let kind = node.kind().to_string();
         let start = node.start_position();
         let end = node.end_position();
         let start_byte = node.start_byte();
         let end_byte = node.end_byte();
+
+        let text = text.as_ref();
 
         let mut args = vec![];
 
@@ -178,11 +181,12 @@ impl FromNode for Argument {
     fn from_node(
         node: &Node,
         // _cursor: &mut tree_sitter::TreeCursor,
-        text: &[u8],
+        text: impl AsRef<[u8]>,
     ) -> Result<Self, FromNodeError> {
         // TODO: make these variants more complete.
         //.child(0).unwrap()
         // Did removing above from match fix things???
+        let text = text.as_ref();
         match node.kind() {
             "int" => Ok(Self::Int(node.utf8_text(text)?.parse::<isize>()?)),
             "float" => Ok(Self::Float(node.utf8_text(text)?.parse::<f64>()?)),
@@ -272,7 +276,7 @@ pub enum NamedCommand {
 }
 
 impl FromNode for NamedCommand {
-    fn from_node(node: &Node, text: &[u8]) -> Result<NamedCommand, FromNodeError> {
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<NamedCommand, FromNodeError> {
         match node.kind() {
             "fix" => Ok(NamedCommand::Fix(FixDef::from_node(node, text)?)),
             "compute" => Ok(NamedCommand::Compute),
@@ -312,8 +316,9 @@ impl FixDef {
 impl FromNode for FixDef {
     /// TODO: Hand a cursor instead???
     // TODO: Remove unwraps
-    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
         let mut cursor = node.walk();
+        let text = text.as_ref();
 
         // TODO: handle case this is false
         cursor.goto_first_child();
@@ -368,12 +373,13 @@ impl ComputeDef {
 impl FromNode for ComputeDef {
     /// TODO: Hand a cursor instead???
     // TODO: Remove unwraps
-    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
         let mut cursor = node.walk();
 
         // TODO: handle case this is false
         cursor.goto_first_child();
         let mut children = node.children(&mut cursor);
+        let text = text.as_ref();
 
         // skip the fix keyword
         children.next();

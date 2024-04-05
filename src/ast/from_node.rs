@@ -6,8 +6,11 @@ use crate::{diagnostic_report::ReportSimple, utils::into_error::IntoError};
 
 use super::expressions::ParseExprError;
 
+/// Converts from a tree-sitter node to the type this trait is implemented for.
+///
+/// Requires providing the text source, which is needed for extracting names and identifiers.
 pub trait FromNode: Sized {
-    fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError>;
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError>;
 }
 
 // #[derive(Debug, Error, Clone)]
