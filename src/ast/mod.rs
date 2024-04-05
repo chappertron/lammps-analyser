@@ -6,9 +6,10 @@
 
 pub mod expressions;
 pub mod from_node;
+use crate::spans::{Point, Span};
 use std::fmt::Display;
 
-use tree_sitter::{Node, Point, Range, Tree};
+use tree_sitter::{Node, Tree};
 
 use crate::{
     compute_styles::ComputeStyle, fix_styles::FixStyle, identifinder::Ident,
@@ -29,7 +30,7 @@ impl Ast {
     pub fn find_point(&self, point: &Point) -> Option<&CommandNode> {
         self.commands
             .iter()
-            .find(|cmd| cmd.range.start_point <= *point && cmd.range.end_point >= *point)
+            .find(|cmd| cmd.range.start <= *point && cmd.range.end >= *point)
     }
 }
 
@@ -63,18 +64,18 @@ pub fn ts_to_ast(tree: &Tree, text: &[u8]) -> Result<Ast, FromNodeError> {
 #[derive(Debug, PartialEq, Clone)]
 pub struct CommandNode {
     pub command_type: CommandType,
-    range: Range,
+    range: Span,
 }
 
 impl CommandNode {
-    pub fn range(&self) -> Range {
+    pub fn range(&self) -> Span {
         self.range
     }
 }
 
 impl FromNode for CommandNode {
     fn from_node(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
-        let range = node.range();
+        let range = node.range().into();
 
         let command_type = CommandType::from_node(node, text)?;
 
@@ -142,8 +143,8 @@ impl FromNode for GenericCommand {
         Ok(GenericCommand {
             name,
             args,
-            start,
-            end,
+            start: start.into(),
+            end: end.into(),
             start_byte,
             end_byte,
         })
@@ -303,7 +304,7 @@ pub struct FixDef {
 }
 
 impl FixDef {
-    pub fn range(&self) -> Range {
+    pub fn range(&self) -> Span {
         self.fix_id.range()
     }
 }
@@ -359,7 +360,7 @@ pub struct ComputeDef {
 }
 
 impl ComputeDef {
-    pub fn range(&self) -> Range {
+    pub fn range(&self) -> Span {
         self.compute_id.range()
     }
 }

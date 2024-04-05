@@ -6,7 +6,7 @@ use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
 use lammps_analyser::identifinder::{unused_variables, IdentiFinder};
 use lammps_analyser::lammps_errors::Warnings;
-use lammps_analyser::utils::{get_symbol_at_point, point_to_position, position_to_point};
+use lammps_analyser::utils::{get_symbol_at_point, position_to_point};
 use std::str::FromStr;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
@@ -203,10 +203,7 @@ impl LanguageServer for Backend {
                     kind: SymbolKind::from(s.ident_type),
                     location: Location {
                         uri: params.text_document.uri.clone(),
-                        range: Range {
-                            start: point_to_position(&s.start()),
-                            end: point_to_position(&s.end()),
-                        },
+                        range: s.range().into_lsp_types(),
                     },
                     container_name: None,
                     tags: None,
@@ -237,7 +234,7 @@ impl LanguageServer for Backend {
     ) -> Result<Option<GotoDefinitionResponse>> {
         let uri = params.text_document_position_params.text_document.uri;
         let position = params.text_document_position_params.position;
-        let point = tree_sitter::Point::new(position.line as usize, position.character as usize);
+        let point = position.into();
 
         self.client
             .log_message(MessageType::INFO, format!("At point: {point:?}"))
@@ -262,10 +259,7 @@ impl LanguageServer for Backend {
                 .iter()
                 .map(|def| Location {
                     uri: uri.clone(),
-                    range: Range {
-                        start: point_to_position(&def.start()),
-                        end: point_to_position(&def.end()),
-                    },
+                    range: def.range().into_lsp_types(),
                 })
                 .collect(),
         )))

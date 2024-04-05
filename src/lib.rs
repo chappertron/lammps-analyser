@@ -12,4 +12,7 @@ pub mod lammps_errors;
 pub mod lsp;
 pub mod utils;
 
+pub mod spanned_error;
+pub mod spans;
+
 pub mod lints;

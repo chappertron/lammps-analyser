@@ -1,5 +1,4 @@
 use crate::ast::FixDef;
-use crate::utils::InTSRange;
 use crate::{
     ast::{Ast, CommandType, NamedCommand},
     identifinder::{Ident, IdentMap},

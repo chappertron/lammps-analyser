@@ -1,5 +1,5 @@
+use crate::spans::Point;
 use lsp_types::Position;
-use tree_sitter::Point;
 
 use crate::identifinder::{IdentiFinder, NameAndType};
 
@@ -13,14 +13,14 @@ pub fn point_to_position(point: &tree_sitter::Point) -> lsp_types::Position {
 
 /// Convert a lsp-position to an tree-sitter point
 pub fn position_to_point(pos: &lsp_types::Position) -> tree_sitter::Point {
-    Point {
+    tree_sitter::Point {
         row: pos.line as usize,
         column: pos.character as usize,
     }
 }
 
 /// convert a `tree_sitter::Range` into a `lsp_types::Range`
-/// Note, the reverse is not trivial becase a `tree_sitter::Range` requires byte information
+/// Note, the reverse is not trivial because a `tree_sitter::Range` requires byte information
 /// that is not used in `lsp_types`
 pub fn ts_range_to_lsp_range(range: &tree_sitter::Range) -> lsp_types::Range {
     lsp_types::Range {

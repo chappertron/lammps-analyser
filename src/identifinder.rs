@@ -1,3 +1,4 @@
+use crate::spans::{Point, Span};
 use anyhow::Result;
 use owo_colors::OwoColorize;
 use std::{
@@ -7,12 +8,9 @@ use std::{
     str::Utf8Error,
 };
 use thiserror::Error;
-use tree_sitter::{Node, Point, Query, QueryCursor, Range, Tree};
+use tree_sitter::{Node, Query, QueryCursor, Tree};
 
-use crate::{
-    diagnostic_report::ReportSimple,
-    utils::{point_to_position, ts_range_to_lsp_range},
-};
+use crate::diagnostic_report::ReportSimple;
 
 pub type IdentMap = HashMap<NameAndType, SymbolDefsAndRefs>;
 
@@ -20,8 +18,6 @@ pub struct IdentiFinder {
     pub query_def: Query,
     pub query_ref: Query,
     cursor: QueryCursor,
-    // ident_defs: Vec<SymbolDef>,
-    // ident_refs: Vec<Ident>,
     symbols: HashMap<NameAndType, SymbolDefsAndRefs>,
 }
 
@@ -294,7 +290,7 @@ impl From<UnusedIdent> for lsp_types::Diagnostic {
     fn from(value: UnusedIdent) -> Self {
         lsp_types::Diagnostic {
             message: format!("Unused {}: {}", value.ident.ident_type, value.ident.name),
-            range: ts_range_to_lsp_range(&value.ident.range()),
+            range: value.ident.range().into_lsp_types(),
             severity: Some(lsp_types::DiagnosticSeverity::WARNING),
             ..Default::default()
         }
@@ -332,11 +328,7 @@ pub struct NameAndType {
 pub struct Ident {
     pub name: String,
     pub ident_type: IdentType,
-    // pub start: Point,
-    // pub end: Point,
-    // pub start_byte: usize,
-    // pub end_byte: usize,
-    pub span: Range,
+    pub span: Span,
 }
 impl Ident {
     /// Parses the node and text into an Ident
@@ -357,20 +349,20 @@ impl Ident {
         Ok(Ident {
             name,
             ident_type,
-            span: node.range(),
+            span: node.range().into(),
         })
     }
 
-    pub fn range(&self) -> Range {
+    pub fn range(&self) -> Span {
         self.span
     }
 
     pub fn start(&self) -> Point {
-        self.span.start_point
+        self.span.start
     }
 
     pub fn end(&self) -> Point {
-        self.span.end_point
+        self.span.end
     }
 
     pub fn underscore_ident(&self) -> String {
@@ -389,11 +381,9 @@ impl Default for Ident {
         Ident {
             name: String::default(),
             ident_type: IdentType::default(),
-            span: Range {
-                start_byte: 0,
-                end_byte: 0,
-                start_point: Point::default(),
-                end_point: Point::default(),
+            span: Span {
+                start: Point::default(),
+                end: Point::default(),
             },
         }
     }
@@ -473,8 +463,8 @@ impl From<IdentType> for lsp_types::SymbolKind {
 
 #[derive(Debug, Error, Clone)]
 #[error("{}:{}: {} {} `{}`",
-        ident.span.start_point.row+1,
-        ident.span.start_point.column+1,
+        ident.span.start.row+1,
+        ident.span.start.column+1,
         "Undefined",
         ident.ident_type,ident.name)]
 pub struct UndefinedIdent {
@@ -485,8 +475,8 @@ impl ReportSimple for UndefinedIdent {
     fn make_simple_report(&self) -> String {
         format!(
             "{}:{}: {} {} `{}`",
-            self.ident.span.start_point.row + 1,
-            self.ident.span.start_point.column + 1,
+            self.ident.span.start.row + 1,
+            self.ident.span.start.column + 1,
             "Undefined".bright_red(),
             self.ident.ident_type.bright_red(),
             self.ident.name
@@ -496,13 +486,7 @@ impl ReportSimple for UndefinedIdent {
 
 impl From<UndefinedIdent> for lsp_types::Diagnostic {
     fn from(value: UndefinedIdent) -> Self {
-        lsp_types::Diagnostic::new_simple(
-            lsp_types::Range {
-                start: point_to_position(&value.ident.span.start_point),
-                end: point_to_position(&value.ident.span.end_point),
-            },
-            value.to_string(),
-        )
+        lsp_types::Diagnostic::new_simple(value.ident.range().into_lsp_types(), value.to_string())
     }
 }
 
