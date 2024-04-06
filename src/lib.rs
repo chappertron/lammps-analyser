@@ -1,6 +1,7 @@
 pub mod ast;
 pub mod check_commands;
 pub mod check_styles;
+pub mod commands;
 pub mod compute_styles;
 pub mod diagnostic_report;
 pub mod error_finder;

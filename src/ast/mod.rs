@@ -6,7 +6,10 @@
 
 pub mod expressions;
 pub mod from_node;
-use crate::spans::{Point, Span};
+use crate::{
+    commands::CommandName,
+    spans::{Point, Span},
+};
 use std::fmt::Display;
 
 use tree_sitter::{Node, Tree};
@@ -108,7 +111,7 @@ impl FromNode for CommandType {
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct GenericCommand {
-    pub name: String,
+    pub name: CommandName,
     pub args: Vec<Argument>,
     pub start: Point,
     pub end: Point,
@@ -134,7 +137,7 @@ impl FromNode for GenericCommand {
         cursor.goto_first_child();
 
         // TODO: use a field in the TS grammar
-        let name = cursor.node().utf8_text(text)?.to_string();
+        let name = cursor.node().utf8_text(text)?;
 
         while cursor.goto_next_sibling() {
             for node in cursor.node().children(&mut cursor) {
@@ -144,7 +147,7 @@ impl FromNode for GenericCommand {
 
         cursor.goto_parent();
         Ok(GenericCommand {
-            name,
+            name: name.into(),
             args,
             start: start.into(),
             end: end.into(),
@@ -165,15 +168,16 @@ pub enum Argument {
     /// Variables within curly braces
     VarCurly(Ident),
     VarRound(expressions::Expression),
-    String,
+    String(String),
     Expression(expressions::Expression),
     // TODO: Remove? Can't know if a group name until further on in the process???
     // Perhaps make it an identifier that then is decided to be either
     Group,
     /// A variable/fix/compute name prefixed by v_/f_/c_
     UnderscoreIdent(Ident),
+    /// A white-space delimited word
     Word(String),
-    /// Indicates an invalid node in the  TreeSitter grammar
+    /// Indicates an invalid node in the tree-sitter grammar
     Error,
 }
 
@@ -203,7 +207,7 @@ impl FromNode for Argument {
             "expression" => Ok(Self::Expression(expressions::Expression::parse_expression(
                 node, text,
             )?)),
-            "string" => Ok(Self::String),
+            "string" => Ok(Self::String(node.utf8_text(text)?.to_owned())),
             "group" => Ok(Self::Group),
             "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
                 &node.child(0).into_err()?,
@@ -246,7 +250,7 @@ impl Display for Argument {
             Argument::VarCurly(x) => write!(f, "var_curly: ${{{0}}}", x.name),
             Argument::VarRound(x) => write!(f, "var_round: $({x})"),
             // TODO: properly implement string
-            Argument::String => write!(f, "string"),
+            Argument::String(s) => write!(f, "string: {s}"),
             Argument::Expression(x) => write!(f, "expression: {x}"),
             Argument::Group => write!(f, "group"),
             Argument::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),
