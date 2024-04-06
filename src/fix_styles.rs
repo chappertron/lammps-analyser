@@ -1,5 +1,3 @@
-pub struct InvalidFix(String);
-
 macro_rules! fix_styles {
     ($(($variant:tt, $lit:literal, $nargs:literal) ),+) => {
 

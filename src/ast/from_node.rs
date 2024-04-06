@@ -1,8 +1,8 @@
 use owo_colors::OwoColorize;
-use thiserror::Error;
 use tree_sitter::{Node, Point, TreeCursor};
 
 use crate::{diagnostic_report::ReportSimple, utils::into_error::IntoError};
+use thiserror::Error;
 
 use super::expressions::ParseExprError;
 
@@ -10,7 +10,8 @@ use super::expressions::ParseExprError;
 ///
 /// Requires providing the text source, which is needed for extracting names and identifiers.
 pub trait FromNode: Sized {
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError>;
+    type Error;
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error>;
 }
 
 // #[derive(Debug, Error, Clone)]
@@ -22,7 +23,8 @@ pub trait FromNode: Sized {
 // }
 
 // TODO: Just wrap expression parse error??
-#[derive(Debug, Error, Clone)]
+#[derive(Debug, Error, Clone, PartialEq)]
+/// An error associated with converting a tree-sitter `Node`.
 pub enum FromNodeError {
     #[error("Could not parse text as UTF-8 {0}")]
     Utf8Error(std::str::Utf8Error),

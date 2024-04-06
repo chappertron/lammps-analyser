@@ -10,7 +10,7 @@ use anyhow::Result;
 
 use clap::Parser as ClapParser;
 use lammps_analyser::{
-    ast::{ts_to_ast, CommandType, NamedCommand},
+    ast::{ts_to_ast, CommandType, NamedCommand, PartialAst},
     check_commands,
     check_styles::check_styles,
     diagnostic_report::ReportSimple,
@@ -73,9 +73,14 @@ fn main() -> Result<()> {
 
     // Somewhat gracefully exit
     if let Err(e) = &ast {
-        println!("{}:{}", cli.source.bold(), e.make_simple_report());
+        for error in &e.errors {
+            println!("{}:{}", cli.source.bold(), error.make_simple_report());
+        }
     }
-    let ast = ast?;
+    let ast = match ast {
+        Ok(ast) => ast,
+        Err(PartialAst { ast, .. }) => ast,
+    };
 
     // Checking fix arguments
     let fix_errors = ast
@@ -114,12 +119,12 @@ fn main() -> Result<()> {
     issues.extend(
         undefined_fixes
             .into_iter()
-            .map(|x| LammpsError::from(x.clone()).into()),
+            .map(|x| LammpsError::from(x).into()),
     );
     issues.extend(
         invalid_styles
             .into_iter()
-            .map(|x| LammpsError::from(x.clone()).into()),
+            .map(|x| LammpsError::from(x).into()),
     );
     issues.extend(
         unused_variables(identifinder.symbols())

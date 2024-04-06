@@ -1,6 +1,6 @@
 //! Alternative implementation for the lsp using the `tower-lsp` crate.
 use dashmap::DashMap;
-use lammps_analyser::ast::{ts_to_ast, CommandType, NamedCommand};
+use lammps_analyser::ast::{ts_to_ast, CommandType, NamedCommand, PartialAst};
 use lammps_analyser::check_commands;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
@@ -321,26 +321,29 @@ impl Backend {
 
         let ast = ts_to_ast(&tree, text.as_bytes());
 
-        if let Err(e) = &ast {
-            println!("{}", e);
+        let ast = match ast {
+            Ok(ast) => ast,
+            Err(PartialAst { ast, errors }) => {
+                for e in errors {
+                    println!("{}", e);
 
-            self.client
-                .publish_diagnostics(
-                    uri.clone(),
-                    vec![Diagnostic {
-                        severity: Some(DiagnosticSeverity::ERROR),
-                        message: format!("Error Parsing TS To AST: {}", e),
-                        // TODO: Don't just push this to the top of the file.
-                        ..Default::default()
-                    }],
-                    None,
-                )
-                .await;
+                    self.client
+                        .publish_diagnostics(
+                            uri.clone(),
+                            vec![Diagnostic {
+                                severity: Some(DiagnosticSeverity::ERROR),
+                                message: format!("Error Parsing TS To AST: {}", e),
+                                range: e.span.into_lsp_types(),
+                                ..Default::default()
+                            }],
+                            None,
+                        )
+                        .await;
+                }
 
-            // Wait for the next call.
-            return;
-        }
-        let ast = ast.unwrap();
+                ast
+            }
+        };
 
         // TODO: combine this whole block into a single function
         let mut error_finder = ErrorFinder::new().unwrap();

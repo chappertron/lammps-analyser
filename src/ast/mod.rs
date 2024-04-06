@@ -8,6 +8,7 @@ pub mod expressions;
 pub mod from_node;
 use crate::{
     commands::CommandName,
+    spanned_error::{SpannedError, WithSpan},
     spans::{Point, Span},
 };
 use std::fmt::Display;
@@ -28,6 +29,13 @@ pub struct Ast {
     pub commands: Vec<CommandNode>,
 }
 
+/// An AST that could not be fully produced. Also contains errors.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PartialAst {
+    pub ast: Ast,
+    pub errors: Vec<SpannedError<FromNodeError>>,
+}
+
 impl Ast {
     /// Find the command corresponding to a given point
     pub fn find_point(&self, point: &Point) -> Option<&CommandNode> {
@@ -37,19 +45,25 @@ impl Ast {
     }
 }
 
-pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, FromNodeError> {
+/// TODO: return both the partial AST and the Errors
+pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, PartialAst> {
     let mut cursor = tree.walk();
     let text = text.as_ref();
 
     let mut commands = vec![];
+    let mut errors = vec![];
     cursor.goto_first_child();
 
     loop {
         // Advance cursor and skip if a comment
         if cursor.goto_first_child() && cursor.node().kind() != "comment" {
-            let cmd = CommandNode::from_node(&cursor.node(), text)?;
+            let result = CommandNode::from_node(&cursor.node(), text)
+                .with_span(cursor.node().range().into());
 
-            commands.push(cmd);
+            match result {
+                Ok(cmd) => commands.push(cmd),
+                Err(err) => errors.push(err),
+            }
 
             cursor.goto_parent();
         }
@@ -60,7 +74,14 @@ pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, FromNodeErr
         }
     }
 
-    Ok(Ast { commands })
+    if errors.is_empty() {
+        Ok(Ast { commands })
+    } else {
+        Err(PartialAst {
+            ast: Ast { commands },
+            errors,
+        })
+    }
 }
 
 /// A command in the LAMMPS Input Script
@@ -78,7 +99,8 @@ impl CommandNode {
 }
 
 impl FromNode for CommandNode {
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
+    type Error = FromNodeError;
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
         let range = node.range().into();
 
         let command_type = CommandType::from_node(node, text)?;
@@ -97,6 +119,7 @@ pub enum CommandType {
 }
 
 impl FromNode for CommandType {
+    type Error = FromNodeError;
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
         let cmd = if NamedCommand::try_from(node.kind()).is_ok() {
             // TODO: add arguments
@@ -120,6 +143,7 @@ pub struct GenericCommand {
 }
 
 impl FromNode for GenericCommand {
+    type Error = FromNodeError;
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
         let mut cursor = node.walk();
         // let kind = node.kind().to_string();
@@ -182,11 +206,12 @@ pub enum Argument {
 }
 
 impl FromNode for Argument {
+    type Error = FromNodeError;
     fn from_node(
         node: &Node,
         // _cursor: &mut tree_sitter::TreeCursor,
         text: impl AsRef<[u8]>,
-    ) -> Result<Self, FromNodeError> {
+    ) -> Result<Self, <Argument as FromNode>::Error> {
         // TODO: make these variants more complete.
         //.child(0).unwrap()
         // Did removing above from match fix things???
@@ -280,7 +305,8 @@ pub enum NamedCommand {
 }
 
 impl FromNode for NamedCommand {
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<NamedCommand, FromNodeError> {
+    type Error = FromNodeError;
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<NamedCommand, Self::Error> {
         match node.kind() {
             "fix" => Ok(NamedCommand::Fix(FixDef::from_node(node, text)?)),
             "compute" => Ok(NamedCommand::Compute),
@@ -318,9 +344,10 @@ impl FixDef {
 }
 
 impl FromNode for FixDef {
+    type Error = FromNodeError;
+
     /// TODO: Hand a cursor instead???
-    // TODO: Remove unwraps
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
         let mut cursor = node.walk();
         let text = text.as_ref();
 
@@ -337,6 +364,7 @@ impl FromNode for FixDef {
                 .ok_or(FromNodeError::PartialNode("Missing identifier".into()))?,
             text,
         )?;
+
         let group_id = children.next().into_err()?.utf8_text(text)?.into();
         let fix_style = children.next().into_err()?.utf8_text(text)?.into();
 
@@ -375,9 +403,9 @@ impl ComputeDef {
 }
 
 impl FromNode for ComputeDef {
+    type Error = FromNodeError;
     /// TODO: Hand a cursor instead???
-    // TODO: Remove unwraps
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
         let mut cursor = node.walk();
 
         // TODO: handle case this is false

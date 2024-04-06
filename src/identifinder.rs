@@ -343,7 +343,7 @@ impl Ident {
             "fix_id" => IdentType::Fix,
             "compute_id" => IdentType::Compute,
             "variable" => IdentType::Variable,
-            x => panic!("Unknown identifier type {x}"), // TODO: Make this not panic
+            x => unreachable!("Unknown identifier type {x}"), // TODO: Make this not panic
         };
 
         Ok(Ident {
