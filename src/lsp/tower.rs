@@ -273,7 +273,9 @@ impl LanguageServer for Backend {
         let mut tree_cursor = tree.walk();
 
         let node = if tree_cursor.goto_first_child_for_point(ts_point).is_some() {
-            tree_cursor.node()
+            let parent = tree_cursor.node();
+            // Go to the narrowest node
+            parent.named_descendant_for_point_range(ts_point, parent.end_position())
         } else {
             return Ok(None);
         };
@@ -282,8 +284,8 @@ impl LanguageServer for Backend {
             contents: HoverContents::Markup(MarkupContent {
                 kind: MarkupKind::Markdown,
                 value: format!(
-                    "**Hovering** over: {:?}",
-                    node // params.text_document_position_params.position
+                    "**Hovering** over: {:?}\n**Raw Position: {:?}**",
+                    node, params.text_document_position_params.position
                 ),
             }),
             range: None,
