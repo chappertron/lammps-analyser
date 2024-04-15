@@ -15,7 +15,7 @@ variable        dofo  equal 2.8151
 variable        seedH equal 35543
 variable        seedC equal 3356
 variable        unused equal 69420
-variable        dz equal 4.0
+variable	dz equal 4.0
 variable        inputname  index startnemd
 variable        outputname string nemd1.TH${Thot}.TC${Tcold}
 # variable        outputname index run3-113
@@ -70,7 +70,7 @@ variable ly equal ly
 variable lz equal lz
 
 
-variable  cbl equal -${lz}/2.0+${dz}
+variable  cbl equal $(-v_lz)/2.0+${dz}
 variable  cbh equal ${lz}/2.0-${dz}
 region hot1 block INF INF INF INF INF  ${cbl} units box
 region hot2 block INF INF INF INF ${cbh} INF   units box
@@ -99,7 +99,7 @@ reset_timestep 0
 
 timestep        1
 
-fix             2 all nve
+fix 2 all nve what  
 
 log ${outputname}.log
 
@@ -128,3 +128,6 @@ fix temphyd hydrogen ave/chunk 1 $(v_nsteps) $(v_nsteps) lhydrogen density/numbe
 
 run   $(v_nsteps)
 write_data      ${outputname}.data pair ij
+
+fix # Here to show what happens with in-complete commands.
+
