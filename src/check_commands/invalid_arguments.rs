@@ -1,4 +1,5 @@
 use crate::diagnostic_report::ReportSimple;
+use crate::diagnostics::{Diagnostic, Issue};
 use crate::spans::{Point, Span};
 use lsp_types::DiagnosticSeverity;
 use owo_colors::OwoColorize;
@@ -6,8 +7,8 @@ use thiserror::Error;
 
 use crate::fix_styles::FixStyle;
 
-#[derive(Debug, Error, PartialEq, Eq)]
-#[error("{}:{}: {err_type} for fix: {fix_style}",range.start.row+1,range.start.column+1)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+#[error("{}:{}: {err_type} for fix {fix_style}",range.start.row+1,range.start.column+1)]
 pub struct InvalidArguments {
     pub(crate) err_type: InvalidArgumentsType,
     pub(crate) range: Span,
@@ -31,6 +32,17 @@ impl InvalidArguments {
     }
     pub fn end(&self) -> Point {
         self.range.end
+    }
+}
+
+impl Issue for InvalidArguments {
+    fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
+        Diagnostic {
+            name: "Invalid Arguments".to_owned(),
+            severity: crate::diagnostics::Severity::Error,
+            span: self.range,
+            message: format!("for fix `{}`: {}", self.fix_style, self.err_type),
+        }
     }
 }
 
@@ -58,9 +70,9 @@ impl ReportSimple for InvalidArguments {
     }
 }
 
-#[derive(Debug, Error, PartialEq, Eq)]
+#[derive(Debug, Error, PartialEq, Eq, Clone)]
 pub enum InvalidArgumentsType {
-    #[error("Incorrect number of arguments: {provided} expected {expected}")]
+    #[error("Incorrect number of arguments: {provided} provided, expected {expected}")]
     IncorrectNumberArguments { provided: usize, expected: usize },
     #[error(
         "Incorrect keyword arguments for `{kwarg}`. Expected {n_expected} arguments: {expected}. Only {n_provided} provided."
