@@ -4,6 +4,7 @@ pub mod check_styles;
 pub mod commands;
 pub mod compute_styles;
 pub mod diagnostic_report;
+pub mod diagnostics;
 pub mod error_finder;
 pub mod fix_styles;
 pub mod hover;
