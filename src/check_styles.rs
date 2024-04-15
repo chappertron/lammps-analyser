@@ -7,7 +7,7 @@ use std::fmt::Display;
 use thiserror::Error;
 use tree_sitter::{Point, Query, QueryCursor, Tree};
 
-#[derive(Debug, Error, Clone)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[error("{}:{}: {} {} `{}`",start.row+1,start.column+1,"Invalid",style_type,name)]
 pub struct InvalidStyle {
     pub start: Point,
@@ -62,7 +62,8 @@ impl Display for StyleType {
 
 // TODO: Check these by using the AST
 /// Checks the tree for different fix and compute styles and checks if they exist or not!!!
-pub fn check_styles(tree: &Tree, text: &[u8]) -> Result<Vec<InvalidStyle>> {
+pub fn check_styles(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Vec<InvalidStyle>> {
+    let text = text.as_ref();
     let query = Query::new(
         tree.language(),
         "(fix (fix_style) @definition.fix) (compute (compute_style) @definition.compute) ",

@@ -6,7 +6,7 @@ use crate::identifinder::{UndefinedIdent, UnusedIdent};
 
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum LammpsError {
     #[error("{0}")]
     SyntaxError(SyntaxError),
@@ -18,7 +18,7 @@ pub enum LammpsError {
     InvalidArguments(InvalidArguments),
 }
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum Warnings {
     #[error("{0}")]
     UnusedIdent(UnusedIdent),

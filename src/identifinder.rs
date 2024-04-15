@@ -1,5 +1,5 @@
 use crate::spans::{Point, Span};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use std::{
     collections::HashMap,
@@ -14,6 +14,8 @@ use crate::diagnostic_report::ReportSimple;
 
 pub type IdentMap = HashMap<NameAndType, SymbolDefsAndRefs>;
 
+/// Find and store Identifiers in the `tree-sitter` Tree. Stores a `QueryCursor` for re-use
+/// Symbols can be accessed through the `symbols` method.
 pub struct IdentiFinder {
     pub query_def: Query,
     pub query_ref: Query,
@@ -86,18 +88,23 @@ impl SymbolDef {
 // Use `DashMap` for easier use with the LSP Server???
 
 impl IdentiFinder {
+    /// Creates a new `IdentiFinder` without searching for the symbols, leaving an empty `symbols`
+    /// map
+    ///
+    /// Fails if the Query used internally is invalid. TODO: Make this a panic instead?
     pub fn new_no_parse() -> Result<Self> {
         let query_def = Query::new(
             tree_sitter_lammps::language(),
             "(fix (fix_id ) @definition.fix) 
                 (compute (compute_id) @definition.compute) 
                 (variable_def (variable) @definition.variable )",
-        )?;
+        )
+        .context("Invalid query for LAMMPS TS Grammar")?;
 
         let query_ref = Query::new(
             tree_sitter_lammps::language(),
             " (fix_id) @reference.fix  (compute_id) @reference.compute (variable) @reference.variable",
-        )?;
+        ).context("Invalid query for LAMMPS TS Grammar")?;
 
         let i = IdentiFinder {
             query_def,
@@ -114,7 +121,9 @@ impl IdentiFinder {
         Ok(i)
     }
 
-    pub fn new(tree: &Tree, text: &[u8]) -> Result<Self> {
+    /// Create a new `Identifinder` and search for symbols.
+    pub fn new(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Self> {
+        let text = text.as_ref();
         let mut i = Self::new_no_parse()?;
         i.find_symbols(tree, text)?;
         Ok(i)
@@ -461,7 +470,7 @@ impl From<IdentType> for lsp_types::SymbolKind {
     }
 }
 
-#[derive(Debug, Error, Clone)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[error("{}:{}: {} {} `{}`",
         ident.span.start.row+1,
         ident.span.start.column+1,

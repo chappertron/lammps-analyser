@@ -6,7 +6,7 @@ use crate::{
 use owo_colors::OwoColorize;
 use thiserror::Error;
 
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum Issue {
     /// Error in LAMMPS input file
     #[error("Error: {0}")]
