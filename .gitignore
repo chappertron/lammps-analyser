@@ -15,6 +15,9 @@ tree.dot
 tree.svg
 
 
+# Flamegraph outputs
+flamegraph.svg
+
 
 # sed backups
 *.rs-r
