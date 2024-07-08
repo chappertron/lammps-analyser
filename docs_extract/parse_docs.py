@@ -1,3 +1,21 @@
+"""
+Removes things that are sphinx extensions to the rst standard, so that pandoc can
+convert them to markdown properly
+
+Things that are done:
+    -  Appends underscores after ` `link text <uri>`_ `
+    - These are needed for pandoc to actually recognise these as links,
+    according to the rst spec. The format without trailing underscores is a sphinx
+    extension
+    - Index lines  (`:: index INDEX`) are extracted into a dictionary and removed from
+    the file. This dictionary is currently unused but could potentially be turned into
+    full proper index pages, or used for lookup of docs files.
+    - ` :: parsed-literal` headings are removed from those indented blocks. They are
+    interepreted as literals without this in rst.
+    -
+
+"""
+
 from os import PathLike
 from pathlib import Path
 
@@ -5,34 +23,33 @@ from typing import List
 import re
 
 
-# TODO: Things to fix
-# - {.interpreted-text role="doc"} - These aren't useful?
-# - Remove ::: index _ ::: etc.
-# - ::: parsed-literal block. -> Turn into nested lists
-# - Turn links into references to the markdown files. make a map betwen the index names and file names.
-
 # Just delete these ones...
 INDEX_REGEX = re.compile(r".. index::\s+(.+)")
 DOCS_REGEX = re.compile(
     r":doc:`(?P<text>.+)\s+<(?P<link_dest>.+)>`"
 )  # Replacing with out :doc: and direct link
 
+
+# TODO: Don't match already proper links (that have trailing _)
+LINK_REGEX_MULTI = re.compile(
+    r"`(?P<text>[^`]+)\s+<(?P<link_dest>[^`]+)>`"
+)  # Multipline version can span multiple lines
+
+# TODO: clear these in the same pass as part of the link regex
 DOCS_SIMPLE_REGEX = re.compile(r":doc:")  # Just delete these
+# TODO: Convert these to MD footnotes or references.
 REF_REGEX = re.compile(
     r":ref:"
 )  # Just delete these TODO: Make this work with MD footnotes
 
-# Convert into a markdown style link? or a link to the appropiate file.
-
-
-# settings = frontend.get_default_settings(Parser)
-
 
 def get_file_indices(file_name: PathLike) -> List[str]:
+    """
+    Extract the  index header from the files.
+    """
     with open(file_name, "r", encoding="utf-8") as file:
-        # parser = Parser()
-        # document = utils.new_document(file.name, settings)
         file_text = file.read()
+
     # TODO: Quit early if found the Syntax section
     indices = []
     for match in re.finditer(INDEX_REGEX, file_text):
@@ -50,14 +67,8 @@ for file in Path(DOCS_PATH).glob("*.rst"):
         # Just the file name
         index_lookup[index] = file.name.removesuffix(".rst")
 
-# Because there is a mistake in the lammps docs.
-## This index loopup might not actually be needed for linking to files...
-index_lookup["fix_atc"] = index_lookup["fix atc"]
-
 
 MODIFIED_PATH = Path("../lammps_docs_cleaned/")
-
-# print(index_lookup)
 
 
 # Go through all the docs files and peform the substitutions
@@ -65,39 +76,36 @@ for file in Path(DOCS_PATH).glob("*.rst"):
     print(file)
     with open(file, "r", encoding="utf-8") as stream:
         original_source = stream.read()
-    # Operate on the string, then write out
 
-    # TODO: Rather than operate line wise, operate on the whole document
-    # This will allow for converting the `{text} <{index}>` format to proper links,
-    # across multiple lines.
+    # TODO: Stop applying this regex if gone past the header section?
+    modified = INDEX_REGEX.sub("", original_source)
+
+    def replace_link(match: re.Match) -> str:
+        # TODO: give these groups names
+        text = match.group("text")
+        link = match.group("link_dest")
+        # file_path = index_lookup[index]
+
+        # TODO: do this with just a sub command and group expansion
+
+        # Make these anonymous links:
+        # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#anonymous-hyperlinks
+        return rf"`{text} <{link}>`__"
+
+    # Replace any indexes with relative file links
+    # modified = DOCS_REGEX.sub(replace_match, modified)
+
+    # Remove any remaining :doc: tags, such as when split accross \n
+    modified = DOCS_SIMPLE_REGEX.sub("", modified)
+
+    # Remove any remaining :ref: tags
+    modified = REF_REGEX.sub("", modified)
+
+    # Replace any links with proper ones with trailing_
+    modified = LINK_REGEX_MULTI.sub(replace_link, modified)
+
+    # Replace with a literal block that can be converted to markdown
+    modified = modified.replace(r".. parsed-literal::", r"::")
+
     with open(MODIFIED_PATH.joinpath(file.name), "w") as stream:
-        for line in original_source.splitlines():
-            # TODO: Stop applying this regex if gone past the header section
-            if match := INDEX_REGEX.match(line):
-                print(line)
-            line = INDEX_REGEX.sub("", line)
-
-            # docs_directives = DOCS_REGEX.findall(line)
-
-            def replace_match(match: re.Match) -> str:
-                text = match.group("text")
-                index = match.group("link_dest")
-                # file_path = index_lookup[index]
-
-                # TODO: do this with just a sub command and group expansion
-                return rf"`{text} <{index}>`"
-
-            # Replace any indexes with relative file links
-            line = DOCS_REGEX.sub(replace_match, line)
-
-            # Remove any remaining :doc: tags, such as when split accross \n
-            line = DOCS_SIMPLE_REGEX.sub("", line)
-
-            # Remove any remaining :ref: tags
-            line = REF_REGEX.sub("", line)
-
-            # Replace with a code block that can be converted to markdown
-            line = line.replace(r".. parsed-literal::", r"::")
-
-            stream.write(line)
-            stream.write("\n")
+        stream.write(modified)

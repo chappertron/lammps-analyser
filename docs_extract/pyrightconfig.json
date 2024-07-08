@@ -1,0 +1,8 @@
+{
+  "exclude": [
+    "**/lammps_docs*/",
+    "**/target/",
+    "docs_venv/"
+  ]
+}
+
