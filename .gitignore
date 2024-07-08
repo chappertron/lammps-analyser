@@ -3,14 +3,23 @@
 # Until I sort out the docs...
 lammps_docs/
 lammps_hover_docs/
-.*.rs.rustfmt
+full_lammps_docs/
+lammps_docs_md/
+lammps_docs_cleaned/
+# An attempted rust based docs extractor may readd
+extract_rst/
+
 docs_filter.py
 docs_example.rst
 docs_example.md
-test.*
 prepare_docs.py
 
-# Example trees
+# Rust format backups
+.*.rs.rustfmt
+
+test.*
+
+# Output from running --output-tree flag
 tree.dot
 tree.svg
 
@@ -21,3 +30,10 @@ flamegraph.svg
 
 # sed backups
 *.rs-r
+
+# venv for docs extract
+docs_venv/
+
+# scratch files for experimenting with the pandoc conversions
+pandoc_experimenting/
+
