@@ -5,7 +5,7 @@ macro_rules! commands {
     ($(($variant:tt, $lit:literal, $nargs:literal) ),+) => {
 
         #[allow(non_camel_case_types)]
-        #[derive(Debug,Eq,PartialEq,Clone)]
+        #[derive(Debug,Eq,PartialEq,Clone,Hash)]
         /// Enum of all possible valid LAMMPS commands.
         pub enum CommandName {
             $($variant,)+

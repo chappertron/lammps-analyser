@@ -4,7 +4,7 @@
 lammps_docs/
 lammps_hover_docs/
 full_lammps_docs/
-lammps_docs_md/
+#lammps_docs_md/
 lammps_docs_cleaned/
 # An attempted rust based docs extractor may readd
 extract_rst/

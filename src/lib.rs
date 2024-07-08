@@ -18,3 +18,5 @@ pub mod spanned_error;
 pub mod spans;
 
 pub mod lints;
+
+pub mod docs_map;

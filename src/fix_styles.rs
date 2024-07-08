@@ -2,7 +2,7 @@ macro_rules! fix_styles {
     ($(($variant:tt, $lit:literal, $nargs:literal) ),+) => {
 
         #[allow(non_camel_case_types)]
-        #[derive(Debug,Default,Eq,PartialEq,Clone,Copy)]
+        #[derive(Debug,Default,Eq,PartialEq,Clone,Copy,Hash)]
         pub enum FixStyle {
             $($variant,)+
             #[default] // Because no other varitant can be default with macro def
