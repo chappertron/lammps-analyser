@@ -1,0 +1,1441 @@
+fix_modify AtC write_restart,atc_write_restart
+pair_style meam/sw/spline,pair_meam_sw_spline
+fix lb/fluid,fix_lb_fluid
+fix imd,fix_imd
+fix print,fix_print
+compute sph/rho/atom,compute_sph_rho_atom
+prd,prd
+fix_modify AtC source,atc_source
+angle_style harmonic,angle_harmonic
+angle_style harmonic/intel,angle_harmonic
+angle_style harmonic/kk,angle_harmonic
+angle_style harmonic/omp,angle_harmonic
+fix_modify AtC atomic_charge,atc_atomic_charge
+dihedral_style harmonic,dihedral_harmonic
+dihedral_style harmonic/intel,dihedral_harmonic
+dihedral_style harmonic/kk,dihedral_harmonic
+dihedral_style harmonic/omp,dihedral_harmonic
+improper_style ring,improper_ring
+improper_style ring/omp,improper_ring
+bond_style harmonic/shift,bond_harmonic_shift
+bond_style harmonic/shift/omp,bond_harmonic_shift
+pair_style amoeba,pair_amoeba
+pair_style amoeba/gpu,pair_amoeba
+pair_style hippo,pair_amoeba
+pair_style hippo/gpu,pair_amoeba
+dihedral_style table,dihedral_table
+dihedral_style table/omp,dihedral_table
+dihedral_style table/cut,dihedral_table
+fix gravity,fix_gravity
+fix gravity/omp,fix_gravity
+fix gravity/kk,fix_gravity
+pair_style polymorphic,pair_polymorphic
+fix ave/time,fix_ave_time
+fix rx,fix_rx
+fix rx/kk,fix_rx
+timestep,timestep
+pair_style coul/cut,pair_coul
+pair_style coul/cut/gpu,pair_coul
+pair_style coul/cut/kk,pair_coul
+pair_style coul/cut/omp,pair_coul
+pair_style coul/debye,pair_coul
+pair_style coul/debye/gpu,pair_coul
+pair_style coul/debye/kk,pair_coul
+pair_style coul/debye/omp,pair_coul
+pair_style coul/dsf,pair_coul
+pair_style coul/dsf/gpu,pair_coul
+pair_style coul/dsf/kk,pair_coul
+pair_style coul/dsf/omp,pair_coul
+pair_style coul/exclude,pair_coul
+pair_style coul/cut/global,pair_coul
+pair_style coul/cut/global/omp,pair_coul
+pair_style coul/long,pair_coul
+pair_style coul/long/omp,pair_coul
+pair_style coul/long/kk,pair_coul
+pair_style coul/long/gpu,pair_coul
+pair_style coul/msm,pair_coul
+pair_style coul/msm/omp,pair_coul
+pair_style coul/streitz,pair_coul
+pair_style coul/wolf,pair_coul
+pair_style coul/wolf/kk,pair_coul
+pair_style coul/wolf/omp,pair_coul
+pair_style tip4p/cut,pair_coul
+pair_style tip4p/cut/omp,pair_coul
+pair_style tip4p/long,pair_coul
+pair_style tip4p/long/omp,pair_coul
+fix_modify AtC consistent_fe_initialization,atc_consistent_fe_initialization
+fix ffl,fix_ffl
+dihedral_style none,dihedral_none
+pair_style buck/long/coul/long,pair_buck_long
+pair_style buck/long/coul/long/omp,pair_buck_long
+improper_coeff,improper_coeff
+fix adapt/fep,fix_adapt_fep
+fix box/relax,fix_box_relax
+compute fep,compute_fep
+pair_style atm,pair_atm
+compute dpd,compute_dpd
+fix heat,fix_heat
+compute plasticity/atom,compute_plasticity_atom
+fix setforce,fix_setforce
+fix setforce/kk,fix_setforce
+fix setforce/spin,fix_setforce
+kspace_style ewald,kspace_style
+kspace_style ewald/dipole,kspace_style
+kspace_style ewald/dipole/spin,kspace_style
+kspace_style ewald/disp,kspace_style
+kspace_style ewald/disp/dipole,kspace_style
+kspace_style ewald/omp,kspace_style
+kspace_style ewald/electrode,kspace_style
+kspace_style pppm,kspace_style
+kspace_style pppm/kk,kspace_style
+kspace_style pppm/omp,kspace_style
+kspace_style pppm/gpu,kspace_style
+kspace_style pppm/intel,kspace_style
+kspace_style pppm/cg,kspace_style
+kspace_style pppm/dielectric,kspace_style
+kspace_style pppm/dipole,kspace_style
+kspace_style pppm/dipole/spin,kspace_style
+kspace_style pppm/disp,kspace_style
+kspace_style pppm/disp/omp,kspace_style
+kspace_style pppm/disp/tip4p,kspace_style
+kspace_style pppm/disp/tip4p/omp,kspace_style
+kspace_style pppm/disp/intel,kspace_style
+kspace_style pppm/disp/dielectric,kspace_style
+kspace_style pppm/cg/omp,kspace_style
+kspace_style pppm/stagger,kspace_style
+kspace_style pppm/tip4p,kspace_style
+kspace_style pppm/tip4p/omp,kspace_style
+kspace_style pppm/electrode,kspace_style
+kspace_style pppm/electrode/intel,kspace_style
+kspace_style msm,kspace_style
+kspace_style msm/omp,kspace_style
+kspace_style msm/cg,kspace_style
+kspace_style msm/cg/omp,kspace_style
+kspace_style msm/dielectric,kspace_style
+kspace_style scafacos,kspace_style
+minimize,minimize
+dihedral_style,dihedral_style
+pair_style wf/cut,pair_wf_cut
+compute property/chunk,compute_property_chunk
+fix external,fix_external
+angle_style cosine/periodic,angle_cosine_periodic
+angle_style cosine/periodic/omp,angle_cosine_periodic
+group,group
+compute pe/atom,compute_pe_atom
+pair_style python,pair_python
+fix wall/reflect,fix_wall_reflect
+fix wall/reflect/kk,fix_wall_reflect
+dump,dump
+dump atom,dump
+dump cfg,dump
+dump custom,dump
+dump dcd,dump
+dump grid,dump
+dump grid/vtk,dump
+dump local,dump
+dump xtc,dump
+dump yaml,dump
+dump xyz,dump
+dump atom/gz,dump
+dump cfg/gz,dump
+dump custom/gz,dump
+dump local/gz,dump
+dump xyz/gz,dump
+dump atom/mpiio,dump
+dump cfg/mpiio,dump
+dump custom/mpiio,dump
+dump xyz/mpiio,dump
+dump atom/zstd,dump
+dump cfg/zstd,dump
+dump custom/zstd,dump
+dump xyz/zstd,dump
+dump local/zstd,dump
+compute smd/tlsph/shape,compute_smd_tlsph_shape
+include,include
+read_restart,read_restart
+fix efield,fix_efield
+fix efield/tip4p,fix_efield
+fix_modify AtC mass_matrix,atc_mass_matrix
+fix addforce,fix_addforce
+create_atoms,create_atoms
+comm_modify,comm_modify
+python,python
+compute chunk/atom,compute_chunk_atom
+pair_style cosine/squared,pair_cosine_squared
+unfix,unfix
+pair_style pace,pair_pace
+pair_style pace/kk,pair_pace
+pair_style pace/extrapolation,pair_pace
+pair_style pace/extrapolation/kk,pair_pace
+package,package
+pair_style meam/spline,pair_meam_spline
+pair_style meam/spline/omp,pair_meam_spline
+fix wall/body/polygon,fix_wall_body_polygon
+compute temp/profile,compute_temp_profile
+fix spring/chunk,fix_spring_chunk
+bond_style none,bond_none
+compute basal/atom,compute_basal_atom
+fix precession/spin,fix_precession_spin
+compute dipole/chunk,compute_dipole_chunk
+compute dipole/tip4p/chunk,compute_dipole_chunk
+pair_style agni,pair_agni
+pair_style agni/omp,pair_agni
+compute smd/ulsph/num/neighs,compute_smd_ulsph_num_neighs
+angle_style table,angle_table
+angle_style table/omp,angle_table
+fix viscous/sphere,fix_viscous_sphere
+fix filter/corotate,fix_filter_corotate
+compute smd/triangle/vertices,compute_smd_triangle_vertices
+fix npt/cauchy,fix_npt_cauchy
+compute property/local,compute_property_local
+thermo_style,thermo_style
+compute reduce/chunk,compute_reduce_chunk
+dump molfile,dump_molfile
+fix srd,fix_srd
+fix electrode/conp,fix_electrode
+fix electrode/conq,fix_electrode
+fix electrode/thermo,fix_electrode
+fix electrode/conp/intel,fix_electrode
+fix electrode/conq/intel,fix_electrode
+fix electrode/thermo/intel,fix_electrode
+angle_style cosine,angle_cosine
+angle_style cosine/omp,angle_cosine
+angle_style cosine/kk,angle_cosine
+compute smd/contact/radius,compute_smd_contact_radius
+pair_style srp,pair_srp
+pair_style srp/react,pair_srp
+fix press/berendsen,fix_press_berendsen
+fix_modify AtC reset_atomic_reference_positions,atc_reset_atomic_reference
+angle_style,angle_style
+compute pressure/uef,compute_pressure_uef
+fix_modify AtC gradients,atc_hardy_gradients
+pair_style buck,pair_buck
+pair_style buck/gpu,pair_buck
+pair_style buck/intel,pair_buck
+pair_style buck/kk,pair_buck
+pair_style buck/omp,pair_buck
+pair_style buck/coul/cut,pair_buck
+pair_style buck/coul/cut/gpu,pair_buck
+pair_style buck/coul/cut/intel,pair_buck
+pair_style buck/coul/cut/kk,pair_buck
+pair_style buck/coul/cut/omp,pair_buck
+pair_style buck/coul/long,pair_buck
+pair_style buck/coul/long/gpu,pair_buck
+pair_style buck/coul/long/intel,pair_buck
+pair_style buck/coul/long/kk,pair_buck
+pair_style buck/coul/long/omp,pair_buck
+pair_style buck/coul/msm,pair_buck
+pair_style buck/coul/msm/omp,pair_buck
+fix halt,fix_halt
+fix dpd/energy,fix_dpd_energy
+fix dpd/energy/kk,fix_dpd_energy
+fix damping/cundall,fix_damping_cundall
+fix addtorque,fix_addtorque
+fix spring/self,fix_spring_self
+fix tgnvt/drude,fix_tgnh_drude
+fix tgnpt/drude,fix_tgnh_drude
+pair_style colloid,pair_colloid
+pair_style colloid/gpu,pair_colloid
+pair_style colloid/omp,pair_colloid
+fix eos/table,fix_eos_table
+fix_modify AtC initial,atc_initial
+shell,shell
+create_bonds,create_bonds
+compute gyration/chunk,compute_gyration_chunk
+pair_style lj/expand,pair_lj_expand
+pair_style lj/expand/gpu,pair_lj_expand
+pair_style lj/expand/kk,pair_lj_expand
+pair_style lj/expand/omp,pair_lj_expand
+pair_style lj/expand/coul/long,pair_lj_expand
+pair_style lj/expand/coul/long/kk,pair_lj_expand
+pair_style lj/expand/coul/long/gpu,pair_lj_expand
+compute coord/atom,compute_coord_atom
+compute coord/atom/kk,compute_coord_atom
+compute inertia/chunk,compute_inertia_chunk
+compute stress/mop,compute_stress_mop
+compute stress/mop/profile,compute_stress_mop
+fix atom/swap,fix_atom_swap
+compute angmom/chunk,compute_angmom_chunk
+pair_style body/nparticle,pair_body_nparticle
+angle_style fourier/simple,angle_fourier_simple
+angle_style fourier/simple/omp,angle_fourier_simple
+fix wall/body/polyhedron,fix_wall_body_polyhedron
+compute smd/ulsph/effm,compute_smd_ulsph_effm
+pair_style lebedeva/z,pair_lebedeva_z
+fix langevin,fix_langevin
+fix langevin/kk,fix_langevin
+dump image,dump_image
+dump movie,dump_image
+fix indent,fix_indent
+improper_style class2,improper_class2
+improper_style class2/omp,improper_class2
+improper_style class2/kk,improper_class2
+improper_style fourier,improper_fourier
+improper_style fourier/omp,improper_fourier
+fix tmd,fix_tmd
+compute slice,compute_slice
+info,info
+dump_modify,dump_modify
+compute erotate/sphere,compute_erotate_sphere
+compute erotate/sphere/kk,compute_erotate_sphere
+mdi,mdi
+fix_modify AtC computes,atc_hardy_computes
+fix charge/regulation,fix_charge_regulation
+pair_style born/coul/dsf/cs,pair_cs
+pair_style born/coul/long/cs,pair_cs
+pair_style born/coul/long/cs/gpu,pair_cs
+pair_style born/coul/wolf/cs,pair_cs
+pair_style born/coul/wolf/cs/gpu,pair_cs
+pair_style buck/coul/long/cs,pair_cs
+pair_style coul/long/cs,pair_cs
+pair_style coul/long/cs/gpu,pair_cs
+pair_style coul/wolf/cs,pair_cs
+pair_style lj/cut/coul/long/cs,pair_cs
+pair_style lj/class2/coul/long/cs,pair_cs
+angle_style spica,angle_spica
+angle_style spica/omp,angle_spica
+fix sph,fix_sph
+compute_modify,compute_modify
+fix flow/gauss,fix_flow_gauss
+fix drude,fix_drude
+improper_style hybrid,improper_hybrid
+angle_write,angle_write
+fix deposit,fix_deposit
+pair_style lj/cut,pair_lj
+pair_style lj/cut/gpu,pair_lj
+pair_style lj/cut/intel,pair_lj
+pair_style lj/cut/kk,pair_lj
+pair_style lj/cut/opt,pair_lj
+pair_style lj/cut/omp,pair_lj
+fix shake,fix_shake
+fix shake/kk,fix_shake
+fix rattle,fix_shake
+compute sph/e/atom,compute_sph_e_atom
+dump cfg/uef,dump_cfg_uef
+pair_style awpmd/cut,pair_awpmd
+angle_style gaussian,angle_gaussian
+compute bond,compute_bond
+compute smd/vol,compute_smd_vol
+fix_modify AtC mesh output,atc_mesh_output
+mass,mass
+angle_style quartic,angle_quartic
+angle_style quartic/omp,angle_quartic
+compute body/local,compute_body_local
+compute temp,compute_temp
+compute temp/kk,compute_temp
+fix nve/body,fix_nve_body
+fix grem,fix_grem
+compute event/displace,compute_event_displace
+fitpod,fitpod_command
+fix_modify AtC filter scale,atc_filter_scale
+neighbor,neighbor
+fix bond/break,fix_bond_break
+fix_modify AtC control momentum,atc_control_momentum
+min_modify,min_modify
+fix langevin/drude,fix_langevin_drude
+pair_style lj/cut/sphere,pair_lj_cut_sphere
+pair_style lj/cut/sphere/omp,pair_lj_cut_sphere
+run_style,run_style
+fix wall/lj93,fix_wall
+fix wall/lj93/kk,fix_wall
+fix wall/lj126,fix_wall
+fix wall/lj1043,fix_wall
+fix wall/colloid,fix_wall
+fix wall/harmonic,fix_wall
+fix wall/lepton,fix_wall
+fix wall/morse,fix_wall
+fix wall/table,fix_wall
+bond_style mesocnt,bond_mesocnt
+pair_style sph/taitwater,pair_sph_taitwater
+region,region
+fix tfmc,fix_tfmc
+fix acks2/reaxff,fix_acks2_reaxff
+fix acks2/reaxff/kk,fix_acks2_reaxff
+compute dpd/atom,compute_dpd_atom
+pair_style nb3b/harmonic,pair_nb3b_harmonic
+pair_style zero,pair_zero
+fix msst,fix_msst
+compute,compute
+compute ke/atom/eff,compute_ke_atom_eff
+fix cmap,fix_cmap
+dihedral_write,dihedral_write
+pair_style spin/neel,pair_spin_neel
+fix nve/dotc/langevin,fix_nve_dotc_langevin
+pair_style lj/cut/soft,pair_fep_soft
+pair_style lj/cut/soft/omp,pair_fep_soft
+pair_style lj/cut/coul/cut/soft,pair_fep_soft
+pair_style lj/cut/coul/cut/soft/omp,pair_fep_soft
+pair_style lj/cut/coul/long/soft,pair_fep_soft
+pair_style lj/cut/coul/long/soft/omp,pair_fep_soft
+pair_style lj/cut/tip4p/long/soft,pair_fep_soft
+pair_style lj/cut/tip4p/long/soft/omp,pair_fep_soft
+pair_style lj/charmm/coul/long/soft,pair_fep_soft
+pair_style lj/charmm/coul/long/soft/omp,pair_fep_soft
+pair_style lj/class2/soft,pair_fep_soft
+pair_style lj/class2/coul/cut/soft,pair_fep_soft
+pair_style lj/class2/coul/long/soft,pair_fep_soft
+pair_style coul/cut/soft,pair_fep_soft
+pair_style coul/cut/soft/omp,pair_fep_soft
+pair_style coul/long/soft,pair_fep_soft
+pair_style coul/long/soft/omp,pair_fep_soft
+pair_style tip4p/long/soft,pair_fep_soft
+pair_style tip4p/long/soft/omp,pair_fep_soft
+pair_style morse/soft,pair_fep_soft
+pair_style dpd,pair_dpd
+pair_style dpd/gpu,pair_dpd
+pair_style dpd/intel,pair_dpd
+pair_style dpd/kk,pair_dpd
+pair_style dpd/omp,pair_dpd
+pair_style dpd/tstat,pair_dpd
+pair_style dpd/tstat/gpu,pair_dpd
+pair_style dpd/tstat/kk,pair_dpd
+pair_style dpd/tstat/omp,pair_dpd
+quit,quit
+thermo_modify,thermo_modify
+fix dt/reset,fix_dt_reset
+fix dt/reset/kk,fix_dt_reset
+jump,jump
+pair_style vashishta,pair_vashishta
+pair_style vashishta/gpu,pair_vashishta
+pair_style vashishta/omp,pair_vashishta
+pair_style vashishta/kk,pair_vashishta
+pair_style vashishta/table,pair_vashishta
+pair_style vashishta/table/omp,pair_vashishta
+pair_style list,pair_list
+variable,variable
+write_data,write_data
+fix_modify AtC fix_flux,atc_fix_flux
+compute temp/deform,compute_temp_deform
+compute temp/deform/kk,compute_temp_deform
+fix saed/vtk,fix_saed_vtk
+fix_modify AtC write_atom_weights,atc_write_atom_weights
+pair_style eam,pair_eam
+pair_style eam/gpu,pair_eam
+pair_style eam/intel,pair_eam
+pair_style eam/kk,pair_eam
+pair_style eam/omp,pair_eam
+pair_style eam/opt,pair_eam
+pair_style eam/alloy,pair_eam
+pair_style eam/alloy/gpu,pair_eam
+pair_style eam/alloy/intel,pair_eam
+pair_style eam/alloy/kk,pair_eam
+pair_style eam/alloy/omp,pair_eam
+pair_style eam/alloy/opt,pair_eam
+pair_style eam/cd,pair_eam
+pair_style eam/cd/old,pair_eam
+pair_style eam/fs,pair_eam
+pair_style eam/fs/gpu,pair_eam
+pair_style eam/fs/intel,pair_eam
+pair_style eam/fs/kk,pair_eam
+pair_style eam/fs/omp,pair_eam
+pair_style eam/fs/opt,pair_eam
+pair_style eam/he,pair_eam
+dimension,dimension
+improper_style cvff,improper_cvff
+improper_style cvff/intel,improper_cvff
+improper_style cvff/omp,improper_cvff
+pair_style yukawa/colloid,pair_yukawa_colloid
+pair_style yukawa/colloid/gpu,pair_yukawa_colloid
+pair_style yukawa/colloid/omp,pair_yukawa_colloid
+fix_modify AtC kernel,atc_hardy_kernel
+fix enforce2d,fix_enforce2d
+fix enforce2d/kk,fix_enforce2d
+fix_modify AtC extrinsic exchange,atc_extrinsic_exchange
+pair_style bop,pair_bop
+compute nbond/atom,compute_nbond_atom
+compute rigid/local,compute_rigid_local
+fix_modify AtC atom_weight,atc_atom_weight
+compute temp/asphere,compute_temp_asphere
+fix spring,fix_spring
+pair_style smd/hertz,pair_smd_hertz
+fix nvk,fix_nvk
+pair_style tracker,pair_tracker
+fix widom,fix_widom
+fix adapt,fix_adapt
+fix_modify AtC mesh create_elementset,atc_mesh_create_elementset
+improper_style distance,improper_distance
+fix ave/correlate,fix_ave_correlate
+fix temp/rescale,fix_temp_rescale
+pair_style saip/metal,pair_saip_metal
+pair_style saip/metal/opt,pair_saip_metal
+compute hma,compute_hma
+compute adf,compute_adf
+fix smd/wall_surface,fix_smd_wall_surface
+dump vtk,dump_vtk
+pair_style peri/pmb,pair_peri
+pair_style peri/pmb/omp,pair_peri
+pair_style peri/lps,pair_peri
+pair_style peri/lps/omp,pair_peri
+pair_style peri/ves,pair_peri
+pair_style peri/eps,pair_peri
+velocity,velocity
+dihedral_style hybrid,dihedral_hybrid
+compute saed,compute_saed
+pair_style dpd/fdt,pair_dpd_fdt
+pair_style dpd/fdt/energy,pair_dpd_fdt
+pair_style dpd/fdt/energy/kk,pair_dpd_fdt
+improper_style umbrella,improper_umbrella
+improper_style umbrella/omp,improper_umbrella
+compute torque/chunk,compute_torque_chunk
+bond_style fene/expand,bond_fene_expand
+bond_style fene/expand/omp,bond_fene_expand
+pair_style spin/dipole/cut,pair_spin_dipole
+pair_style spin/dipole/long,pair_spin_dipole
+bond_style harmonic/restrain,bond_harmonic_restrain
+pair_style kolmogorov/crespi/z,pair_kolmogorov_crespi_z
+bond_style oxdna/fene,bond_oxdna
+bond_style oxdna2/fene,bond_oxdna
+bond_style oxrna2/fene,bond_oxdna
+fix_modify AtC equilibrium_start,atc_equilibrium_start
+fix lb/momentum,fix_lb_momentum
+dihedral_style class2,dihedral_class2
+dihedral_style class2/omp,dihedral_class2
+dihedral_style class2/kk,dihedral_class2
+rerun,rerun
+compute fep/ta,compute_fep_ta
+pair_style smtbq,pair_smtbq
+fix temp/berendsen,fix_temp_berendsen
+fix bond/react,fix_bond_react
+fix lineforce,fix_lineforce
+compute temp/ramp,compute_temp_ramp
+fix qbmsst,fix_qbmsst
+pair_style oxdna2/excv,pair_oxdna2
+pair_style oxdna2/stk,pair_oxdna2
+pair_style oxdna2/hbond,pair_oxdna2
+pair_style oxdna2/xstk,pair_oxdna2
+pair_style oxdna2/coaxstk,pair_oxdna2
+pair_style oxdna2/dh,pair_oxdna2
+bond_style bpm/spring,bond_bpm_spring
+fix_modify,fix_modify
+compute voronoi/atom,compute_voronoi_atom
+fix_modify AtC mesh quadrature,atc_mesh_quadrature
+pair_style sph/heatconduction,pair_sph_heatconduction
+pair_style kim,pair_kim
+compute spin,compute_spin
+read_dump,read_dump
+compute efield/atom,compute_efield_atom
+pair_modify,pair_modify
+compute reduce,compute_reduce
+compute reduce/region,compute_reduce
+compute smd/tlsph/strain,compute_smd_tlsph_strain
+fix ehex,fix_ehex
+fix qeq/comb,fix_qeq_comb
+fix qeq/comb/omp,fix_qeq_comb
+fix planeforce,fix_planeforce
+compute improper,compute_improper
+fix orient/eco,fix_orient_eco
+fix smd,fix_smd
+restart,restart
+angle_style cross,angle_cross
+fix oneway,fix_oneway
+compute cnp/atom,compute_cnp_atom
+compute ptm/atom,compute_ptm_atom
+echo,echo
+compute smd/ulsph/strain/rate,compute_smd_ulsph_strain_rate
+compute smd/tlsph/stress,compute_smd_tlsph_stress
+pair_style exp6/rx,pair_exp6_rx
+pair_style exp6/rx/kk,pair_exp6_rx
+pair_style table/rx,pair_table_rx
+pair_style table/rx/kk,pair_table_rx
+bond_style bpm/rotational,bond_bpm_rotational
+processors,processors
+pair_style lj/gromacs,pair_gromacs
+pair_style lj/gromacs/gpu,pair_gromacs
+pair_style lj/gromacs/kk,pair_gromacs
+pair_style lj/gromacs/omp,pair_gromacs
+pair_style lj/gromacs/coul/gromacs,pair_gromacs
+pair_style lj/gromacs/coul/gromacs/kk,pair_gromacs
+pair_style lj/gromacs/coul/gromacs/omp,pair_gromacs
+compute contact/atom,compute_contact_atom
+compute dihedral,compute_dihedral
+pair_style lj/expand/sphere,pair_lj_expand_sphere
+pair_style lj/expand/sphere/omp,pair_lj_expand_sphere
+pair_style smd/tlsph,pair_smd_tlsph
+fix propel/self,fix_propel_self
+fix phonon,fix_phonon
+improper_style none,improper_none
+compute erotate/sphere/atom,compute_erotate_sphere_atom
+compute sna/atom,compute_sna_atom
+compute snad/atom,compute_sna_atom
+compute snav/atom,compute_sna_atom
+compute snap,compute_sna_atom
+compute sna/grid,compute_sna_atom
+compute sna/grid/local,compute_sna_atom
+compute smd/tlsph/strain/rate,compute_smd_tlsph_strain_rate
+fix ave/grid,fix_ave_grid
+improper_style distharm,improper_distharm
+third_order,third_order
+third_order/kk,third_order
+compute stress/cartesian,compute_stress_cartesian
+fix_modify AtC mesh write,atc_mesh_write
+lattice,lattice
+pair_style buck6d/coul/gauss/dsf,pair_buck6d_coul_gauss
+pair_style buck6d/coul/gauss/long,pair_buck6d_coul_gauss
+compute momentum,compute_momentum
+compute orientorder/atom,compute_orientorder_atom
+compute orientorder/atom/kk,compute_orientorder_atom
+pair_style body/rounded/polyhedron,pair_body_rounded_polyhedron
+pair_style quip,pair_quip
+clear,clear
+fix nve/bpm/sphere,fix_nve_bpm_sphere
+fix_modify AtC remove_molecule,atc_remove_molecule
+dihedral_style spherical,dihedral_spherical
+pair_style ylz,pair_ylz
+pair_style gran/hooke,pair_gran
+pair_style gran/hooke/omp,pair_gran
+pair_style gran/hooke/history,pair_gran
+pair_style gran/hooke/history/omp,pair_gran
+pair_style gran/hooke/history/kk,pair_gran
+pair_style gran/hertz/history,pair_gran
+pair_style gran/hertz/history/omp,pair_gran
+dihedral_style charmm,dihedral_charmm
+dihedral_style charmm/intel,dihedral_charmm
+dihedral_style charmm/kk,dihedral_charmm
+dihedral_style charmm/omp,dihedral_charmm
+dihedral_style charmmfsw,dihedral_charmm
+fix_modify AtC filter,atc_time_filter
+fix langevin/spin,fix_langevin_spin
+fix wall/reflect/stochastic,fix_wall_reflect_stochastic
+angle_coeff,angle_coeff
+dihedral_style opls,dihedral_opls
+dihedral_style opls/intel,dihedral_opls
+dihedral_style opls/kk,dihedral_opls
+dihedral_style opls/omp,dihedral_opls
+compute smd/plastic/strain,compute_smd_plastic_strain
+tad,tad
+compute property/atom,compute_property_atom
+dihedral_style multi/harmonic,dihedral_multi_harmonic
+dihedral_style multi/harmonic/omp,dihedral_multi_harmonic
+fix rigid,fix_rigid
+fix rigid/omp,fix_rigid
+fix rigid/nve,fix_rigid
+fix rigid/nve/omp,fix_rigid
+fix rigid/nvt,fix_rigid
+fix rigid/nvt/omp,fix_rigid
+fix rigid/npt,fix_rigid
+fix rigid/npt/omp,fix_rigid
+fix rigid/nph,fix_rigid
+fix rigid/nph/omp,fix_rigid
+fix rigid/small,fix_rigid
+fix rigid/small/omp,fix_rigid
+fix rigid/nve/small,fix_rigid
+fix rigid/nvt/small,fix_rigid
+fix rigid/npt/small,fix_rigid
+fix rigid/nph/small,fix_rigid
+fix_modify AtC unfix_flux,atc_unfix_flux
+angle_style none,angle_none
+angle_style fourier,angle_fourier
+angle_style fourier/omp,angle_fourier
+angle_style cosine/shift,angle_cosine_shift
+angle_style cosine/shift/omp,angle_cosine_shift
+compute smd/rho,compute_smd_rho
+compute msd,compute_msd
+pair_style coul/diel,pair_coul_diel
+pair_style coul/diel/omp,pair_coul_diel
+compute erotate/asphere,compute_erotate_asphere
+pair_style smd/ulsph,pair_smd_ulsph
+compute erotate/rigid,compute_erotate_rigid
+label,label
+min_style spin,min_spin
+compute ke,compute_ke
+temper/grem,temper_grem
+fix aveforce,fix_aveforce
+partition,partition
+compute smd/ulsph/strain,compute_smd_ulsph_strain
+compute smd/plastic/strain/rate,compute_smd_plastic_strain_rate
+fix ave/chunk,fix_ave_chunk
+dump netcdf,dump_netcdf
+dump netcdf/mpiio,dump_netcdf
+compute com/chunk,compute_com_chunk
+pair_style smatb,pair_smatb
+pair_style smatb/single,pair_smatb
+fix vector,fix_vector
+fix thermal/conductivity,fix_thermal_conductivity
+compute smd/ulsph/stress,compute_smd_ulsph_stress
+fix_modify AtC output,atc_output
+fix nve/asphere,fix_nve_asphere
+fix nve/asphere/gpu,fix_nve_asphere
+fix nve/asphere/intel,fix_nve_asphere
+pair_style tersoff/zbl,pair_tersoff_zbl
+pair_style tersoff/zbl/gpu,pair_tersoff_zbl
+pair_style tersoff/zbl/kk,pair_tersoff_zbl
+pair_style tersoff/zbl/omp,pair_tersoff_zbl
+fix bocs,fix_bocs
+boundary,boundary
+pair_style e3b,pair_e3b
+pair_style tersoff/mod,pair_tersoff_mod
+pair_style tersoff/mod/c,pair_tersoff_mod
+pair_style tersoff/mod/gpu,pair_tersoff_mod
+pair_style tersoff/mod/kk,pair_tersoff_mod
+pair_style tersoff/mod/omp,pair_tersoff_mod
+pair_style tersoff/mod/c/omp,pair_tersoff_mod
+pair_style hbond/dreiding/lj,pair_hbond_dreiding
+pair_style hbond/dreiding/lj/omp,pair_hbond_dreiding
+pair_style hbond/dreiding/morse,pair_hbond_dreiding
+pair_style hbond/dreiding/morse/omp,pair_hbond_dreiding
+fix_modify AtC output volume_integral,atc_output_volume_integral
+fix store/force,fix_store_force
+pair_style coul/shield,pair_coul_shield
+fix eos/table/rx,fix_eos_table_rx
+fix eos/table/rx/kk,fix_eos_table_rx
+compute ackland/atom,compute_ackland_atom
+fix nph/body,fix_nph_body
+fix nve/eff,fix_nve_eff
+fix property/atom,fix_property_atom
+fix property/atom/kk,fix_property_atom
+fix tune/kspace,fix_tune_kspace
+fix_modify AtC material,atc_material
+pair_style oxrna2/excv,pair_oxrna2
+pair_style oxrna2/stk,pair_oxrna2
+pair_style oxrna2/hbond,pair_oxrna2
+pair_style oxrna2/xstk,pair_oxrna2
+pair_style oxrna2/coaxstk,pair_oxrna2
+pair_style oxrna2/dh,pair_oxrna2
+fix smd/move_tri_surf,fix_smd_move_triangulated_surface
+fix qtb,fix_qtb
+dihedral_coeff,dihedral_coeff
+fix brownian,fix_brownian
+fix brownian/sphere,fix_brownian
+fix brownian/asphere,fix_brownian
+pair_style adp,pair_adp
+pair_style adp/kk,pair_adp
+pair_style adp/omp,pair_adp
+fix amoeba/pitorsion,fix_amoeba_pitorsion
+fix_modify AtC unfix,atc_unfix
+bond_style mm3,bond_mm3
+compute temp/deform/eff,compute_temp_deform_eff
+fix ave/histo,fix_ave_histo
+fix ave/histo/weight,fix_ave_histo
+improper_style sqdistharm,improper_sqdistharm
+compute temp/cs,compute_temp_cs
+compute global/atom,compute_global_atom
+compute force/tally,compute_tally
+compute heat/flux/tally,compute_tally
+compute heat/flux/virial/tally,compute_tally
+compute pe/tally,compute_tally
+compute pe/mol/tally,compute_tally
+compute stress/tally,compute_tally
+fix plumed,fix_plumed
+plugin,plugin
+reset_atoms,reset_atoms
+pair_style dsmc,pair_dsmc
+pair_style lj/long/coul/long,pair_lj_long
+pair_style lj/long/coul/long/intel,pair_lj_long
+pair_style lj/long/coul/long/omp,pair_lj_long
+pair_style lj/long/coul/long/opt,pair_lj_long
+pair_style lj/long/tip4p/long,pair_lj_long
+pair_style lj/long/tip4p/long/omp,pair_lj_long
+pair_style ilp/graphene/hbn,pair_ilp_graphene_hbn
+pair_style ilp/graphene/hbn/opt,pair_ilp_graphene_hbn
+compute msd/chunk,compute_msd_chunk
+fix nve/tri,fix_nve_tri
+pair_style lj/relres,pair_lj_relres
+pair_style lj/relres/omp,pair_lj_relres
+pair_style mliap,pair_mliap
+pair_style mliap/kk,pair_mliap
+improper_style,improper_style
+fix_modify AtC mesh nodeset_to_elementset,atc_mesh_nodeset_to_elementset
+compute stress/atom,compute_stress_atom
+compute centroid/stress/atom,compute_stress_atom
+thermo,thermo
+pair_style hdnnp,pair_hdnnp
+fix_modify AtC output boundary_integral,atc_output_boundary_integral
+fix_modify AtC sample_frequency,atc_sample_frequency
+fix qeq/reaxff,fix_qeq_reaxff
+fix qeq/reaxff/kk,fix_qeq_reaxff
+fix qeq/reaxff/omp,fix_qeq_reaxff
+compute stress/cylinder,compute_stress_curvilinear
+compute stress/spherical,compute_stress_curvilinear
+min_style,min_style
+fix ipi,fix_ipi
+dihedral_style lepton,dihedral_lepton
+dihedral_style lepton/omp,dihedral_lepton
+compute smd/damage,compute_smd_damage
+pair_style oxdna/excv,pair_oxdna
+pair_style oxdna/stk,pair_oxdna
+pair_style oxdna/hbond,pair_oxdna
+pair_style oxdna/xstk,pair_oxdna
+pair_style oxdna/coaxstk,pair_oxdna
+compute edpd/temp/atom,compute_edpd_temp_atom
+pair_style tri/lj,pair_tri_lj
+pair_style bpm/spring,pair_bpm_spring
+fix freeze,fix_freeze
+fix freeze/kk,fix_freeze
+pair_style lj/switch3/coulgauss/long,pair_lj_switch3_coulgauss_long
+pair_style mm3/switch3/coulgauss/long,pair_lj_switch3_coulgauss_long
+angle_style amoeba,angle_amoeba
+compute count/type,compute_count_type
+compute mliap,compute_mliap
+fix pafi,fix_pafi
+fix nve/noforce,fix_nve_noforce
+fix nvt/sphere,fix_nvt_sphere
+fix nvt/sphere/omp,fix_nvt_sphere
+pair_style drip,pair_drip
+fix lb/viscous,fix_lb_viscous
+pair_style mesocnt,pair_mesocnt
+pair_style mesocnt/viscous,pair_mesocnt
+compute temp/sphere,compute_temp_sphere
+fix_modify AtC mesh create_nodeset,atc_mesh_create_nodeset
+pair_write,pair_write
+replicate,replicate
+dielectric,dielectric
+pair_style brownian,pair_brownian
+pair_style brownian/omp,pair_brownian
+pair_style brownian/poly,pair_brownian
+pair_style brownian/poly/omp,pair_brownian
+pair_style lj/spica,pair_spica
+pair_style lj/spica/gpu,pair_spica
+pair_style lj/spica/kk,pair_spica
+pair_style lj/spica/omp,pair_spica
+pair_style lj/spica/coul/long,pair_spica
+pair_style lj/spica/coul/long/gpu,pair_spica
+pair_style lj/spica/coul/long/omp,pair_spica
+pair_style lj/spica/coul/msm,pair_spica
+pair_style lj/spica/coul/msm/omp,pair_spica
+angle_style cosine/delta,angle_cosine_delta
+angle_style cosine/delta/omp,angle_cosine_delta
+fix append/atoms,fix_append_atoms
+bond_style quartic,bond_quartic
+bond_style quartic/omp,bond_quartic
+fix neb/spin,fix_neb_spin
+pair_style aip/water/2dm,pair_aip_water_2dm
+pair_style aip/water/2dm/opt,pair_aip_water_2dm
+fix viscosity,fix_viscosity
+fix nvt/asphere,fix_nvt_asphere
+fix nvt/asphere/omp,fix_nvt_asphere
+compute pressure,compute_pressure
+compute temp/region/eff,compute_temp_region_eff
+fix nvt/sllod/eff,fix_nvt_sllod_eff
+pair_style gw,pair_gw
+pair_style gw/zbl,pair_gw
+fix viscous,fix_viscous
+fix viscous/kk,fix_viscous
+pair_style kolmogorov/crespi/full,pair_kolmogorov_crespi_full
+pair_style lj/mdf,pair_mdf
+pair_style buck/mdf,pair_mdf
+pair_style lennard/mdf,pair_mdf
+bond_style table,bond_table
+bond_style table/omp,bond_table
+fix_modify AtC decomposition,atc_decomposition
+bond_style,bond_style
+pair_style granular,pair_granular
+fix_modify AtC mesh read,atc_mesh_read
+compute property/grid,compute_property_grid
+fix shardlow,fix_shardlow
+fix shardlow/kk,fix_shardlow
+fix recenter,fix_recenter
+compute entropy/atom,compute_entropy_atom
+fix rhok,fix_rhok
+pair_style none,pair_none
+fix ave/correlate/long,fix_ave_correlate_long
+pair_style lubricateU,pair_lubricateU
+pair_style lubricateU/poly,pair_lubricateU
+compute angle,compute_angle
+pair_style threebody/table,pair_threebody_table
+compute dihedral/local,compute_dihedral_local
+temper,temper
+compute rdf,compute_rdf
+pair_style lepton,pair_lepton
+pair_style lepton/omp,pair_lepton
+pair_style lepton/coul,pair_lepton
+pair_style lepton/coul/omp,pair_lepton
+pair_style lepton/sphere,pair_lepton
+pair_style lepton/sphere/omp,pair_lepton
+dihedral_style nharmonic,dihedral_nharmonic
+dihedral_style nharmonic/omp,dihedral_nharmonic
+fix nvt/eff,fix_nh_eff
+fix npt/eff,fix_nh_eff
+fix nph/eff,fix_nh_eff
+compute temp/region,compute_temp_region
+compute pair/local,compute_pair_local
+neb,neb
+fix_modify AtC internal_element_set,atc_internal_element_set
+kim_commands,kim_commands
+fix nph/sphere,fix_nph_sphere
+fix nph/sphere/omp,fix_nph_sphere
+pair_style eff/cut,pair_eff
+fix spring/rg,fix_spring_rg
+fix accelerate/cos,fix_accelerate_cos
+pair_style lj/cut/coul/cut,pair_lj_cut_coul
+pair_style lj/cut/coul/cut/gpu,pair_lj_cut_coul
+pair_style lj/cut/coul/cut/kk,pair_lj_cut_coul
+pair_style lj/cut/coul/cut/omp,pair_lj_cut_coul
+pair_style lj/cut/coul/debye,pair_lj_cut_coul
+pair_style lj/cut/coul/debye/gpu,pair_lj_cut_coul
+pair_style lj/cut/coul/debye/kk,pair_lj_cut_coul
+pair_style lj/cut/coul/debye/omp,pair_lj_cut_coul
+pair_style lj/cut/coul/dsf,pair_lj_cut_coul
+pair_style lj/cut/coul/dsf/gpu,pair_lj_cut_coul
+pair_style lj/cut/coul/dsf/kk,pair_lj_cut_coul
+pair_style lj/cut/coul/dsf/omp,pair_lj_cut_coul
+pair_style lj/cut/coul/long,pair_lj_cut_coul
+pair_style lj/cut/coul/long/gpu,pair_lj_cut_coul
+pair_style lj/cut/coul/long/kk,pair_lj_cut_coul
+pair_style lj/cut/coul/long/intel,pair_lj_cut_coul
+pair_style lj/cut/coul/long/opt,pair_lj_cut_coul
+pair_style lj/cut/coul/long/omp,pair_lj_cut_coul
+pair_style lj/cut/coul/msm,pair_lj_cut_coul
+pair_style lj/cut/coul/msm/gpu,pair_lj_cut_coul
+pair_style lj/cut/coul/msm/omp,pair_lj_cut_coul
+pair_style lj/cut/coul/wolf,pair_lj_cut_coul
+pair_style lj/cut/coul/wolf/omp,pair_lj_cut_coul
+angle_style dipole,angle_dipole
+angle_style dipole/omp,angle_dipole
+bond_style nonlinear,bond_nonlinear
+bond_style nonlinear/omp,bond_nonlinear
+fix rigid/meso,fix_rigid_meso
+fix pair,fix_pair
+fix wall/piston,fix_wall_piston
+pair_style sw/angle/table,pair_sw_angle_table
+pair_style lj/charmm/coul/charmm,pair_charmm
+pair_style lj/charmm/coul/charmm/gpu,pair_charmm
+pair_style lj/charmm/coul/charmm/intel,pair_charmm
+pair_style lj/charmm/coul/charmm/kk,pair_charmm
+pair_style lj/charmm/coul/charmm/omp,pair_charmm
+pair_style lj/charmm/coul/charmm/implicit,pair_charmm
+pair_style lj/charmm/coul/charmm/implicit/kk,pair_charmm
+pair_style lj/charmm/coul/charmm/implicit/omp,pair_charmm
+pair_style lj/charmm/coul/long,pair_charmm
+pair_style lj/charmm/coul/long/gpu,pair_charmm
+pair_style lj/charmm/coul/long/intel,pair_charmm
+pair_style lj/charmm/coul/long/kk,pair_charmm
+pair_style lj/charmm/coul/long/opt,pair_charmm
+pair_style lj/charmm/coul/long/omp,pair_charmm
+pair_style lj/charmm/coul/msm,pair_charmm
+pair_style lj/charmm/coul/msm/omp,pair_charmm
+pair_style lj/charmmfsw/coul/charmmfsh,pair_charmm
+pair_style lj/charmmfsw/coul/long,pair_charmm
+fix_modify AtC fields,atc_hardy_fields
+fix reaxff/species,fix_reaxff_species
+fix reaxff/species/kk,fix_reaxff_species
+fix nvt,fix_nh
+fix nvt/gpu,fix_nh
+fix nvt/intel,fix_nh
+fix nvt/kk,fix_nh
+fix nvt/omp,fix_nh
+fix npt,fix_nh
+fix npt/gpu,fix_nh
+fix npt/intel,fix_nh
+fix npt/kk,fix_nh
+fix npt/omp,fix_nh
+fix nph,fix_nh
+fix nph/kk,fix_nh
+fix nph/omp,fix_nh
+fix_modify AtC extrinsic electron_integration,atc_electron_integration
+pair_style beck,pair_beck
+pair_style beck/gpu,pair_beck
+pair_style beck/omp,pair_beck
+fix gcmc,fix_gcmc
+fix edpd/source,fix_dpd_source
+fix tdpd/source,fix_dpd_source
+fix wall/ees,fix_wall_ees
+fix wall/region/ees,fix_wall_ees
+pair_style sdpd/taitwater/isothermal,pair_sdpd_taitwater_isothermal
+fix deform,fix_deform
+fix deform/kk,fix_deform
+uncompute,uncompute
+compute damage/atom,compute_damage_atom
+improper_style amoeba,improper_amoeba
+compute dilatation/atom,compute_dilatation_atom
+angle_style mesocnt,angle_mesocnt
+fix_modify AtC reset_time,atc_reset_time
+fix_modify AtC mesh add_to_nodeset,atc_mesh_add_to_nodeset
+fix_modify AtC fix,atc_fix
+pair_style sph/rhosum,pair_sph_rhosum
+compute dipole,compute_dipole
+compute dipole/tip4p,compute_dipole
+bond_style morse,bond_morse
+bond_style morse/omp,bond_morse
+fix electron/stopping,fix_electron_stopping
+fix electron/stopping/fit,fix_electron_stopping
+fix_modify AtC mesh create_faceset plane,atc_mesh_create_faceset_plane
+compute efield/wolf/atom,compute_efield_wolf_atom
+print,print
+compute chunk/spread/atom,compute_chunk_spread_atom
+fix smd/setvel,fix_smd_setvel
+run,run
+fix mvv/dpd,fix_mvv_dpd
+fix mvv/edpd,fix_mvv_dpd
+fix mvv/tdpd,fix_mvv_dpd
+fix_modify AtC time_integration,atc_time_integration
+fix meso/move,fix_meso_move
+improper_style cossq,improper_cossq
+improper_style cossq/omp,improper_cossq
+bond_style special,bond_special
+write_coeff,write_coeff
+set,set
+fix nve/asphere/noforce,fix_nve_asphere_noforce
+fix nve/dot,fix_nve_dot
+bond_style fene,bond_fene
+bond_style fene/nm,bond_fene
+bond_style fene/intel,bond_fene
+bond_style fene/kk,bond_fene
+bond_style fene/omp,bond_fene
+fix nve/line,fix_nve_line
+fix smd/adjust_dt,fix_smd_adjust_dt
+fix_modify AtC boundary_faceset,atc_boundary_faceset
+fix mscg,fix_mscg
+fix qmmm,fix_qmmm
+neb/spin,neb_spin
+pair_style gauss,pair_gauss
+pair_style gauss/gpu,pair_gauss
+pair_style gauss/omp,pair_gauss
+pair_style gauss/cut,pair_gauss
+pair_style gauss/cut/omp,pair_gauss
+fix mdi/qmmm,fix_mdi_qmmm
+fix,fix
+dynamical_matrix,dynamical_matrix
+dynamical_matrix/kk,dynamical_matrix
+if,if
+bond_style zero,bond_zero
+compute smd/internal/energy,compute_smd_internal_energy
+change_box,change_box
+fix_modify AtC add_molecule,atc_add_molecule
+fix reaxff/bonds,fix_reaxff_bonds
+fix reaxff/bonds/kk,fix_reaxff_bonds
+pair_style morse,pair_morse
+pair_style morse/gpu,pair_morse
+pair_style morse/omp,pair_morse
+pair_style morse/opt,pair_morse
+pair_style morse/smooth/linear,pair_morse
+pair_style morse/smooth/linear/omp,pair_morse
+pair_style morse/kk,pair_morse
+fix hyper/global,fix_hyper_global
+fix temp/csvr,fix_temp_csvr
+fix temp/csld,fix_temp_csvr
+fix evaporate,fix_evaporate
+compute cna/atom,compute_cna_atom
+fix nve,fix_nve
+fix nve/gpu,fix_nve
+fix nve/intel,fix_nve
+fix nve/kk,fix_nve
+fix nve/omp,fix_nve
+fix_modify AtC kernel_bandwidth,atc_kernel_bandwidth
+fix npt/asphere,fix_npt_asphere
+fix npt/asphere/omp,fix_npt_asphere
+compute smd/tlsph/dt,compute_smd_tlsph_dt
+fix_modify AtC add_species,atc_add_species
+fix wall/gran,fix_wall_gran
+fix wall/gran/kk,fix_wall_gran
+labelmap,labelmap
+pair_style line/lj,pair_line_lj
+angle_style cosine/buck6d,angle_cosine_buck6d
+dihedral_style cosine/shift/exp,dihedral_cosine_shift_exp
+dihedral_style cosine/shift/exp/omp,dihedral_cosine_shift_exp
+timer,timer
+pair_style edpd,pair_mesodpd
+pair_style mdpd,pair_mesodpd
+pair_style mdpd/rhosum,pair_mesodpd
+pair_style tdpd,pair_mesodpd
+temper/npt,temper_npt
+fix_modify AtC control localized_lambda,atc_control_localized_lambda
+pair_style table,pair_table
+pair_style table/gpu,pair_table
+pair_style table/kk,pair_table
+pair_style table/omp,pair_table
+compute displace/atom,compute_displace_atom
+pair_style mgpt,pair_mgpt
+compute temp/eff,compute_temp_eff
+fix_modify AtC control thermal,atc_control_thermal
+pair_style eim,pair_eim
+pair_style eim/omp,pair_eim
+bond_style gromos,bond_gromos
+bond_style gromos/omp,bond_gromos
+dump atom/adios,dump_adios
+dump custom/adios,dump_adios
+fix sph/stationary,fix_sph_stationary
+fix ave/atom,fix_ave_atom
+pair_style lcbop,pair_lcbop
+pair_style edip,pair_edip
+pair_style edip/omp,pair_edip
+pair_style edip/multi,pair_edip
+pair_style lj/smooth,pair_lj_smooth
+pair_style lj/smooth/gpu,pair_lj_smooth
+pair_style lj/smooth/omp,pair_lj_smooth
+bond_write,bond_write
+displace_atoms,displace_atoms
+write_dump,write_dump
+compute xrd,compute_xrd
+pair_style sw,pair_sw
+pair_style sw/gpu,pair_sw
+pair_style sw/intel,pair_sw
+pair_style sw/kk,pair_sw
+pair_style sw/omp,pair_sw
+pair_style sw/mod,pair_sw
+pair_style sw/mod/omp,pair_sw
+fix colvars,fix_colvars
+pair_style coul/slater,pair_coul_slater
+pair_style coul/slater/cut,pair_coul_slater
+pair_style coul/slater/long,pair_coul_slater
+fix numdiff/virial,fix_numdiff_virial
+compute pe,compute_pe
+compute group/group,compute_group_group
+compute temp/body,compute_temp_body
+pair_style hybrid,pair_hybrid
+pair_style hybrid/kk,pair_hybrid
+pair_style hybrid/overlay,pair_hybrid
+pair_style hybrid/overlay/kk,pair_hybrid
+pair_style hybrid/scaled,pair_hybrid
+fix polarize/bem/gmres,fix_polarize
+fix polarize/bem/icc,fix_polarize
+fix polarize/functional,fix_polarize
+improper_style harmonic,improper_harmonic
+improper_style harmonic/intel,improper_harmonic
+improper_style harmonic/kk,improper_harmonic
+improper_style harmonic/omp,improper_harmonic
+fix eos/cv,fix_eos_cv
+compute vcm/chunk,compute_vcm_chunk
+fix python/invoke,fix_python_invoke
+fix bond/swap,fix_bond_swap
+pair_style mie/cut,pair_mie
+pair_style mie/cut/gpu,pair_mie
+balance,balance
+fix_modify AtC boundary type,atc_boundary_type
+compute bond/local,compute_bond_local
+fix balance,fix_balance
+fix_modify AtC atom_element_map,atc_atom_element_map
+compute ave/sphere/atom,compute_ave_sphere_atom
+compute ave/sphere/atom/kk,compute_ave_sphere_atom
+fix heat/flow,fix_heat_flow
+dihedral_style zero,dihedral_zero
+suffix,suffix
+pair_style lj/class2,pair_class2
+pair_style lj/class2/gpu,pair_class2
+pair_style lj/class2/kk,pair_class2
+pair_style lj/class2/omp,pair_class2
+pair_style lj/class2/coul/cut,pair_class2
+pair_style lj/class2/coul/cut/kk,pair_class2
+pair_style lj/class2/coul/cut/omp,pair_class2
+pair_style lj/class2/coul/long,pair_class2
+pair_style lj/class2/coul/long/gpu,pair_class2
+pair_style lj/class2/coul/long/kk,pair_class2
+pair_style lj/class2/coul/long/omp,pair_class2
+fix_modify AtC output nodeset,atc_output_nodeset
+compute born/matrix,compute_born_matrix
+fix manifoldforce,fix_manifoldforce
+fix_modify AtC control lumped_lambda_solve,atc_lumped_lambda_solve
+pair_style lj/cubic,pair_lj_cubic
+pair_style lj/cubic/gpu,pair_lj_cubic
+pair_style lj/cubic/omp,pair_lj_cubic
+pair_style lj/smooth/linear,pair_lj_smooth_linear
+pair_style lj/smooth/linear/omp,pair_lj_smooth_linear
+pair_style dpd/ext,pair_dpd_ext
+pair_style dpd/ext/kk,pair_dpd_ext
+pair_style dpd/ext/omp,pair_dpd_ext
+pair_style dpd/ext/tstat,pair_dpd_ext
+pair_style dpd/ext/tstat/kk,pair_dpd_ext
+pair_style dpd/ext/tstat/omp,pair_dpd_ext
+pair_style,pair_style
+fix controller,fix_controller
+fix_modify AtC temperature_definition,atc_temperature_definition
+fix ti/spring,fix_ti_spring
+fix_modify AtC remove_species,atc_remove_species
+pair_style smd/tri_surface,pair_smd_triangulated_surface
+pair_coeff,pair_coeff
+angle_style hybrid,angle_hybrid
+bond_style gaussian,bond_gaussian
+fix langevin/eff,fix_langevin_eff
+molecule,molecule
+compute temp/drude,compute_temp_drude
+compute temp/partial,compute_temp_partial
+pair_style pod,pair_pod
+fix numdiff,fix_numdiff
+fix alchemy,fix_alchemy
+fix_modify AtC mesh create_faceset box,atc_mesh_create_faceset_box
+pair_style spin/dmi,pair_spin_dmi
+fix move,fix_move
+fix nve/spin,fix_nve_spin
+fix pimd/langevin,fix_pimd
+fix pimd/nvt,fix_pimd
+compute viscosity/cos,compute_viscosity_cos
+angle_style class2,angle_class2
+angle_style class2/kk,angle_class2
+angle_style class2/omp,angle_class2
+angle_style class2/p6,angle_class2
+bond_style lepton,bond_lepton
+bond_style lepton/omp,bond_lepton
+fix mdi/qm,fix_mdi_qm
+fix bond/create,fix_bond_create
+fix bond/create/angle,fix_bond_create
+compute msd/nongauss,compute_msd_nongauss
+compute cluster/atom,compute_cluster_atom
+compute fragment/atom,compute_cluster_atom
+compute aggregate/atom,compute_cluster_atom
+pair_style nm/cut,pair_nm
+pair_style nm/cut/split,pair_nm
+pair_style nm/cut/coul/cut,pair_nm
+pair_style nm/cut/coul/long,pair_nm
+pair_style nm/cut/omp,pair_nm
+pair_style nm/cut/coul/cut/omp,pair_nm
+pair_style nm/cut/coul/long/omp,pair_nm
+compute gyration/shape/chunk,compute_gyration_shape_chunk
+pair_style reaxff,pair_reaxff
+pair_style reaxff/kk,pair_reaxff
+pair_style reaxff/omp,pair_reaxff
+compute temp/chunk,compute_temp_chunk
+pair_style resquared,pair_resquared
+pair_style resquared/gpu,pair_resquared
+pair_style resquared/omp,pair_resquared
+compute gyration/shape,compute_gyration_shape
+pair_style comb,pair_comb
+pair_style comb/omp,pair_comb
+pair_style comb3,pair_comb
+fix nvt/sllod,fix_nvt_sllod
+fix nvt/sllod/intel,fix_nvt_sllod
+fix nvt/sllod/omp,fix_nvt_sllod
+fix nvt/sllod/kk,fix_nvt_sllod
+reset_timestep,reset_timestep
+pair_style coul/tt,pair_coul_tt
+fix npt/sphere,fix_npt_sphere
+fix npt/sphere/omp,fix_npt_sphere
+fix_modify AtC filter type,atc_filter_type
+fix orient/fcc,fix_orient
+fix orient/bcc,fix_orient
+pair_style tersoff,pair_tersoff
+pair_style tersoff/table,pair_tersoff
+pair_style tersoff/gpu,pair_tersoff
+pair_style tersoff/intel,pair_tersoff
+pair_style tersoff/kk,pair_tersoff
+pair_style tersoff/omp,pair_tersoff
+pair_style tersoff/table/omp,pair_tersoff
+atom_modify,atom_modify
+fix pour,fix_pour
+compute temp/uef,compute_temp_uef
+fix_modify AtC read_restart,atc_read_restart
+compute temp/rotate,compute_temp_rotate
+compute centro/atom,compute_centro_atom
+fix drag,fix_drag
+fix smd/integrate_ulsph,fix_smd_integrate_ulsph
+dihedral_style fourier,dihedral_fourier
+dihedral_style fourier/intel,dihedral_fourier
+dihedral_style fourier/omp,dihedral_fourier
+improper_style inversion/harmonic,improper_inversion_harmonic
+pair_style meam,pair_meam
+pair_style meam/kk,pair_meam
+pair_style meam/ms,pair_meam
+pair_style meam/ms/kk,pair_meam
+fix gle,fix_gle
+fix nvt/body,fix_nvt_body
+pair_style spin/exchange,pair_spin_exchange
+pair_style spin/exchange/biquadratic,pair_spin_exchange
+create_box,create_box
+fix_modify AtC boundary_dynamics,atc_boundary_dynamics
+fix nve/sphere,fix_nve_sphere
+fix nve/sphere/omp,fix_nve_sphere
+fix nve/sphere/kk,fix_nve_sphere
+fix store/state,fix_store_state
+compute tdpd/cc/atom,compute_tdpd_cc_atom
+compute sph/t/atom,compute_sph_t_atom
+neigh_modify,neigh_modify
+group2ndx,group2ndx
+ndx2group,group2ndx
+angle_style cosine/squared,angle_cosine_squared
+angle_style cosine/squared/omp,angle_cosine_squared
+write_restart,write_restart
+pair_style rann,pair_rann
+atom_style,atom_style
+fix temp/rescale/eff,fix_temp_rescale_eff
+compute ti,compute_ti
+compute ke/rigid,compute_ke_rigid
+fix nph/asphere,fix_nph_asphere
+fix nph/asphere/omp,fix_nph_asphere
+fix qeq/point,fix_qeq
+fix qeq/shielded,fix_qeq
+fix qeq/slater,fix_qeq
+fix qeq/dynamic,fix_qeq
+fix qeq/fire,fix_qeq
+dihedral_style quadratic,dihedral_quadratic
+dihedral_style quadratic/omp,dihedral_quadratic
+bond_style harmonic/shift/cut,bond_harmonic_shift_cut
+bond_style harmonic/shift/cut/omp,bond_harmonic_shift_cut
+read_data,read_data
+angle_style zero,angle_zero
+pair_style airebo,pair_airebo
+pair_style airebo/intel,pair_airebo
+pair_style airebo/omp,pair_airebo
+pair_style airebo/morse,pair_airebo
+pair_style airebo/morse/intel,pair_airebo
+pair_style airebo/morse/omp,pair_airebo
+pair_style rebo,pair_airebo
+pair_style rebo/intel,pair_airebo
+pair_style rebo/omp,pair_airebo
+fix_modify AtC poisson_solver,atc_poisson_solver
+pair_style snap,pair_snap
+pair_style snap/kk,pair_snap
+fix poems,fix_poems
+pair_style born/gauss,pair_born_gauss
+pair_style body/rounded/polygon,pair_body_rounded_polygon
+compute ke/atom,compute_ke_atom
+pair_style soft,pair_soft
+pair_style soft/gpu,pair_soft
+pair_style soft/omp,pair_soft
+fix_modify AtC remove_source,atc_remove_source
+compute gyration,compute_gyration
+fix_modify AtC pair_interactions,atc_pair_interactions
+pair_style yukawa,pair_yukawa
+pair_style yukawa/gpu,pair_yukawa
+pair_style yukawa/omp,pair_yukawa
+pair_style yukawa/kk,pair_yukawa
+fix_modify AtC fe_md_boundary,atc_fe_md_boundary
+fix gld,fix_gld
+pair_style ufm,pair_ufm
+pair_style ufm/gpu,pair_ufm
+pair_style ufm/omp,pair_ufm
+pair_style ufm/opt,pair_ufm
+fix neb,fix_neb
+fix wall/region,fix_wall_region
+fix_modify AtC source_integration,atc_source_integration
+pair_style sph/lj,pair_sph_lj
+compute smd/hourglass/error,compute_smd_hourglass_error
+kspace_modify,kspace_modify
+fix_modify AtC set reference_potential_energy,atc_set_reference_pe
+improper_style zero,improper_zero
+log,log
+fix amoeba/bitorsion,fix_amoeba_bitorsion
+delete_atoms,delete_atoms
+fix python/move,fix_python_move
+fix nvt/manifold/rattle,fix_nvt_manifold_rattle
+compute hexorder/atom,compute_hexorder_atom
+fix_modify AtC track_displacement,atc_track_displacement
+fix nve/awpmd,fix_nve_awpmd
+compute smd/tlsph/defgrad,compute_smd_tlsph_defgrad
+pair_style sph/idealgas,pair_sph_idealgas
+pair_style multi/lucy/rx,pair_multi_lucy_rx
+pair_style multi/lucy/rx/kk,pair_multi_lucy_rx
+dihedral_style helix,dihedral_helix
+dihedral_style helix/omp,dihedral_helix
+fix nve/manifold/rattle,fix_nve_manifold_rattle
+pair_style lubricate,pair_lubricate
+pair_style lubricate/omp,pair_lubricate
+pair_style lubricate/poly,pair_lubricate
+pair_style lubricate/poly/omp,pair_lubricate
+pair_style lj/cut/tip4p/cut,pair_lj_cut_tip4p
+pair_style lj/cut/tip4p/cut/omp,pair_lj_cut_tip4p
+pair_style lj/cut/tip4p/long,pair_lj_cut_tip4p
+pair_style lj/cut/tip4p/long/gpu,pair_lj_cut_tip4p
+pair_style lj/cut/tip4p/long/omp,pair_lj_cut_tip4p
+pair_style lj/cut/tip4p/long/opt,pair_lj_cut_tip4p
+angle_style charmm,angle_charmm
+angle_style charmm/intel,angle_charmm
+angle_style charmm/kk,angle_charmm
+angle_style charmm/omp,angle_charmm
+compute ke/eff,compute_ke_eff
+pair_style thole,pair_thole
+pair_style lj/cut/thole/long,pair_thole
+pair_style lj/cut/thole/long/omp,pair_thole
+next,next
+bond_style harmonic,bond_harmonic
+bond_style harmonic/intel,bond_harmonic
+bond_style harmonic/kk,bond_harmonic
+bond_style harmonic/omp,bond_harmonic
+pair_style lj/cut/dipole/cut,pair_dipole
+pair_style lj/cut/dipole/cut/gpu,pair_dipole
+pair_style lj/cut/dipole/cut/kk,pair_dipole
+pair_style lj/cut/dipole/cut/omp,pair_dipole
+pair_style lj/sf/dipole/sf,pair_dipole
+pair_style lj/sf/dipole/sf/gpu,pair_dipole
+pair_style lj/sf/dipole/sf/omp,pair_dipole
+pair_style lj/cut/dipole/long,pair_dipole
+pair_style lj/cut/dipole/long/gpu,pair_dipole
+pair_style lj/long/dipole/long,pair_dipole
+pair_style ilp/tmd,pair_ilp_tmd
+pair_style ilp/tmd/opt,pair_ilp_tmd
+pair_style born,pair_born
+pair_style born/omp,pair_born
+pair_style born/gpu,pair_born
+pair_style born/coul/long,pair_born
+pair_style born/coul/long/gpu,pair_born
+pair_style born/coul/long/omp,pair_born
+pair_style born/coul/msm,pair_born
+pair_style born/coul/msm/omp,pair_born
+pair_style born/coul/wolf,pair_born
+pair_style born/coul/wolf/gpu,pair_born
+pair_style born/coul/wolf/omp,pair_born
+pair_style born/coul/dsf,pair_born
+fix wall/gran/region,fix_wall_gran_region
+fix mol/swap,fix_mol_swap
+fix_modify AtC control mask_direction,atc_mask_direction
+pair_style sph/taitwater/morris,pair_sph_taitwater_morris
+angle_style cosine/shift/exp,angle_cosine_shift_exp
+angle_style cosine/shift/exp/omp,angle_cosine_shift_exp
+fix sgcmc,fix_sgcmc
+dump h5md,dump_h5md
+compute pressure/alchemy,compute_pressure_alchemy
+pair_style extep,pair_extep
+fix_modify AtC mesh delete_elements,atc_mesh_delete_elements
+compute heat/flux,compute_heat_flux
+fix_modify AtC output contour_integral,atc_output_contour_integral
+undump,undump
+compute vacf,compute_vacf
+fix wall/srd,fix_wall_srd
+delete_bonds,delete_bonds
+angle_style mm3,angle_mm3
+pair_style multi/lucy,pair_multi_lucy
+bond_style hybrid,bond_hybrid
+pair_style lj96/cut,pair_lj96
+pair_style lj96/cut/gpu,pair_lj96
+pair_style lj96/cut/omp,pair_lj96
+fix nvt/uef,fix_nh_uef
+fix npt/uef,fix_nh_uef
+pair_style coul/cut/dielectric,pair_dielectric
+pair_style coul/long/dielectric,pair_dielectric
+pair_style lj/cut/coul/cut/dielectric,pair_dielectric
+pair_style lj/cut/coul/cut/dielectric/omp,pair_dielectric
+pair_style lj/cut/coul/debye/dielectric,pair_dielectric
+pair_style lj/cut/coul/debye/dielectric/omp,pair_dielectric
+pair_style lj/cut/coul/long/dielectric,pair_dielectric
+pair_style lj/cut/coul/long/dielectric/omp,pair_dielectric
+pair_style lj/cut/coul/msm/dielectric,pair_dielectric
+pair_style lj/long/coul/long/dielectric,pair_dielectric
+fix atc,fix_atc
+compute com,compute_com
+fix hyper/local,fix_hyper_local
+pair_style harmonic/cut,pair_harmonic_cut
+pair_style harmonic/cut/omp,pair_harmonic_cut
+bond_style class2,bond_class2
+bond_style class2/omp,bond_class2
+bond_style class2/kk,bond_class2
+angle_style lepton,angle_lepton
+angle_style lepton/omp,angle_lepton
+compute omega/chunk,compute_omega_chunk
+bond_coeff,bond_coeff
+fix restrain,fix_restrain
+fix_modify AtC internal_quadrature,atc_internal_quadrature
+pair_style gayberne,pair_gayberne
+pair_style gayberne/gpu,pair_gayberne
+pair_style gayberne/intel,pair_gayberne
+pair_style gayberne/omp,pair_gayberne
+compute improper/local,compute_improper_local
+pair_style spin/magelec,pair_spin_magelec
+fix momentum,fix_momentum
+fix momentum/kk,fix_momentum
+fix momentum/chunk,fix_momentum
+pair_style zbl,pair_zbl
+pair_style zbl/gpu,pair_zbl
+pair_style zbl/kk,pair_zbl
+pair_style zbl/omp,pair_zbl
+newton,newton
+fix ttm,fix_ttm
+fix ttm/grid,fix_ttm
+fix ttm/mod,fix_ttm
+compute temp/com,compute_temp_com
+fix npt/body,fix_npt_body
+special_bonds,special_bonds
+units,units
+compute pair,compute_pair
+fix nphug,fix_nphug
+fix nphug/omp,fix_nphug
+fix nve/limit,fix_nve_limit
+pair_style momb,pair_momb
+fix_modify AtC on_the_fly,atc_hardy_on_the_fly
+compute smd/tlsph/num/neighs,compute_smd_tlsph_num_neighs
+fix smd/integrate_tlsph,fix_smd_integrate_tlsph
+comm_style,comm_style
+compute angle/local,compute_angle_local
+hyper,hyper
+fix_modify AtC rates,atc_hardy_rates
+fix_modify AtC mesh create,atc_mesh_create
+pair_style local/density,pair_local_density
+fix drude/transform/direct,fix_drude_transform
+fix drude/transform/inverse,fix_drude_transform
+compute fabric,compute_fabric

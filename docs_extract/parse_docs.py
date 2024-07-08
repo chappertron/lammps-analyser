@@ -128,6 +128,13 @@ def tidy_file(file_contents: str) -> str:
 
 
 def main():
+    index_map = create_index_file_map()
+
+    with open("index_map.txt", "w") as stream:
+        for k, v in index_map.items():
+            stream.write(f"{k},{v}")
+            stream.write("\n")
+
     # Go through all the docs files and peform the substitutions
     for file in Path(DOCS_PATH).glob("*.rst"):
         print(file)
