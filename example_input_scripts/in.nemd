@@ -15,7 +15,7 @@ variable        dofo  equal 2.8151
 variable        seedH equal 35543
 variable        seedC equal 3356
 variable        unused equal 69420
-variable	dz equal 4.0
+variable        dz equal 4.0
 variable        inputname  index startnemd
 variable        outputname string nemd1.TH${Thot}.TC${Tcold}
 # variable        outputname index run3-113
@@ -51,7 +51,6 @@ pair_coeff 2 2 0.0000 0.0000 # H H TIP4P/2005 x
 # Define Masses
 mass 1 15.9994 # OW
 mass 2 1.00794 # HW
-
 # Define groups
 group           water type 1 2
 group           oxygen type 1
@@ -129,5 +128,9 @@ fix temphyd hydrogen ave/chunk 1 $(v_nsteps) $(v_nsteps) lhydrogen density/numbe
 run   $(v_nsteps)
 write_data      ${outputname}.data pair ij
 
+compute  1 all rdf
+
 fix # Here to show what happens with in-complete commands.
+
+
 

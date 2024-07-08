@@ -485,14 +485,17 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Not yet fully implemented"]
     fn test_ast() {
         let mut parser = setup_parser();
         // let source_bytes = include_bytes!("../../fix.lmp");
         let source_bytes = include_bytes!("../../in.nemd");
+        let source_bytes = include_bytes!("../../example_input_scripts/in.nemd");
         let tree = parser.parse(source_bytes, None).unwrap();
 
         let ast = ts_to_ast(&tree, source_bytes);
         dbg!(ast.unwrap());
+        // dbg!(ast.unwrap());
 
         unimplemented!()
     }
@@ -530,6 +533,8 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "Not yet fully implemented"]
+    // TODO: Finish this test
     fn parse_index_variable() {
         let mut parser = setup_parser();
         let text = b"variable index step4.1.aatm";

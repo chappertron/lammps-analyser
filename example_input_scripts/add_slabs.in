@@ -1,0 +1,122 @@
+units real
+atom_style full
+
+# TODO(MSF): Make these the appropiate styles for your system.
+pair_style lj/cut/coul/long 12.0
+kspace_style pppm 1e-5
+bond_style harmonic
+angle_style harmonic
+
+variable delete_buffer index 1.0 # delete water molecules this distance from the box edge.
+variable slab_offset index 5.0 # TODO(MSF): This should be approximately the thickness of the slab 
+
+variable temp index 300.0
+variable press index 1.0
+
+# TODO(MSF): change these to be the data files for your electrodes and electrolyte.
+variable elyte_data index elyte.data
+variable slab_left_data index slab.data
+variable slab_right_data index slab.data
+
+# TODO: Add for bonds etc. 
+variable n_additional index 1 # Number of addtional atom types to add when reading in the data files.
+
+# TODO(MSF): Add more extra atoms for your electrodes.
+read_data ${elyte_data} extra/atom/types ${n_additional}  # TODO: Unhardcode this value.
+
+# TODO(MSF): Change this to be the IL atoms.
+group water type 1 2
+
+# Delete water molecules with bonds over PBCs.
+
+region delete_lo block EDGE EDGE EDGE EDGE $(zlo) $(zlo+v_delete_buffer)
+# using random because supports both region and group
+delete_atoms random fraction 1.0 yes water delete_lo 41234 mol yes  bond yes
+
+region delete_hi block EDGE EDGE EDGE EDGE $(zhi-v_delete_buffer) $(zhi)
+# using random because supports both region and group
+delete_atoms random fraction 1.0 yes water delete_hi 8080234  mol yes bond yes
+
+# Read the slabs into the system.
+read_data  ${slab_left_data} shift 0 0 $(zhi+v_slab_offset) add append  
+read_data  ${slab_right_data} shift 0 0 $(zlo-v_slab_offset) add append   
+
+
+write_data pre_min.data
+
+# Minimisation
+fix waterbondangles all shake 1.0e-5 20 0 b 1 a 1
+fix npt all npt temp $(v_temp) $(v_temp) 100.0 aniso  $(v_press) $(v_press) $(1000*dt) couple xy
+
+
+min_style cg
+
+minimize 1.0e-4 1.0e-6 100 1000
+
+write_data minimized.data
+unfix npt
+
+# NVE with slowly increasing interaction strength
+variable scale equal ramp(0.001,1.0)
+
+#fix nve all nve
+#fix adapt all adapt 10 pair lj/cut/coul/long epsilon * * v_scale scale yes reset yes
+#
+#fix waterbondangles all shake 1.0e-5 20 0 b 1 a 1
+##dump adapt_run all custom 100 adapt.dump id type x y z q
+#thermo 100
+#run 1000
+#unfix adapt
+#
+#write_data adapt.data
+#
+#unfix nve
+
+# NVT Run.
+
+fix nvt all nvt temp $(v_temp) $(v_temp) 100.0
+fix waterbondangles all shake 1.0e-5 20 0 b 1 a 1
+thermo 100
+run 1000
+unfix nvt 
+write_data nvt.data
+
+# NPT Run.
+fix npt all npt temp $(v_temp) $(v_temp) 100.0 aniso  $(v_press) $(v_press) $(1000*dt) couple xy
+
+thermo 100
+run 1000
+write_data npt.data
+
+group ions type 3 4
+variable avogadro equal 6.0221e23
+variable molality equal (count(ions)/2/v_avogadro)/(mass(water)*1e-3/v_avogadro)
+
+print "${molality}"
+
+# Quick NPT run to get average density
+
+variable lx equal lx
+variable ly equal ly
+variable lz equal lz
+
+# Average over the last 5000 steps.
+reset_timestep 0 # Because fix only outputs on multiples of n_npt 
+variable n_npt  index 10000
+thermo_style custom step temp press lx ly lz pxx pyy pzz density 
+fix ave_box all ave/time  1 ${n_npt} ${n_npt} v_lx v_ly v_lz
+
+run ${n_npt}
+
+variable scale_x equal f_ave_box[1]/lx
+variable scale_y equal f_ave_box[2]/ly
+variable scale_z equal f_ave_box[3]/lz
+
+
+
+
+print "${scale_x} ${scale_y} ${scale_z} "
+change_box all x scale ${scale_x} y scale ${scale_y} z scale ${scale_z}
+
+write_data averaged_box.data
+
