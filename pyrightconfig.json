@@ -1,0 +1,8 @@
+{
+"exclude": [
+	"target/",
+	"lammps_docs",
+	"lammps_docs_md",
+	"lammps_hover_docs",
+]
+}
