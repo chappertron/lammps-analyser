@@ -9,7 +9,7 @@ MD_DIR="./lammps_docs_md"
 # Has a flat structure so easy to convert
 
 # TODO: Use parrallel 
-for file in "$RST_DIR"/fix_*.rst ; do
+for file in "$RST_DIR"/*.rst ; do
 	echo "$file"
 	# Just the file name, not full path
 	filename=$(basename "$file")
