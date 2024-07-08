@@ -489,7 +489,6 @@ mod tests {
     fn test_ast() {
         let mut parser = setup_parser();
         // let source_bytes = include_bytes!("../../fix.lmp");
-        let source_bytes = include_bytes!("../../in.nemd");
         let source_bytes = include_bytes!("../../example_input_scripts/in.nemd");
         let tree = parser.parse(source_bytes, None).unwrap();
 
