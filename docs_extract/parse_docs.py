@@ -1,6 +1,6 @@
 """
-Removes things that are sphinx extensions to the rst standard, so that pandoc can
-convert them to markdown properly
+Removes directives from the LAMMPS docs that are Sphinx extensions to the rst standard,
+so that pandoc can convert them to markdown properly
 
 Things that are done:
     -  Appends underscores after ` `link text <uri>`_ `
@@ -19,9 +19,11 @@ Things that are done:
 from os import PathLike
 from pathlib import Path
 
-from typing import List
+from typing import Dict, List
 import re
 
+DOCS_PATH = "../lammps_docs/"
+MODIFIED_PATH = Path("../lammps_docs_cleaned/")
 
 # Just delete these ones...
 INDEX_REGEX = re.compile(r".. index::\s+(.+)")
@@ -57,28 +59,43 @@ def get_file_indices(file_name: PathLike) -> List[str]:
     return indices
 
 
-DOCS_PATH = "../lammps_docs/"
+def create_index_file_map() -> Dict[str, str]:
+    """
+    Find index sections in all doc files in each path.
+    Create a map from each index to the file that has that index
+    """
+    # rst index -> file
+    index_lookup = {}
+    for file in Path(DOCS_PATH).glob("*.rst"):
+        for index in get_file_indices(file):
+            # Just the file name
+            # TODO: What if these aren't a unique map?
+            index_lookup[index] = file.name.removesuffix(".rst")
+    return index_lookup
 
-# rst index -> file
-index_lookup = {}
 
-for file in Path(DOCS_PATH).glob("*.rst"):
-    for index in get_file_indices(file):
-        # Just the file name
-        index_lookup[index] = file.name.removesuffix(".rst")
+def tidy_file(file_contents: str) -> str:
+    """
+    Removes several Sphinx specific directives from an .rst file
 
+    These are namely:
+        -  Appends underscores after ` `link text <uri>`_ `
+        These are needed for pandoc to actually recognise these as links,
+        according to the [rst spec](https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#anonymous-hyperlinks).
+        The format without trailing underscores is a
+        sphinx extension.
+        - Index lines  (`:: index INDEX`) are extracted into a dictionary and removed
+        from the file. This dictionary is currently unused but could potentially be
+        turned into full proper index pages, or used for lookup of docs files.
+        - ` :: parsed-literal` headings are removed from those indented blocks. They
+        are interepreted as literals without this in rst.
 
-MODIFIED_PATH = Path("../lammps_docs_cleaned/")
+    ## Implemenation:
+    The implementation is simply using a few regexes. Ideally a proper .rst parser
+    would be used.
+    """
 
-
-# Go through all the docs files and peform the substitutions
-for file in Path(DOCS_PATH).glob("*.rst"):
-    print(file)
-    with open(file, "r", encoding="utf-8") as stream:
-        original_source = stream.read()
-
-    # TODO: Stop applying this regex if gone past the header section?
-    modified = INDEX_REGEX.sub("", original_source)
+    modified = INDEX_REGEX.sub("", file_contents)
 
     def replace_link(match: re.Match) -> str:
         # TODO: give these groups names
@@ -107,5 +124,21 @@ for file in Path(DOCS_PATH).glob("*.rst"):
     # Replace with a literal block that can be converted to markdown
     modified = modified.replace(r".. parsed-literal::", r"::")
 
-    with open(MODIFIED_PATH.joinpath(file.name), "w") as stream:
-        stream.write(modified)
+    return modified
+
+
+def main():
+    # Go through all the docs files and peform the substitutions
+    for file in Path(DOCS_PATH).glob("*.rst"):
+        print(file)
+        with open(file, "r", encoding="utf-8") as stream:
+            original_source = stream.read()
+
+        modified = tidy_file(original_source)
+
+        with open(MODIFIED_PATH.joinpath(file.name), "w") as stream:
+            stream.write(modified)
+
+
+if __name__ == "__main__":
+    main()
