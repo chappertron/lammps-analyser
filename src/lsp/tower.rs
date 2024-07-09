@@ -6,11 +6,11 @@ use lammps_analyser::ast::{
 use lammps_analyser::check_commands;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::docs::docs_map::DOCS_MAP;
+use lammps_analyser::docs::DOCS_CONTENTS;
 use lammps_analyser::error_finder::ErrorFinder;
 use lammps_analyser::identifinder::{unused_variables, IdentiFinder};
 use lammps_analyser::lammps_errors::Warnings;
 use lammps_analyser::utils::get_symbol_at_point;
-use std::fs::read_to_string;
 use std::str::FromStr;
 use std::sync::Arc;
 use tower_lsp::jsonrpc::Result;
@@ -306,8 +306,10 @@ impl LanguageServer for Backend {
             // TODO: Don't hard code this path.
             // Set an envar or somethign
             // From root of project
-            let hover_text = read_to_string(format!("./lammps_docs_md/{}.md", doc_name))
-                .expect("IO Error reading documentation");
+            let hover_text = DOCS_CONTENTS
+                .get(format!("{doc_name}.md").as_str())
+                .expect("No docs for this command")
+                .to_string();
 
             Ok(Some(Hover {
                 contents: HoverContents::Markup(MarkupContent {
@@ -322,16 +324,9 @@ impl LanguageServer for Backend {
     }
 }
 
-// struct TextDocumentItem {
-//     uri: Url,
-//     text: String,
-//     version: i32,
-// }
 impl Backend {
     // async fn on_change(&self, params: TextDocumentItem) {
     async fn on_change(&self, uri: Url, text: String, version: i32) {
-        // example uses a rope, I'm just going to use a u8 vec or str.
-        // let rope = ropey::Rope::from_str(&params.text);
         self.document_map.insert(uri.to_string(), text);
 
         let text = self.document_map.get(&uri.to_string()).unwrap();
