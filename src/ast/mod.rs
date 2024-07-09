@@ -7,6 +7,7 @@
 pub mod expressions;
 pub mod find_node;
 pub mod from_node;
+
 use crate::{
     commands::CommandName,
     spanned_error::{SpannedError, WithSpan},
@@ -23,7 +24,7 @@ use crate::{
 
 use self::from_node::{FromNode, FromNodeError};
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 /// A list of commands
 /// Perhaps not truly an AST
 pub struct Ast {
@@ -292,7 +293,7 @@ impl Display for Argument {
 #[derive(Debug, PartialEq, Clone)]
 pub enum NamedCommand {
     Fix(FixDef),
-    Compute,
+    Compute(ComputeDef),
     Style,
     Modify,
     AtomStyle,
@@ -310,7 +311,7 @@ impl FromNode for NamedCommand {
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<NamedCommand, Self::Error> {
         match node.kind() {
             "fix" => Ok(NamedCommand::Fix(FixDef::from_node(node, text)?)),
-            "compute" => Ok(NamedCommand::Compute),
+            "compute" => Ok(NamedCommand::Compute(ComputeDef::from_node(node, text)?)),
             "style" => Ok(NamedCommand::Style),
             "modify" => Ok(NamedCommand::Modify),
             "atom_style" => Ok(NamedCommand::AtomStyle),
@@ -445,7 +446,7 @@ impl TryFrom<&str> for NamedCommand {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "fix" => Ok(Self::Fix(FixDef::default())),
-            "compute" => Ok(Self::Compute),
+            "compute" => Ok(Self::Compute(ComputeDef::default())),
             "style" => Ok(Self::Style),
             "modify" => Ok(Self::Modify),
             "atom_style" => Ok(Self::AtomStyle),
@@ -494,7 +495,6 @@ mod tests {
         let tree = parser.parse(source_bytes, None).unwrap();
 
         let ast = ts_to_ast(&tree, source_bytes);
-        dbg!(ast.unwrap());
         // dbg!(ast.unwrap());
 
         unimplemented!()
