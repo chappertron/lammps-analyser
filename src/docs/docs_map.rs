@@ -8,8 +8,9 @@ use crate::{commands::CommandName, compute_styles::ComputeStyle, fix_styles::Fix
 /// This maps between commands and the documenation files
 
 /// Static map between the commands and their files.
-pub(crate) static DOCS_MAP: Lazy<DocsMap> =
-    Lazy::new(|| DocsMap::new_from_str(include_str!["../docs_extract/index_map.txt"]));
+/// TODO: Make pub(crate) again
+pub static DOCS_MAP: Lazy<DocsMap> =
+    Lazy::new(|| DocsMap::new_from_str(include_str!["../../docs_extract/index_map.txt"]));
 
 /// A mapping between a command name and a doc path.
 pub struct DocsMap {

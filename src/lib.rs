@@ -19,4 +19,4 @@ pub mod spans;
 
 pub mod lints;
 
-pub mod docs_map;
+pub mod docs;
