@@ -5,6 +5,7 @@
 #![deny(clippy::expect_used)]
 
 pub mod expressions;
+pub mod find_node;
 pub mod from_node;
 use crate::{
     commands::CommandName,

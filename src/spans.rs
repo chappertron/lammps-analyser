@@ -1,3 +1,5 @@
+use std::cmp::{Ordering, PartialOrd};
+
 /// A point within a file.
 /// Zero-based, so the first row is zero.
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
@@ -92,5 +94,169 @@ impl Span {
 impl Span {
     pub fn in_range(&self, range: &Span) -> bool {
         range.start <= self.start && self.end <= range.end
+    }
+
+    /// Whether the point is in the spans range, inclusively
+    pub fn contains(&self, point: &Point) -> bool {
+        self.start <= *point && *point <= self.end
+    }
+}
+
+impl PartialOrd<Point> for Span {
+    /// Compare a point and a span
+    ///
+    /// If point is inside the span considered equal.
+    /// If outside to the left, the span is considered greather than the point
+    /// If outside to the right, considered greater.
+    /// Both ends of the range are inclusive
+    fn partial_cmp(&self, other: &Point) -> Option<std::cmp::Ordering> {
+        match (self.start.cmp(&other), self.end.cmp(&other)) {
+            // End is less than the point, span must be less than point
+            (_, Ordering::Less) => Some(Ordering::Less),
+            // Start is greater than the poinbt, span must be greater than point
+            (Ordering::Greater, _) => Some(Ordering::Greater),
+            // TODO: Explicitly enumerate
+            (_, _) => Some(Ordering::Equal),
+        }
+    }
+}
+
+impl PartialOrd<Span> for Point {
+    /// Compare a point and a span
+    ///
+    /// If point is inside the span considered equal.
+    /// If outside to the left, the span is considered greather than the point
+    /// If outside to the right, considered greater.
+    /// Both ends of the range are inclusive
+    fn partial_cmp(&self, other: &Span) -> Option<std::cmp::Ordering> {
+        match (self.cmp(&other.start), self.cmp(&other.end)) {
+            // Point is less than the start, must be outside
+            (Ordering::Less, _) => Some(Ordering::Less),
+            // Point is greater than the start, must be outside
+            (_, Ordering::Greater) => Some(Ordering::Greater),
+            // TODO: Explicitly enumerate
+            (_, _) => Some(Ordering::Equal),
+        }
+    }
+}
+
+impl PartialEq<Point> for Span {
+    /// Compare a point and a span
+    ///
+    /// If point is inside the span considered equal.
+    /// If outside to the left, considered less than.
+    /// If outside to the right, considered greater.
+    /// Both ends of the range are inclusive
+    fn eq(&self, other: &Point) -> bool {
+        self.contains(other)
+    }
+}
+
+impl PartialEq<Span> for Point {
+    /// Compare a point and a span
+    ///
+    /// If point is inside the span considered equal.
+    /// If outside to the left, considered less than.
+    /// If outside to the right, considered greater.
+    /// Both ends of the range are inclusive
+    fn eq(&self, other: &Span) -> bool {
+        other.contains(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn span_contains() {
+        let point = Point { row: 0, column: 2 };
+        let span = Span {
+            start: Point { row: 0, column: 1 },
+            end: Point { row: 0, column: 3 },
+        };
+
+        assert!(span.contains(&point));
+        assert_eq!(span, point);
+
+        assert_eq!(span.partial_cmp(&point), Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn point_on_lower_edge_of_span() {
+        let point = Point { row: 0, column: 1 };
+        let span = Span {
+            start: Point { row: 0, column: 1 },
+            end: Point { row: 0, column: 3 },
+        };
+
+        assert!(span.contains(&point));
+        assert_eq!(span, point);
+
+        assert_eq!(span.partial_cmp(&point), Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn point_on_outside_left_of_span() {
+        let point = Point { row: 0, column: 0 };
+        let span = Span {
+            start: Point { row: 0, column: 1 },
+            end: Point { row: 0, column: 3 },
+        };
+
+        assert!(!span.contains(&point));
+        assert!(point < span);
+        assert!(span > point);
+
+        assert_eq!(point.partial_cmp(&span), Some(Ordering::Less));
+        assert_eq!(span.partial_cmp(&point), Some(Ordering::Greater));
+    }
+
+    #[test]
+    fn point_on_outside_right_of_span() {
+        let point = Point { row: 0, column: 10 };
+        let span = Span {
+            start: Point { row: 0, column: 1 },
+            end: Point { row: 0, column: 3 },
+        };
+
+        assert!(!span.contains(&point));
+        assert!(point > span);
+        assert!(span < point);
+
+        assert_eq!(point.partial_cmp(&span), Some(Ordering::Greater));
+        assert_eq!(span.partial_cmp(&point), Some(Ordering::Less));
+    }
+
+    #[test]
+    fn point_on_upper_edge_of_span() {
+        let point = Point { row: 0, column: 3 };
+        let span = Span {
+            start: Point { row: 0, column: 1 },
+            end: Point { row: 0, column: 3 },
+        };
+
+        assert!(span.contains(&point));
+        assert_eq!(span, point);
+
+        assert_eq!(span.partial_cmp(&point), Some(Ordering::Equal));
+    }
+
+    #[test]
+    fn point_ordering() {
+        let p0 = Point { row: 0, column: 0 };
+        let p1 = Point { row: 1, column: 0 };
+
+        assert!(p1 > p0);
+
+        let p2 = Point { row: 0, column: 1 };
+        let p3 = Point { row: 0, column: 2 };
+
+        assert!(p2 > p0);
+        assert!(p3 > p0);
+
+        // Higher row always higher order
+        assert!(p1 > p2);
+        assert!(p1 > p3);
     }
 }
