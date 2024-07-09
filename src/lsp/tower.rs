@@ -1,6 +1,6 @@
 //! Alternative implementation for the lsp using the `tower-lsp` crate.
 use dashmap::DashMap;
-use lammps_analyser::ast::{ts_to_ast, CommandType, NamedCommand, PartialAst};
+use lammps_analyser::ast::{ts_to_ast, Ast, CommandType, NamedCommand, PartialAst};
 use lammps_analyser::check_commands;
 use lammps_analyser::check_styles::check_styles;
 use lammps_analyser::error_finder::ErrorFinder;
@@ -8,6 +8,7 @@ use lammps_analyser::identifinder::{unused_variables, IdentiFinder};
 use lammps_analyser::lammps_errors::Warnings;
 use lammps_analyser::utils::{get_symbol_at_point, position_to_point};
 use std::str::FromStr;
+use std::sync::Arc;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer, LspService, Server};
@@ -31,6 +32,8 @@ struct Backend {
     /// Finds Symbols maps.
     /// Wrapped in RwLock for Interior Mutability
     identifinder: std::sync::RwLock<IdentiFinder>,
+
+    ast: Arc<std::sync::RwLock<Option<Ast>>>,
 }
 
 use SemanticTokenType as ST;
@@ -272,21 +275,28 @@ impl LanguageServer for Backend {
         let tree = self.tree_map.get(&uri.to_string()).unwrap();
         let mut tree_cursor = tree.walk();
 
-        let node = if tree_cursor.goto_first_child_for_point(ts_point).is_some() {
-            let parent = tree_cursor.node();
-            // Go to the narrowest node
-            parent.named_descendant_for_point_range(ts_point, parent.end_position())
-        } else {
-            return Ok(None);
-        };
+        let point = params.text_document_position_params.position.into();
 
+        // TODO: Tidy the unwraps
+        let ast = self.ast.read().unwrap();
+
+        let command = ast
+            .as_ref()
+            .map(|ast| ast.find_node(point))
+            .flatten()
+            .unwrap();
+
+        let hover_text = format!(
+            "**Hovering** over: {:?}\n**Raw Position: {:?}**",
+            command, point
+        );
+        // Old hard coded example. TODO: remove
+        // include_str!("../../lammps_docs_md/fix_langevin.md").to_owned()
         Ok(Some(Hover {
             contents: HoverContents::Markup(MarkupContent {
                 kind: MarkupKind::Markdown,
-                value: format!(
-                    "**Hovering** over: {:?}\n**Raw Position: {:?}**",
-                    node, params.text_document_position_params.position
-                ),
+                // TODO: Actually find the right document for the command.
+                value: hover_text,
             }),
             range: None,
         }))
@@ -345,6 +355,8 @@ impl Backend {
             }
         };
 
+        *self.ast.write().unwrap() = Some(ast);
+
         // TODO: combine this whole block into a single function
         let mut error_finder = ErrorFinder::new().unwrap();
         error_finder.find_syntax_errors(&tree, &*text).unwrap();
@@ -362,12 +374,19 @@ impl Backend {
 
         // Parsing fixes
 
-        let fix_errors = ast
+        let fix_errors = self
+            .ast
+            .read()
+            .expect("Taking read lock on ast")
+            .as_ref()
+            .unwrap()
             .commands
             .iter()
             .filter_map(|command| {
                 if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
                     Some(check_commands::fixes::check_fix(fix))
+
+                // TODO: add checking for computes here.
                 } else {
                     None
                 }
@@ -436,6 +455,7 @@ async fn main() {
         document_map: DashMap::new(),
         tree_map: DashMap::new(),
         identifinder: IdentiFinder::new_no_parse().unwrap().into(),
+        ast: Arc::new(None.into()),
     });
     Server::new(stdin, stdout, socket).serve(service).await;
 }
