@@ -41,5 +41,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     writeln!(&mut all_the_docs, r##"]"##,)?;
 
+    // Tell cargo to only rebuild if the docs files have changed.
+    println!("cargo::rerun-if-changed={SOURCE_DIR}");
+
     Ok(())
 }
