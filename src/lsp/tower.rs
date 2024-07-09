@@ -1,12 +1,16 @@
 //! Alternative implementation for the lsp using the `tower-lsp` crate.
 use dashmap::DashMap;
-use lammps_analyser::ast::{ts_to_ast, Ast, CommandType, NamedCommand, PartialAst};
+use lammps_analyser::ast::{
+    ts_to_ast, Ast, CommandType, ComputeDef, FixDef, GenericCommand, NamedCommand, PartialAst,
+};
 use lammps_analyser::check_commands;
 use lammps_analyser::check_styles::check_styles;
+use lammps_analyser::docs::docs_map::DOCS_MAP;
 use lammps_analyser::error_finder::ErrorFinder;
 use lammps_analyser::identifinder::{unused_variables, IdentiFinder};
 use lammps_analyser::lammps_errors::Warnings;
-use lammps_analyser::utils::{get_symbol_at_point, position_to_point};
+use lammps_analyser::utils::get_symbol_at_point;
+use std::fs::read_to_string;
 use std::str::FromStr;
 use std::sync::Arc;
 use tower_lsp::jsonrpc::Result;
@@ -33,7 +37,7 @@ struct Backend {
     /// Wrapped in RwLock for Interior Mutability
     identifinder: std::sync::RwLock<IdentiFinder>,
 
-    ast: Arc<std::sync::RwLock<Option<Ast>>>,
+    ast: Arc<std::sync::RwLock<Ast>>,
 }
 
 use SemanticTokenType as ST;
@@ -269,37 +273,52 @@ impl LanguageServer for Backend {
     }
 
     async fn hover(&self, params: HoverParams) -> Result<Option<Hover>> {
-        let uri = params.text_document_position_params.text_document.uri;
-        let ts_point = position_to_point(&params.text_document_position_params.position);
-
-        let tree = self.tree_map.get(&uri.to_string()).unwrap();
-        let mut tree_cursor = tree.walk();
-
         let point = params.text_document_position_params.position.into();
 
-        // TODO: Tidy the unwraps
+        // Unwrap should be ok. Panics if can't get lock result
         let ast = self.ast.read().unwrap();
 
-        let command = ast
-            .as_ref()
-            .map(|ast| ast.find_node(point))
-            .flatten()
-            .unwrap();
+        let command = ast.find_node(point);
 
-        let hover_text = format!(
-            "**Hovering** over: {:?}\n**Raw Position: {:?}**",
-            command, point
-        );
-        // Old hard coded example. TODO: remove
-        // include_str!("../../lammps_docs_md/fix_langevin.md").to_owned()
-        Ok(Some(Hover {
-            contents: HoverContents::Markup(MarkupContent {
-                kind: MarkupKind::Markdown,
-                // TODO: Actually find the right document for the command.
-                value: hover_text,
-            }),
-            range: None,
-        }))
+        // FIXME: For unknown fix/compute styles does some weird stuff.
+        if let Some(command) = command {
+            let doc_name = match &command.command_type {
+                CommandType::NamedCommand(NamedCommand::Fix(FixDef { fix_style, .. })) => {
+                    DOCS_MAP.fixes().get(&fix_style)
+                }
+                CommandType::NamedCommand(NamedCommand::Compute(ComputeDef {
+                    compute_style,
+                    ..
+                })) => DOCS_MAP.computes().get(&compute_style),
+
+                CommandType::GenericCommand(GenericCommand { name, .. }) => {
+                    DOCS_MAP.commands().get(&name)
+                }
+
+                _ => None,
+            };
+
+            let Some(doc_name) = doc_name else {
+                return Ok(None);
+            };
+
+            // Read the actual docs
+            // TODO: Don't hard code this path.
+            // Set an envar or somethign
+            // From root of project
+            let hover_text = read_to_string(format!("./lammps_docs_md/{}.md", doc_name))
+                .expect("IO Error reading documentation");
+
+            Ok(Some(Hover {
+                contents: HoverContents::Markup(MarkupContent {
+                    kind: MarkupKind::Markdown,
+                    value: hover_text,
+                }),
+                range: None,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 }
 
@@ -355,7 +374,7 @@ impl Backend {
             }
         };
 
-        *self.ast.write().unwrap() = Some(ast);
+        *self.ast.write().unwrap() = ast;
 
         // TODO: combine this whole block into a single function
         let mut error_finder = ErrorFinder::new().unwrap();
@@ -378,8 +397,6 @@ impl Backend {
             .ast
             .read()
             .expect("Taking read lock on ast")
-            .as_ref()
-            .unwrap()
             .commands
             .iter()
             .filter_map(|command| {
@@ -455,7 +472,7 @@ async fn main() {
         document_map: DashMap::new(),
         tree_map: DashMap::new(),
         identifinder: IdentiFinder::new_no_parse().unwrap().into(),
-        ast: Arc::new(None.into()),
+        ast: Arc::new(Ast::default().into()),
     });
     Server::new(stdin, stdout, socket).serve(service).await;
 }
