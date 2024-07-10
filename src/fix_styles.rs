@@ -6,36 +6,25 @@ macro_rules! fix_styles {
         pub enum FixStyle {
             $($variant,)+
             #[default] // Because no other varitant can be default with macro def
-            InvalidFixStyle,
+            InvalidStyle,
         }
 
         impl FixStyle {
             pub const fn n_positional_args(&self) -> usize {
                 match self {
                     $(FixStyle::$variant => $nargs,)+
-                    FixStyle::InvalidFixStyle => 0,
+                    FixStyle::InvalidStyle => 0,
                 }
 
             }
         }
 
-        // TODO: Decide if try from or From is more appropriate
-
-        // impl TryFrom<&str> for FixStyle {
-        //    type Error = InvalidFix;
-        //         fn try_from(value: &str) -> Result<Self, Self::Error> {
-        //             match value {
-        //                 $($lit => Ok(FixStyle::$variant),)+
-        //                 value => Err(InvalidFix(value.into())),
-        //             }
-        //         }
-        // }
 
         impl From<&str> for FixStyle {
             fn from(value: &str) -> Self {
                 match value {
                     $($lit => FixStyle::$variant,)+
-                    _ => FixStyle::InvalidFixStyle,
+                    _ => FixStyle::InvalidStyle,
                 }
             }
         }
@@ -43,7 +32,7 @@ macro_rules! fix_styles {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
                     $(FixStyle::$variant => write!(f, $lit),)+
-                    FixStyle::InvalidFixStyle => write!(f, "INVALID FIX STYLE"),
+                    FixStyle::InvalidStyle => write!(f, "INVALID FIX STYLE"),
                 }
             }
         }
@@ -264,7 +253,7 @@ fix_styles!(
     (SmdWall_surface, "smd/wall_surface", 3),
     (Sph, "sph", 0),
     (SphStationary, "sph/stationary", 0),
-    (Spring, "spring", 6), // TODO: Check that zero isn't just acceptable?
+    (Spring, "spring", 6),
     (SpringChunk, "spring/chunk", 3),
     (SpringRg, "spring/rg", 2),
     (SpringSelf, "spring/self", 2),
@@ -290,7 +279,6 @@ fix_styles!(
     (Viscosity, "viscosity", 4),
     (Viscous, "viscous", 1),
     (ViscousSphere, "viscous/sphere", 1),
-    // TODO: Really Not sure about these wall arg counts...
     (WallLj93, "wall/lj93", 2),
     (WallLj126, "wall/lj126", 2),
     (WallLj1043, "wall/lj1043", 2),
@@ -307,7 +295,7 @@ fix_styles!(
     (WallGranRegion, "wall/gran/region", 4),
     (WallPiston, "wall/piston", 1),
     (WallReflect, "wall/reflect", 2),
-    (WallReflectStochastic, "wall/reflect/stochastic", 11), // TODO: Check...
+    (WallReflectStochastic, "wall/reflect/stochastic", 11),
     (WallRegion, "wall/region", 5),
     (WallSrd, "wall/srd", 2),
     (Widom, "widom", 5)

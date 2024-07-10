@@ -13,18 +13,14 @@ variable slab_offset index 5.0 # TODO(MSF): This should be approximately the thi
 variable temp index 300.0
 variable press index 1.0
 
-# TODO(MSF): change these to be the data files for your electrodes and electrolyte.
 variable elyte_data index elyte.data
 variable slab_left_data index slab.data
 variable slab_right_data index slab.data
 
-# TODO: Add for bonds etc. 
 variable n_additional index 1 # Number of addtional atom types to add when reading in the data files.
 
-# TODO(MSF): Add more extra atoms for your electrodes.
-read_data ${elyte_data} extra/atom/types ${n_additional}  # TODO: Unhardcode this value.
+read_data ${elyte_data} extra/atom/types ${n_additional}  
 
-# TODO(MSF): Change this to be the IL atoms.
 group water type 1 2
 
 # Delete water molecules with bonds over PBCs.

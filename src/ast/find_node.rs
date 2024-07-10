@@ -6,9 +6,12 @@ impl Ast {
     /// Find the Command node located at a given text location.
     ///
     /// Uses binary search over the nodes, which should be in order.
+    #[allow(clippy::missing_panics_doc)] // expect shouldn't panic here.
     pub fn find_node(&self, point: Point) -> Option<&CommandNode> {
         self.commands
             .binary_search_by(|node| {
+                // NOTE: This expect is OK. partial cmp between `Point` and `Span` never returns `None`
+                #[allow(clippy::expect_used)]
                 node.range
                     .partial_cmp(&point)
                     // Invert. this comparison says whether the point is in the range or not.
@@ -22,6 +25,7 @@ impl Ast {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod tests {
 
     use crate::{

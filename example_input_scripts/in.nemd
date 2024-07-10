@@ -130,6 +130,8 @@ write_data      ${outputname}.data pair ij
 
 compute  1 all rdf
 
+invald_command
+
 fix # Here to show what happens with in-complete commands.
 
 

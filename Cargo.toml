@@ -7,6 +7,7 @@ repository = "https://github.com/chappertron/lammps-analyser"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 
+
 [build-dependencies]
 cc="*"
 
@@ -26,11 +27,11 @@ thiserror = "1.0.44"
 tokio = { version = "1.32.0", features = ["io-std", "rt", "macros", "rt-multi-thread"] }
 tower-lsp = "0.20.0"
 tree-sitter = "0.20.10"
-tree-sitter-lammps = { path = "../tree-sitter-lammps" } # TODO: Work out how to de capitalise this
+tree-sitter-lammps = { path = "../tree-sitter-lammps" } 
 
 [lints.clippy]
 enum_glob_use = "deny"
-missing_panics_doc = "warn"
+## missing_panics_doc = "warn"
 redundant_clone = "warn"
 ref_option_ref = "warn"
 

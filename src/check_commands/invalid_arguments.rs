@@ -7,20 +7,22 @@ use thiserror::Error;
 
 use crate::fix_styles::FixStyle;
 
+use super::fixes::CommandAndStyle;
+
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
-#[error("{}:{}: {err_type} for fix {fix_style}",range.start.row+1,range.start.column+1)]
+#[error("{}:{}: {err_type} for {style}",range.start.row+1,range.start.column+1)]
 pub struct InvalidArguments {
     pub(crate) err_type: InvalidArgumentsType,
     pub(crate) range: Span,
-    pub(crate) fix_style: FixStyle,
+    pub(crate) style: CommandAndStyle,
 }
 
 impl InvalidArguments {
-    pub fn new(err_type: InvalidArgumentsType, range: Span, fix_style: FixStyle) -> Self {
+    pub fn new(err_type: InvalidArgumentsType, range: Span, style: CommandAndStyle) -> Self {
         InvalidArguments {
             err_type,
             range,
-            fix_style,
+            style,
         }
     }
 
@@ -41,7 +43,7 @@ impl Issue for InvalidArguments {
             name: "Invalid Arguments".to_owned(),
             severity: crate::diagnostics::Severity::Error,
             span: self.range,
-            message: format!("for fix `{}`: {}", self.fix_style, self.err_type),
+            message: format!("for {} : {}", self.style, self.err_type),
         }
     }
 }
@@ -65,7 +67,7 @@ impl ReportSimple for InvalidArguments {
             self.start().row + 1,
             self.start().column + 1,
             self.err_type.bright_red(),
-            self.fix_style.bright_red(),
+            self.style.bright_red(),
         )
     }
 }

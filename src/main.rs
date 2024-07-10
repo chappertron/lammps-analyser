@@ -1,8 +1,6 @@
 /// TODO:
-/// - [x] Scan all identifiers in one pass?
 /// - [ ] Add incrental parsing
-/// - [x] Make the output look a bit prettier
-/// - [ ] Add file snippets to show where errors are
+/// - [ ] Add file snippets to show where errors are.
 /// - [ ] Add a test suite
 /// - [ ] Create an issue abstraction to handle all errors and warnings
 /// - [ ] Extract core behaviour into a library
@@ -55,7 +53,7 @@ impl<'src> InputScript<'src> {
     /// Parser is taken as input rather than stored because it does not implement debug.
     fn new(source_code: &'src str, parser: &mut Parser) -> Result<Self> {
         let tree = parser
-            .parse(&source_code, None)
+            .parse(source_code, None)
             .context("Failed to load the TS grammar.")?;
 
         let mut issues: Vec<ScriptIssue> = Vec::new();
@@ -74,8 +72,13 @@ impl<'src> InputScript<'src> {
             .commands
             .iter()
             .filter_map(|command| {
+                // TODO: Use a checkcommand function that checks all command types.
                 if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
                     Some(check_commands::fixes::check_fix(fix))
+                } else if let CommandType::NamedCommand(NamedCommand::Compute(compute)) =
+                    &command.command_type
+                {
+                    Some(check_commands::computes::check_compute(compute))
                 } else {
                     None
                 }
@@ -84,7 +87,7 @@ impl<'src> InputScript<'src> {
             .map(|issue| issue.diagnostic())
             .collect::<Vec<_>>();
 
-        let identifinder = IdentiFinder::new(&tree, &source_code)?;
+        let identifinder = IdentiFinder::new(&tree, source_code)?;
 
         let undefined_fixes = match identifinder.check_symbols() {
             Ok(()) => vec![],
@@ -92,13 +95,11 @@ impl<'src> InputScript<'src> {
         };
 
         let mut error_finder = ErrorFinder::new()?;
-        _ = error_finder.find_syntax_errors(&tree, &source_code)?;
+        _ = error_finder.find_syntax_errors(&tree, source_code)?;
         error_finder.find_missing_nodes(&tree)?;
         let syntax_errors = error_finder.syntax_errors();
 
-        // TODO: Check if any warnings or errors are found!!!
-
-        let invalid_styles = check_styles(&tree, &source_code)?;
+        let invalid_styles = check_styles(&tree, source_code)?;
         issues.extend(
             syntax_errors
                 .iter()
@@ -120,7 +121,7 @@ impl<'src> InputScript<'src> {
                 .map(|x| Warnings::from(x).into()),
         );
 
-        diagnostics.extend(fix_errors.into_iter());
+        diagnostics.extend(fix_errors);
 
         Ok(Self {
             source_code,
@@ -168,7 +169,7 @@ fn main() -> Result<()> {
         println!("{}", diagnostic.make_simple_report());
     }
     if !state.issues.is_empty() && !state.diagnostics.is_empty() {
-        // TODO:  Don't count warnings as errors!!!
+        // TODO:   Count warnings seperately!!!
         let n_errors = state.issues.len() + state.diagnostics.len();
         println!(
             "{}: {} error{} found 😞",

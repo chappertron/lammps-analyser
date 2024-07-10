@@ -284,15 +284,15 @@ impl LanguageServer for Backend {
         if let Some(command) = command {
             let doc_name = match &command.command_type {
                 CommandType::NamedCommand(NamedCommand::Fix(FixDef { fix_style, .. })) => {
-                    DOCS_MAP.fixes().get(&fix_style)
+                    DOCS_MAP.fixes().get(fix_style)
                 }
                 CommandType::NamedCommand(NamedCommand::Compute(ComputeDef {
                     compute_style,
                     ..
-                })) => DOCS_MAP.computes().get(&compute_style),
+                })) => DOCS_MAP.computes().get(compute_style),
 
                 CommandType::GenericCommand(GenericCommand { name, .. }) => {
-                    DOCS_MAP.commands().get(&name)
+                    DOCS_MAP.commands().get(name)
                 }
 
                 _ => None,

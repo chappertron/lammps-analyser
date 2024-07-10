@@ -37,12 +37,10 @@ LINK_REGEX_MULTI = re.compile(
     r"`(?P<text>[^`]+)\s+<(?P<link_dest>[^`]+)>`"
 )  # Multipline version can span multiple lines
 
-# TODO: clear these in the same pass as part of the link regex
+# TODO: remove these in the one pass, by making part of the link regex
 DOCS_SIMPLE_REGEX = re.compile(r":doc:")  # Just delete these
 # TODO: Convert these to MD footnotes or references.
-REF_REGEX = re.compile(
-    r":ref:"
-)  # Just delete these TODO: Make this work with MD footnotes
+REF_REGEX = re.compile(r":ref:")  # Just delete these
 
 
 def get_file_indices(file_name: PathLike) -> List[str]:
@@ -52,7 +50,6 @@ def get_file_indices(file_name: PathLike) -> List[str]:
     with open(file_name, "r", encoding="utf-8") as file:
         file_text = file.read()
 
-    # TODO: Quit early if found the Syntax section
     indices = []
     for match in re.finditer(INDEX_REGEX, file_text):
         indices.append(match.groups()[0])
@@ -98,12 +95,9 @@ def tidy_file(file_contents: str) -> str:
     modified = INDEX_REGEX.sub("", file_contents)
 
     def replace_link(match: re.Match) -> str:
-        # TODO: give these groups names
         text = match.group("text")
         link = match.group("link_dest")
         # file_path = index_lookup[index]
-
-        # TODO: do this with just a sub command and group expansion
 
         # Make these anonymous links:
         # https://docutils.sourceforge.io/docs/ref/rst/restructuredtext.html#anonymous-hyperlinks

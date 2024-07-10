@@ -83,7 +83,7 @@ pub fn check_styles(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Vec<InvalidSt
                 _ => unreachable!(),
             };
 
-            if let (StyleType::Fix, FixStyle::InvalidFixStyle) = (&style_type, style.into()) {
+            if let (StyleType::Fix, FixStyle::InvalidStyle) = (&style_type, style.into()) {
                 Some(InvalidStyle {
                     start: mat.captures[0].node.start_position(),
                     end: mat.captures[0].node.end_position(),

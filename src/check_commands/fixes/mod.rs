@@ -1,9 +1,33 @@
 use crate::ast::FixDef;
+use crate::commands::CommandName;
+use crate::compute_styles::ComputeStyle;
 
 use super::invalid_arguments;
 use super::utils::parse_no_args;
 
 use crate::fix_styles::FixStyle;
+
+/// enumerate between styles and commands.
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CommandAndStyle {
+    /// A compute style
+    ComputeStyle(ComputeStyle),
+    /// A fix style
+    FixStyle(FixStyle),
+    /// A commandName
+    CommandName(CommandName),
+}
+
+impl std::fmt::Display for CommandAndStyle {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::ComputeStyle(compute) => write![f, "compute `{}`", compute],
+            Self::FixStyle(fix) => write![f, "fix `{}`", fix],
+            Self::CommandName(command) => write![f, "command `{}`", command],
+        }
+    }
+}
 
 /// Check the arguments of a fix
 pub fn check_fix(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArguments> {
@@ -13,21 +37,21 @@ pub fn check_fix(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArguments
     // arguments in this function.
 
     match style {
-        //  TODO: Report the invalid styles name
+        //  TODO: Report the invalid styles name here
         // `Ok`, so duplicates aren't raised. Also checked elsewhere...
-        FixStyle::InvalidFixStyle => Ok(()),
+        FixStyle::InvalidStyle => Ok(()),
 
         FixStyle::Nve => parse_no_args(fix).map_err(|x| invalid_arguments::InvalidArguments {
             err_type: x,
             range: fix.range(),
-            fix_style: style,
+            style: CommandAndStyle::FixStyle(style),
         }),
         // TODO: See if other fix styles share the same arguments
         FixStyle::Nvt | FixStyle::Npt | FixStyle::Nph => {
             nose_hoover::parse_nh_fixes(fix).map_err(|x| invalid_arguments::InvalidArguments {
                 err_type: x,
                 range: fix.range(),
-                fix_style: style,
+                style: CommandAndStyle::FixStyle(style),
             })
         }
         // Fallback to checking only positional arguments
@@ -35,7 +59,7 @@ pub fn check_fix(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArguments
             invalid_arguments::InvalidArguments {
                 err_type: x,
                 range: fix.range(),
-                fix_style: style,
+                style: CommandAndStyle::FixStyle(style),
             }
         }),
     }

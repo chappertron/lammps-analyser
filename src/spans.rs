@@ -110,7 +110,7 @@ impl PartialOrd<Point> for Span {
     /// If outside to the right, considered greater.
     /// Both ends of the range are inclusive
     fn partial_cmp(&self, other: &Point) -> Option<std::cmp::Ordering> {
-        match (self.start.cmp(&other), self.end.cmp(&other)) {
+        match (self.start.cmp(other), self.end.cmp(other)) {
             // End is less than the point, span must be less than point
             (_, Ordering::Less) => Some(Ordering::Less),
             // Start is greater than the poinbt, span must be greater than point

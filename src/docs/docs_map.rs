@@ -21,21 +21,33 @@ pub struct DocsMap {
 
 impl DocsMap {
     /// Read an 'index file' that maps commands to their
+    ///
+    /// # Panics
+    ///
+    /// Panics if IO operations fail
+    ///
+    /// Also panics if the 'map' file does not have comma seperated pairs of
+    /// index names and file prefixes.
     pub fn new_from_file(map_file: impl AsRef<Path>) -> Self {
+        // TODO: Remove panics
         let file = read_to_string(map_file).expect("Failed to open documenation map file");
 
         DocsMap::new_from_str(&file)
     }
 
     /// Read an 'index file' that maps commands to their
+    ///
+    /// # Panics
+    ///
+    /// Currently panics if the 'map' file does not have comma seperated pairs of
+    /// index names and file prefixes.
     pub fn new_from_str(map_contents: &str) -> Self {
         let mut fixes = HashMap::new();
         let mut computes = HashMap::new();
         let mut others = HashMap::new();
 
         map_contents.lines().for_each(|line| {
-            let line = line;
-
+            // TODO: Remove this panic.
             let (name, doc_file) = line.split_once(',').expect("Expected key value pair");
 
             if let Some((command_type, style)) = name.split_once(' ') {
@@ -82,7 +94,7 @@ impl DocsMap {
 #[cfg(test)]
 mod tests {
     use crate::{
-        commands::CommandName, compute_styles::ComputeStyle, docs_map::DOCS_MAP,
+        commands::CommandName, compute_styles::ComputeStyle, docs::docs_map::DOCS_MAP,
         fix_styles::FixStyle,
     };
 
