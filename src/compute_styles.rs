@@ -12,7 +12,7 @@ macro_rules! compute_styles {
         impl ComputeStyle {
             /// Returns the minimum number of positional arguments the compute style takes
             /// Note: This does not include the required arguments common to all computes, i.e.
-            /// the `compute` keyword, the compute id, the group id and the compute stlye name
+            /// the `compute` keyword, the compute id, the group id and the compute style name
             pub const fn n_positional_args(&self) -> usize {
                 match self {
                     $(ComputeStyle::$variant => $nargs,)+

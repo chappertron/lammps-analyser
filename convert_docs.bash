@@ -8,7 +8,7 @@ MD_DIR="./lammps_docs_md"
 
 # Has a flat structure so easy to convert
 
-# TODO: Use GNU-parrallel 
+# TODO: Use GNU-parallel 
 for file in "$RST_DIR"/*.rst ; do
 	echo "$file"
 	# Just the file name, not full path

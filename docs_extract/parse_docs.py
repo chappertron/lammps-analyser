@@ -11,7 +11,7 @@ Things that are done:
     the file. This dictionary is currently unused but could potentially be turned into
     full proper index pages, or used for lookup of docs files.
     - ` :: parsed-literal` headings are removed from those indented blocks. They are
-    interepreted as literals without this in rst.
+    interpreted as literals without this in rst.
     -
 
 """
@@ -85,9 +85,9 @@ def tidy_file(file_contents: str) -> str:
         from the file. This dictionary is currently unused but could potentially be
         turned into full proper index pages, or used for lookup of docs files.
         - ` :: parsed-literal` headings are removed from those indented blocks. They
-        are interepreted as literals without this in rst.
+        are interpreted as literals without this in rst.
 
-    ## Implemenation:
+    ## Implementation:
     The implementation is simply using a few regexes. Ideally a proper .rst parser
     would be used.
     """
@@ -106,7 +106,7 @@ def tidy_file(file_contents: str) -> str:
     # Replace any indexes with relative file links
     # modified = DOCS_REGEX.sub(replace_match, modified)
 
-    # Remove any remaining :doc: tags, such as when split accross \n
+    # Remove any remaining :doc: tags, such as when split across \n
     modified = DOCS_SIMPLE_REGEX.sub("", modified)
 
     # Remove any remaining :ref: tags
@@ -129,7 +129,7 @@ def main():
             stream.write(f"{k},{v}")
             stream.write("\n")
 
-    # Go through all the docs files and peform the substitutions
+    # Go through all the docs files and perform the substitutions
     for file in Path(DOCS_PATH).glob("*.rst"):
         print(file)
         with open(file, "r", encoding="utf-8") as stream:

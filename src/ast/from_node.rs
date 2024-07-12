@@ -122,7 +122,7 @@ trait GetChild {
 }
 
 trait SeekChild {
-    /// Moves the cursor to the location of `index` child and resturns it as a result.
+    /// Moves the cursor to the location of `index` child and returns it as a result.
     fn seek_child(&mut self, index: usize) -> Result<Node, MissingChild>;
 }
 

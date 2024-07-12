@@ -23,7 +23,7 @@ use tree_sitter::{Parser, Tree};
 /// - [ ] Add Symbols
 /// - [ ] Add Scemantic Tokens
 ///     - [ ] Create a token map using identifinder
-///     - [ ] Add convinence methods for converting from this map to an LSP Scemantic Token
+///     - [ ] Add convenience methods for converting from this map to an LSP Scemantic Token
 /// - [ ] Add Goto Definitions
 #[derive(Debug)]
 struct Backend {
@@ -304,7 +304,7 @@ impl LanguageServer for Backend {
 
             // Read the actual docs
             // TODO: Don't hard code this path.
-            // Set an envar or somethign
+            // Set an envar or something
             // From root of project
             let hover_text = DOCS_CONTENTS
                 .get(format!("{doc_name}.md").as_str())

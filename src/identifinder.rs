@@ -58,7 +58,7 @@ impl SymbolDefsAndRefs {
 // pub enum SymbolDef {
 //     /// Single Definition
 //     Single(Ident),
-//     /// Multiple Defintions
+//     /// Multiple Definitions
 //     Multiple(Vec<Ident>),
 //     /// No Definition
 //     #[default]
@@ -269,7 +269,7 @@ impl IdentiFinder {
 pub fn unused_variables(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<UnusedIdent> {
     map.iter()
         .filter_map(|(k, v)| {
-            // TODO: don't include defintions as references???
+            // TODO: don't include definitions as references???
             if v.refs().len() == v.defs().defs.len() && k.ident_type == IdentType::Variable {
                 Some(v.refs())
             } else {

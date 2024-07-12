@@ -15,7 +15,7 @@ macro_rules! commands {
         impl CommandName {
             /// Returns the minimum number of positional arguments the compute style takes
             /// Note: This does not include the required arguments common to all computes, i.e.
-            /// the `compute` keyword, the compute id, the group id and the compute stlye name
+            /// the `compute` keyword, the compute id, the group id and the compute style name
             pub const fn n_positional_args(&self) -> usize {
                 match self {
                     $(CommandName::$variant => $nargs,)+
@@ -128,7 +128,7 @@ commands!(
     (Region, "region", 2),
     (Replicate, "replicate", 3),
     (Rerun, "rerun", 1),
-    (ResetAtoms, "reset_atoms", 1), // Requires at leat the property field.
+    (ResetAtoms, "reset_atoms", 1), // Requires at least the property field.
     (ResetTimestep, "reset_timestep", 1),
     (Restart, "restart", 1),
     (Run, "run", 1),

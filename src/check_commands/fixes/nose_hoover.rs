@@ -4,7 +4,7 @@ use crate::{ast::FixDef, check_commands::invalid_arguments, fix_styles::FixStyle
 
 /// Generic Parsing of the Nose-Hoover Fixes
 /// TODO: Finish ME
-/// TODO:Extract into a seperate module
+/// TODO:Extract into a separate module
 /// TODO: Error if a temp or barostat keyword is not being used
 pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     let args = &fix.args;
@@ -30,7 +30,7 @@ pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::Inva
     };
 
     // Errors if the keyword is not being used with  barostatting style
-    let thermostast_only = |kwarg: &str| {
+    let thermostat_only = |kwarg: &str| {
         if !is_thermostatting {
             Err(invalid_arguments::InvalidArgumentsType::InvalidKeyword {
                 kwarg: kwarg.to_string(),
@@ -45,7 +45,7 @@ pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::Inva
         match arg {
             Argument::ArgName(kwarg) if kwarg == "temp" => {
                 // TODO: check if there are 3 more elements
-                thermostast_only(kwarg)?;
+                thermostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 3, "<Tstart> <Tstop> <Tdamp>")?;
             }
             Argument::ArgName(kwarg)
@@ -67,7 +67,7 @@ pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::Inva
                 )?;
             }
             Argument::ArgName(kwarg) if kwarg == "tchain" => {
-                thermostast_only(kwarg)?;
+                thermostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 1, "<N> chain.")?;
             }
             Argument::ArgName(kwarg) if kwarg == "pchain" => {

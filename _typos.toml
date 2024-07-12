@@ -1,0 +1,13 @@
+[default.extend-words]
+coul = "coul" # Abbreviation for Coulombic
+
+
+[default.extend-identifiers]
+CnaAtom = "CnaAtom" # One of the LAMMPS Fixes
+
+
+[default]
+extend-ignore-identifiers-re = [
+    "cna[_/]atom", # One of the lammps Fixes Just ignore in this case.
+]
+

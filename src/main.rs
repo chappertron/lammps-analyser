@@ -169,7 +169,7 @@ fn main() -> Result<()> {
         println!("{}", diagnostic.make_simple_report());
     }
     if !state.issues.is_empty() && !state.diagnostics.is_empty() {
-        // TODO:   Count warnings seperately!!!
+        // TODO:   Count warnings separately!!!
         let n_errors = state.issues.len() + state.diagnostics.len();
         println!(
             "{}: {} error{} found 😞",

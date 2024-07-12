@@ -67,7 +67,7 @@ impl ErrorFinder {
         Ok(self.syntax_errors())
     }
 
-    /// Tree-sitter can't currently query for missing nodes, so recursivley walking the tree instead
+    /// Tree-sitter can't currently query for missing nodes, so recursively walking the tree instead
     /// Missing nodes are also not reported as errors, so this is needed.
     /// TODO: Walk back from missing nodes to work out the expected node?
     pub fn find_missing_nodes(&mut self, tree: &Tree) -> Result<&Vec<SyntaxError>> {

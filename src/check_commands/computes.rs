@@ -7,7 +7,7 @@ use super::{fixes::CommandAndStyle, invalid_arguments::InvalidArguments};
 /// All computes are checked for a minimum number of arguments they are expected to have, as
 /// defined in [`crate::compute_styles::ComputeStyle`]
 ///
-/// Returns `Ok(())` if there are no issues, otherwise returns the appropiate error.
+/// Returns `Ok(())` if there are no issues, otherwise returns the appropriate error.
 pub fn check_compute(compute: &ComputeDef) -> Result<(), InvalidArguments> {
     if compute.args.len() < compute.compute_style.n_positional_args() {
         return Err(InvalidArguments::new(

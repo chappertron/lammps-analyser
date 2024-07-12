@@ -65,7 +65,7 @@ pub fn check_fix(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArguments
     }
 }
 
-// NOTE: Tests are in the appropiate sub modules for the given fix.
+// NOTE: Tests are in the appropriate sub modules for the given fix.
 
 /// Parse Fix with at least n positional arguments
 pub(crate) fn check_n_positional(

@@ -106,7 +106,7 @@ impl PartialOrd<Point> for Span {
     /// Compare a point and a span
     ///
     /// If point is inside the span considered equal.
-    /// If outside to the left, the span is considered greather than the point
+    /// If outside to the left, the span is considered greater than the point
     /// If outside to the right, considered greater.
     /// Both ends of the range are inclusive
     fn partial_cmp(&self, other: &Point) -> Option<std::cmp::Ordering> {
@@ -125,7 +125,7 @@ impl PartialOrd<Span> for Point {
     /// Compare a point and a span
     ///
     /// If point is inside the span considered equal.
-    /// If outside to the left, the span is considered greather than the point
+    /// If outside to the left, the span is considered greater than the point
     /// If outside to the right, considered greater.
     /// Both ends of the range are inclusive
     fn partial_cmp(&self, other: &Span) -> Option<std::cmp::Ordering> {

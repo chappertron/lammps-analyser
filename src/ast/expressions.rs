@@ -115,7 +115,7 @@ impl From<MissingNode> for ParseExprError {
 }
 
 impl Expression {
-    /// TODO: Handle Erros
+    /// TODO: Handle Errors
     pub(crate) fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Self, ParseExprError> {
         // dbg!(node);
 

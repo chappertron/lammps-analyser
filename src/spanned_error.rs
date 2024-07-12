@@ -15,7 +15,7 @@ pub struct SpannedError<E> {
 }
 
 impl<V> SpannedError<V> {
-    /// Convert the inner error, using the appropiate `From` impl.
+    /// Convert the inner error, using the appropriate `From` impl.
     pub fn convert<U>(value: SpannedError<U>) -> Self
     where
         V: From<U>,

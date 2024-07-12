@@ -50,7 +50,7 @@ pub fn fix_redef_before_run<'a>(
         let commands_iter = ast
             .commands
             .iter()
-            // Check if definition is in range, because definiton uses identifier location.
+            // Check if definition is in range, because definition uses identifier location.
             .skip_while(|cmd| !(first_def.range()).in_range(&cmd.range()))
             .skip(1);
 
@@ -152,7 +152,7 @@ mod tests {
 
     #[test]
     #[ignore = "Lint being tested is incomplete"]
-    // TODO: Finsh the lint so the test passes
+    // TODO: Finish the lint so the test passes
     fn redefined_twice_after_first_run() {
         let mut parser = setup_parser();
         let text = b"fix NVT all nvt temp 1 1.5 $(100.0*dt)

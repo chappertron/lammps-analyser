@@ -78,7 +78,7 @@ pub(crate) mod into_error {
 
     /// A trait designed for allowing easier conversions from `Option<T>` to `Result<T, E>`.
     ///
-    /// This needed for foriegn types T to circumvent the orphan rules, that prevent using the `From` trait.
+    /// This needed for foreign types T to circumvent the orphan rules, that prevent using the `From` trait.
     /// This can only be defined Once per type, but then From<Error> can be implemented for other
     /// error types with the question mark operator.
     pub(crate) trait IntoError<T> {
