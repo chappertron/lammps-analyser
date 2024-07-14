@@ -18,19 +18,13 @@ use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
 use tree_sitter::{Parser, Tree};
 
-/// Core LSP Application
-/// TODO:
-/// - [ ] Add Symbols
-/// - [ ] Add Scemantic Tokens
-///     - [ ] Create a token map using identifinder
-///     - [ ] Add convenience methods for converting from this map to an LSP Scemantic Token
-/// - [ ] Add Goto Definitions
+/// Core LSP Server Application
 #[derive(Debug)]
 pub struct Backend {
     client: Client,
-    /// Map of uri to document text
+    /// Map of file URI to document text
     document_map: DashMap<String, String>,
-    /// Map of uri to document tree
+    /// Map of file URI to document tree
     tree_map: DashMap<String, Tree>,
     // TODO: Symbols Map
     /// Finds Symbols maps.
@@ -46,7 +40,9 @@ impl Backend {
             client,
             document_map: DashMap::new(),
             tree_map: DashMap::new(),
-            identifinder: IdentiFinder::new_no_parse().unwrap().into(),
+            identifinder: IdentiFinder::new_no_parse()
+                .expect("Failed to compile Tree-sitter Query")
+                .into(),
             ast: Arc::new(Ast::default().into()),
         }
     }
@@ -60,30 +56,16 @@ pub const TOKEN_TYPES: [SemanticTokenType; 3] = [ST::KEYWORD, ST::TYPE, ST::FUNC
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
-        // Ok(InitializeResult::default())
         Ok(InitializeResult {
             server_info: Some(ServerInfo {
                 name: "LAMMPS Analyser".into(),
                 version: None,
             }),
             capabilities: ServerCapabilities {
-                // inlay_hint_provider: Some(OneOf::Left(true)),
                 text_document_sync: Some(TextDocumentSyncCapability::Kind(
-                    // Currently only supports full file update
+                    // NOTE: Currently only supports full file update
                     TextDocumentSyncKind::FULL,
                 )),
-                // completion_provider: Some(CompletionOptions {
-                //     resolve_provider: Some(false),
-                //     trigger_characters: Some(vec![".".to_string()]), // TODO: make ${ a trigger
-                //     // character
-                //     work_done_progress_options: Default::default(),
-                //     all_commit_characters: None,
-                //     completion_item: None,
-                // }),
-                // execute_command_provider: Some(ExecuteCommandOptions {
-                //     commands: vec!["dummy.do_something".to_string()],
-                //     work_done_progress_options: Default::default(),
-                // }),
                 workspace: Some(WorkspaceServerCapabilities {
                     workspace_folders: Some(WorkspaceFoldersServerCapabilities {
                         supported: Some(true),
@@ -91,7 +73,6 @@ impl LanguageServer for Backend {
                     }),
                     file_operations: None,
                 }),
-                // TODO: Consider adding more options like in the tower-lsp boilerplate example
                 semantic_tokens_provider: Some(
                     SemanticTokensServerCapabilities::SemanticTokensOptions(
                         SemanticTokensOptions {
@@ -104,15 +85,10 @@ impl LanguageServer for Backend {
                     ),
                 ),
                 definition_provider: Some(OneOf::Left(true)),
-                // TODO: Add options?
                 document_symbol_provider: Some(OneOf::Left(true)),
                 workspace_symbol_provider: Some(OneOf::Left(true)),
                 hover_provider: Some(HoverProviderCapability::Simple(true)),
 
-                // definition: Some(GotoCapability::default()),
-                // definition_provider: Some(OneOf::Left(true)),
-                // references_provider: Some(OneOf::Left(true)),
-                // rename_provider: Some(OneOf::Left(true)),
                 ..Default::default()
             },
         })
@@ -150,8 +126,6 @@ impl LanguageServer for Backend {
                 format!("File changed: {}", params.text_document.uri),
             )
             .await;
-        //
-        // Not sure about this interface or method name, but it's in the template I'm hacking apart
         self.on_change(
             params.text_document.uri,
             std::mem::take(&mut params.content_changes[0].text),
@@ -196,17 +170,15 @@ impl LanguageServer for Backend {
         &self,
         params: DocumentSymbolParams,
     ) -> Result<Option<DocumentSymbolResponse>> {
-        // Ok(Some(DocumentSymbolResponse::Flat(vec![])))
         self.client
             .log_message(
-                MessageType::ERROR,
+                MessageType::INFO,
                 format!("Tried to find symbols for {}", params.text_document.uri),
             )
             .await;
 
         // Assuming the identifier is properly updated
-        // let symbols = ;
-        // need to flatten???
+        // TODO: need to flatten???
         #[allow(deprecated)] // Used for the `deprecated` field of the `SymbolInformation` struct
         let symbols = self
             .identifinder
@@ -229,22 +201,10 @@ impl LanguageServer for Backend {
 
                     deprecated: None,
                 })
-                // .collect::<Vec<_>>()
             })
             .collect();
 
-        // self.client
-        //     .log_message(
-        //         MessageType::INFO,
-        //         format!(
-        //             "Found Symbols for {}: {:?}",
-        //             params.text_document.uri, &symbols
-        //         ),
-        //     )
-        //     .await;
-
         Ok(Some(DocumentSymbolResponse::Flat(symbols)))
-        // todo!()
     }
 
     async fn goto_definition(
@@ -268,8 +228,13 @@ impl LanguageServer for Backend {
         let symbol = identifiers
             .symbols()
             .iter()
-            .find(|(x, _)| *x == name_and_type)
-            .expect("Could not find symbol"); // TODO: Bubble this up
+            .find(|(x, _)| *x == name_and_type);
+
+        let Some(symbol) = symbol else {
+            // For the case no identifier is found.
+            // This should not happen, however, but this remvoes an unwrap.
+            return Ok(None);
+        };
 
         Ok(Some(GotoDefinitionResponse::Array(
             symbol
@@ -315,9 +280,6 @@ impl LanguageServer for Backend {
             };
 
             // Read the actual docs
-            // TODO: Don't hard code this path.
-            // Set an envar or something
-            // From root of project
             let hover_text = DOCS_CONTENTS
                 .get(format!("{doc_name}.md").as_str())
                 .expect("No docs for this command")
@@ -338,12 +300,23 @@ impl LanguageServer for Backend {
 
 impl Backend {
     // async fn on_change(&self, params: TextDocumentItem) {
+    /// Main method that is called on change to the file.
+    ///
+    /// Currently the only method used for updating the server state.
+    ///
+    /// Actions performed:
+    /// - Parse file with tree-sitter
+    /// - Convert the TS tree into a `Ast`
+    /// - Publish errors in the `Ast`a
+    /// - Find any identifiers in the file.
+    /// - Run checks on the fixes and publish these errors.
+    /// - Checks for any issues with the symbols of the file.
     async fn on_change(&self, uri: Url, text: String, version: i32) {
         self.document_map.insert(uri.to_string(), text);
 
         let text = self.document_map.get(&uri.to_string()).unwrap();
 
-        // TODO: Store parser in the state
+        // TODO: Store parser in the state of the backend.
         let mut parser = Parser::new();
 
         parser
@@ -351,9 +324,6 @@ impl Backend {
             .expect("Could not load language");
 
         let tree = parser.parse(&*text, None).unwrap();
-        // self.client
-        //     .log_message(MessageType::INFO, format!("{:?}", errors))
-        //     .await;
 
         let ast = ts_to_ast(&tree, text.as_bytes());
 
@@ -387,9 +357,6 @@ impl Backend {
         let mut error_finder = ErrorFinder::new().unwrap();
         error_finder.find_syntax_errors(&tree, &*text).unwrap();
         error_finder.find_missing_nodes(&tree).unwrap();
-        // let mut ident_finder = IdentiFinder::new(&tree, text.as_bytes()).unwrap();
-        // ident_finder.find_refs(&tree, text.as_bytes()).unwrap();
-        // ident_finder.find_defs(&tree, text.as_bytes()).unwrap();
         self.identifinder
             .write()
             .unwrap()
@@ -418,10 +385,8 @@ impl Backend {
             .filter_map(|x| x.err())
             .collect::<Vec<_>>();
 
-        dbg!(&fix_errors);
-
         let mut diagnostics: Vec<Diagnostic> = error_finder
-            // TODO: add methods to create ownership, so clowning isn't needed???
+            // TODO: implement `From<&SyntaxError>` for `Diagnostic` so explicit cloning isn't needed.
             // TODO: implement into for vec of error
             .syntax_errors()
             .iter()
@@ -449,22 +414,7 @@ impl Backend {
             .publish_diagnostics(uri.clone(), diagnostics, Some(version))
             .await;
 
-        // TODO: Could be excessive
-        // TODO: handle result
-        // self.client.workspace_diagnostic_refresh().await;
-
-        // DEBUGGING
-        // To stop a clippy warning about using format, and an async error
-        // let sexp = &tree.root_node().to_sexp().to_string();
-        // self.client.log_message(MessageType::INFO, sexp).await;
-
         // TODO: pop old tree and update with new one
         self.tree_map.insert(uri.to_string(), tree);
-
-        // self.client
-        //     .log_message(MessageType::INFO, &format!("{:?}", semantic_tokens))
-        //     .await;
-        // self.semantic_token_map
-        //     .insert(uri.to_string(), semantic_tokens);
     }
 }
