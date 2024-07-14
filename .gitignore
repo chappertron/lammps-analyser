@@ -21,7 +21,7 @@ test.*
 
 # Output from running --output-tree flag
 tree.dot
-tree.svg
+*tree.svg
 
 
 # Flamegraph outputs
