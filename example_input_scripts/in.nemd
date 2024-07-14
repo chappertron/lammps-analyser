@@ -93,12 +93,15 @@ fix cons_mom all momentum 1 linear 1 1 1
 compute mymom all momentum
 compute mymomwater water momentum
 
+
+variable function equal 12*sqrt(-1260) # Just for testing
+
 # Reset timestep
 reset_timestep 0
 
 timestep        1
 
-fix 2 all nve what  
+fix 2 all nve what
 
 log ${outputname}.log
 
