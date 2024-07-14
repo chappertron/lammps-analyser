@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 repository = "https://github.com/chappertron/lammps-analyser"
 
+default-run = "lammps-analyser"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 
@@ -35,9 +37,3 @@ enum_glob_use = "deny"
 redundant_clone = "warn"
 ref_option_ref = "warn"
 
-[[bin]]
-# TODO: rename to lmp_lsp
-# TODO: Or make a subcommand of lammps_analyser bin
-name = "lsp"
-# TODO: make this a sensible path.
-path = "./src/lsp/tower.rs"
