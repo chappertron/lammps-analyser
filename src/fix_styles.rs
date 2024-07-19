@@ -300,3 +300,27 @@ fix_styles!(
     (WallSrd, "wall/srd", 2),
     (Widom, "widom", 5)
 );
+
+#[cfg(test)]
+mod tests {
+
+    use super::FixStyle;
+
+    #[test]
+    fn all_fixes_defined() {
+        // Read all the computes from the txt file ensure they all can be converted and have all
+        // been covered
+
+        let fixes = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/docs_extract/fixes.txt"
+        ));
+
+        for fix in fixes.lines() {
+            dbg!(fix);
+
+            // Ensure that call computes get parsed
+            assert_ne!(FixStyle::from(fix), FixStyle::InvalidStyle)
+        }
+    }
+}

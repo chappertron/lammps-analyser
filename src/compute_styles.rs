@@ -168,7 +168,7 @@ compute_styles!(
     (SnavAtom, "snav/atom", 2),
     (Snap, "snap", 2),
     (SnaGrid, "sna/grid", 3),
-    (SnaGridLocal, "wna/grid/local", 3),
+    (SnaGridLocal, "sna/grid/local", 3),
     (SphEAtom, "sph/e/atom", 0),
     (SphRhoAtom, "sph/rho/atom", 0),
     (SphTAtom, "sph/t/atom", 0),
@@ -214,3 +214,29 @@ compute_styles!(
     (VoronoiAtom, "voronoi/atom", 0),
     (Xrd, "xrd", 2) // lambda +  1 or more types and keywords.
 );
+
+#[cfg(test)]
+mod tests {
+    use crate::compute_styles::ComputeStyle;
+
+    #[test]
+    fn all_computes_defined() {
+        // Read all the computes from the txt file ensure they all can be converted and have all
+        // been covered
+
+        let computes = include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/docs_extract/computes.txt"
+        ));
+
+        for compute in computes.lines() {
+            dbg!(compute);
+
+            // Ensure that call computes get parsed
+            assert_ne!(
+                ComputeStyle::from(compute),
+                ComputeStyle::InvalidComputeStyle
+            )
+        }
+    }
+}
