@@ -43,12 +43,13 @@ pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::Inva
 
     while let Some(arg) = iter.next() {
         match arg {
-            Argument::ArgName(kwarg) if kwarg == "temp" => {
+            // TODO: Change ArgName again if this changes again
+            Argument::Word(kwarg) if kwarg == "temp" => {
                 // TODO: check if there are 3 more elements
                 thermostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 3, "<Tstart> <Tstop> <Tdamp>")?;
             }
-            Argument::ArgName(kwarg)
+            Argument::Word(kwarg)
                 if matches!(
                     kwarg.as_ref(),
                     "iso" | "aniso" | "tri" | "x" | "y" | "z" | "xy" | "xz" | "yz"
@@ -57,7 +58,7 @@ pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::Inva
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 3, "<Pstart> <Pstop> <Pdamp>")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "couple" => {
+            Argument::Word(kwarg) if kwarg == "couple" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_enum(
                     &mut iter,
@@ -66,69 +67,69 @@ pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::Inva
                     &["none", "xyz", "xy", "xz", "yz"],
                 )?;
             }
-            Argument::ArgName(kwarg) if kwarg == "tchain" => {
+            Argument::Word(kwarg) if kwarg == "tchain" => {
                 thermostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 1, "<N> chain.")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "pchain" => {
+            Argument::Word(kwarg) if kwarg == "pchain" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 1, "<N> chain.")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "mtk" => {
+            Argument::Word(kwarg) if kwarg == "mtk" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "tloop" => {
+            Argument::Word(kwarg) if kwarg == "tloop" => {
                 utils::kwarg_expected_floats(&mut iter, kwarg, 1, "<N> sub-cycles")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "ploop" => {
+            Argument::Word(kwarg) if kwarg == "ploop" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 1, "<N> sub-cycles")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "nreset" => {
+            Argument::Word(kwarg) if kwarg == "nreset" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 1, "<N> reset")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "drag" => {
+            Argument::Word(kwarg) if kwarg == "drag" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 1, "<Df> drag factor")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "ptemp" => {
+            Argument::Word(kwarg) if kwarg == "ptemp" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 1, "<Ttarget>")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "dilate" => {
+            Argument::Word(kwarg) if kwarg == "dilate" => {
                 barostat_only(kwarg)?;
                 // TODO: convert to a group
                 utils::kwarg_expected_str(&mut iter, kwarg, 1, "<dilate-group-ID>")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "scalexy" => {
+            Argument::Word(kwarg) if kwarg == "scalexy" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "scaleyz" => {
+            Argument::Word(kwarg) if kwarg == "scaleyz" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "scalexz" => {
-                barostat_only(kwarg)?;
-                utils::kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
-            }
-
-            Argument::ArgName(kwarg) if kwarg == "flip" => {
+            Argument::Word(kwarg) if kwarg == "scalexz" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
             }
 
-            Argument::ArgName(kwarg) if kwarg == "fixedpoint" => {
+            Argument::Word(kwarg) if kwarg == "flip" => {
+                barostat_only(kwarg)?;
+                utils::kwarg_expected_bool(&mut iter, kwarg, 1, "<value>")?;
+            }
+
+            Argument::Word(kwarg) if kwarg == "fixedpoint" => {
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 1, "<x> <y> <z>")?;
             }
-            Argument::ArgName(kwarg) if kwarg == "update" => {
+            Argument::Word(kwarg) if kwarg == "update" => {
                 utils::kwarg_expected_enum(&mut iter, kwarg, 1, &["dipole", "dipole/dlm"])?
             }
 
-            Argument::ArgName(kwarg) => Err(invalid_arguments::InvalidArgumentsType::Custom(
+            Argument::Word(kwarg) => Err(invalid_arguments::InvalidArgumentsType::Custom(
                 format!("Unknown kwarg argument: {kwarg}",),
             ))?,
 

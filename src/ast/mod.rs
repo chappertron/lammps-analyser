@@ -580,7 +580,7 @@ mod tests {
                 group_id: "all".into(),
                 fix_style: FixStyle::Nvt,
                 args: vec![
-                    Argument::ArgName("temp".into()),
+                    Argument::Word("temp".into()),
                     Argument::Int(1),
                     Argument::Float(1.5),
                     Argument::VarRound(Expression::BinaryOp(
@@ -621,7 +621,7 @@ mod tests {
                 group_id: "water".into(),
                 compute_style: ComputeStyle::TempRegion,
                 // TODO: Change to a more generic word argument
-                args: vec![Argument::ArgName("hot_region".into()),],
+                args: vec![Argument::Word("hot_region".into()),],
             }
         );
     }

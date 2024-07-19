@@ -110,6 +110,7 @@ impl From<std::str::Utf8Error> for ParseExprError {
 }
 impl From<MissingNode> for ParseExprError {
     fn from(_: MissingNode) -> Self {
+        // TODO: Add more context here. What went wrong?
         Self::IncompleteNode
     }
 }
@@ -120,9 +121,10 @@ impl Expression {
         // dbg!(node);
 
         match node.kind() {
-            // Child 0 is the v_/f_/c_ prefix
+            // Child 0 is the identifier
+            // The v_/f_/c_ prefix is anonymous
             "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
-                &node.child(1).into_err()?,
+                &node.child(0).into_err()?,
                 text,
             )?)),
             "binary_op" => Ok(Self::BinaryOp(
@@ -433,15 +435,15 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
-            Expression::Function(
+            Expression::parse_expression(&expr_node, source_bytes.as_slice()),
+            Ok(Expression::Function(
                 "abs".into(),
                 vec!(Expression::UnderscoreIdent(Ident {
                     name: "example".into(),
                     ident_type: IdentType::Variable,
                     ..Default::default()
                 })),
-            )
+            ))
         );
     }
 
