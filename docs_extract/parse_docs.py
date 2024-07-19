@@ -19,7 +19,8 @@ Things that are done:
 from os import PathLike
 from pathlib import Path
 
-from typing import Dict, List
+from typing import Dict, List, Set, Tuple
+from dataclasses import dataclass
 import re
 
 DOCS_PATH = "../lammps_docs/"
@@ -56,19 +57,75 @@ def get_file_indices(file_name: PathLike) -> List[str]:
     return indices
 
 
-def create_index_file_map() -> Dict[str, str]:
+# Mapping between index entries and their files
+type IndexMap = Dict[str, str]
+
+
+@dataclass
+class Styles:
+    """
+    Set of all styles for different commands.
+    """
+
+    fixes: Set[str]
+    computes: Set[str]
+    pair_styles: Set[str]
+
+
+def create_index_file_map(docs_path: Path) -> Tuple[IndexMap, Styles]:
     """
     Find index sections in all doc files in each path.
     Create a map from each index to the file that has that index
     """
     # rst index -> file
     index_lookup = {}
-    for file in Path(DOCS_PATH).glob("*.rst"):
+    fixes = set()
+    computes = set()
+    pair_styles = set()
+    for file in docs_path.glob("*.rst"):
         for index in get_file_indices(file):
             # Just the file name
             # TODO: What if these aren't a unique map?
             index_lookup[index] = file.name.removesuffix(".rst")
-    return index_lookup
+            words = index.split()
+
+            if len(words) != 2:
+                continue
+
+            style = trim_accelerator(words[1])
+
+            match words[0]:
+                case "fix":
+                    fixes.add(style)
+
+                case "compute":
+                    print(style)
+                    computes.add(style)
+                case "pair_style":
+                    pair_styles.add(style)
+
+    return index_lookup, Styles(fixes, computes, pair_styles)
+
+
+def trim_accelerator(s: str) -> str:
+    """
+    Remove accelerator variant from suffix.
+
+    Needed because accelerator variants do not have their own entries
+    in the list of all fixes, but do have their own index.
+    """
+
+    accel_variants = ["/gpu", "/intel", "/kk", "/opt", "/omp"]
+
+    n = len(s)
+
+    for accel in accel_variants:
+        s = s.removesuffix(accel)
+        if len(s) != n:
+            # Only remove one suffix, in case of false positives.
+            break
+
+    return s
 
 
 def tidy_file(file_contents: str) -> str:
@@ -122,16 +179,32 @@ def tidy_file(file_contents: str) -> str:
 
 
 def main():
-    index_map = create_index_file_map()
+    docs_path = Path(DOCS_PATH)
+    index_map, styles = create_index_file_map(docs_path)
 
     with open("index_map.txt", "w") as stream:
         for k, v in index_map.items():
             stream.write(f"{k},{v}")
             stream.write("\n")
 
+    with open("fixes.txt", "w") as stream:
+        for v in styles.fixes:
+            stream.write(f"{v}")
+            stream.write("\n")
+
+    with open("computes.txt", "w") as stream:
+        for v in styles.computes:
+            stream.write(f"{v}")
+            stream.write("\n")
+
+    with open("pair_styles.txt", "w") as stream:
+        for v in styles.pair_styles:
+            stream.write(f"{v}")
+            stream.write("\n")
+
     # Go through all the docs files and perform the substitutions
     for file in Path(DOCS_PATH).glob("*.rst"):
-        print(file)
+        # print(file)
         with open(file, "r", encoding="utf-8") as stream:
             original_source = stream.read()
 
