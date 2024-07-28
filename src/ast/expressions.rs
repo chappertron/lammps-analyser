@@ -1,4 +1,4 @@
-// For denying unwraps and expects in this file
+// Deny unwraps and expects in this file to prevent crashes in the LSP
 #![deny(clippy::unwrap_used)]
 #![deny(clippy::expect_used)]
 
@@ -13,6 +13,7 @@ use thiserror::Error;
 use super::from_node::MissingNode;
 
 #[derive(Debug, Default, PartialEq, Clone)]
+/// An mathematical expression in LAMMPS
 pub enum Expression {
     #[default]
     None,

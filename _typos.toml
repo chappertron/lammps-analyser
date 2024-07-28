@@ -11,3 +11,9 @@ extend-ignore-identifiers-re = [
     "cna[_/]atom", # One of the lammps Fixes Just ignore in this case.
 ]
 
+
+[files]
+# Don't check the LAMMPS docs. Not our problem
+extend-exclude = ["lammps_docs*/"]
+
+

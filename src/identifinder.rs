@@ -374,6 +374,7 @@ impl Ident {
         self.span.end
     }
 
+    /// Display the identifier as in underscore form.
     pub fn underscore_ident(&self) -> String {
         let prefix = match self.ident_type {
             IdentType::Fix => "f_",

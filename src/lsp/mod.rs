@@ -232,7 +232,7 @@ impl LanguageServer for Backend {
 
         let Some(symbol) = symbol else {
             // For the case no identifier is found.
-            // This should not happen, however, but this remvoes an unwrap.
+            // This should not happen, however, but this removes an unwrap.
             return Ok(None);
         };
 

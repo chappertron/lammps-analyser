@@ -1,14 +1,13 @@
 units real
 atom_style full
 
-# TODO(MSF): Make these the appropiate styles for your system.
 pair_style lj/cut/coul/long 12.0
 kspace_style pppm 1e-5
 bond_style harmonic
 angle_style harmonic
 
 variable delete_buffer index 1.0 # delete water molecules this distance from the box edge.
-variable slab_offset index 5.0 # TODO(MSF): This should be approximately the thickness of the slab 
+variable slab_offset index 5.0 
 
 variable temp index 300.0
 variable press index 1.0
@@ -17,7 +16,7 @@ variable elyte_data index elyte.data
 variable slab_left_data index slab.data
 variable slab_right_data index slab.data
 
-variable n_additional index 1 # Number of addtional atom types to add when reading in the data files.
+variable n_additional index 1 # Number of additional atom types to add when reading in the data files.
 
 read_data ${elyte_data} extra/atom/types ${n_additional}  
 
