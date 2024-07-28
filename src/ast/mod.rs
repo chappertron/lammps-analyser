@@ -31,7 +31,7 @@ pub struct Ast {
     pub commands: Vec<CommandNode>,
 }
 
-/// An AST that could not be fully produced. Also contains errors.
+/// An AST that could not be fully parsed. Also contains errors.
 #[derive(Debug, Clone, PartialEq)]
 pub struct PartialAst {
     pub ast: Ast,
@@ -195,6 +195,10 @@ pub enum Argument {
     VarCurly(Ident),
     VarRound(expressions::Expression),
     String(String),
+    /// Multiple argument stuck together, usually strings and expansions.
+    Concatenation(Vec<Argument>),
+    /// Expression.
+    /// TODO: Not really valid as a bare argument except for with variable commands
     Expression(expressions::Expression),
     // TODO: Remove? Can't know if a group name until further on in the process???
     // Perhaps make it an identifier that then is decided to be either
@@ -256,6 +260,14 @@ impl FromNode for Argument {
                 //.child(0).into_err()?
                 node.utf8_text(text)?.to_string(),
             )),
+            "concatenation" => {
+                let mut cursor = node.walk();
+                let v: Result<Vec<_>, _> = node
+                    .children(&mut cursor)
+                    .map(|ch| Argument::from_node(&ch, text))
+                    .collect();
+                Ok(Self::Concatenation(v?))
+            }
             // TODO: It seems weird sending something called error through ok.
             "ERROR" => Ok(Self::Error),
             x => Err(FromNodeError::UnknownCustom {
@@ -269,6 +281,7 @@ impl FromNode for Argument {
 
 impl Display for Argument {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // TODO: rework this. This is only really appropriate for debug, not display
         match self {
             Argument::Int(x) => write!(f, "int: {x}"),
             Argument::Float(x) => write!(f, "float: {x}"),
@@ -276,6 +289,14 @@ impl Display for Argument {
             Argument::ArgName(x) => write!(f, "argname: {x}"),
             Argument::VarCurly(x) => write!(f, "var_curly: ${{{0}}}", x.name),
             Argument::VarRound(x) => write!(f, "var_round: $({x})"),
+            Argument::Concatenation(v) => {
+                // TODO: this will look really ugly
+                write!(f, "concatenation: ")?;
+                for a in v {
+                    write!(f, "{a}")?;
+                }
+                Ok(())
+            }
             // TODO: properly implement string
             Argument::String(s) => write!(f, "string: {s}"),
             Argument::Expression(x) => write!(f, "expression: {x}"),
@@ -292,12 +313,15 @@ impl Display for Argument {
 /// TODO: Add command location
 #[derive(Debug, PartialEq, Clone)]
 pub enum NamedCommand {
+    /// A Fix defintion
     Fix(FixDef),
+    /// A compute definition
     Compute(ComputeDef),
     Style,
     Modify,
     AtomStyle,
     Boundary,
+    /// A variable definition
     VariableDef,
     ThermoStyle,
     Thermo,
