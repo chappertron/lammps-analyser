@@ -116,11 +116,14 @@ impl From<std::str::Utf8Error> for FromNodeError {
 }
 
 // Traits that might make using `tree-sitter` more ergonomic. However, not sure.
+// TODO: Remove these if they never get used.
 
+#[allow(dead_code)]
 trait GetChild {
     fn get_child(&self, index: usize) -> Result<Node, MissingChild>;
 }
 
+#[allow(dead_code)]
 trait SeekChild {
     /// Moves the cursor to the location of `index` child and returns it as a result.
     fn seek_child(&mut self, index: usize) -> Result<Node, MissingChild>;
