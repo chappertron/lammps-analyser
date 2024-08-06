@@ -20,3 +20,5 @@ pub mod spans;
 pub mod lints;
 
 pub mod docs;
+
+pub(crate) mod styles;
