@@ -301,6 +301,12 @@ fix_styles!(
     (Widom, "widom", 5)
 );
 
+impl FixStyle {
+    pub fn is_invalid(&self) -> bool {
+        matches!(self, FixStyle::InvalidStyle)
+    }
+}
+
 #[cfg(test)]
 mod tests {
 

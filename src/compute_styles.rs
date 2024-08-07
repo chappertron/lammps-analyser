@@ -215,6 +215,12 @@ compute_styles!(
     (Xrd, "xrd", 2) // lambda +  1 or more types and keywords.
 );
 
+impl ComputeStyle {
+    pub fn is_invalid(&self) -> bool {
+        matches!(self, ComputeStyle::InvalidComputeStyle)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::compute_styles::ComputeStyle;
