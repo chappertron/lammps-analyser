@@ -31,6 +31,13 @@ tower-lsp = "0.20.0"
 tree-sitter = "0.20.10"
 tree-sitter-lammps = { path = "../tree-sitter-lammps" } 
 
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "on_change_bench"
+harness = false
+
 [lints.clippy]
 enum_glob_use = "deny"
 ## missing_panics_doc = "warn"
