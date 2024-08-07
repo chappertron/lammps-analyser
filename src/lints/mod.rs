@@ -51,7 +51,7 @@ pub fn fix_redef_before_run<'a>(
             .commands
             .iter()
             // Check if definition is in range, because definition uses identifier location.
-            .skip_while(|cmd| !(first_def.range()).in_range(&cmd.range()))
+            .skip_while(|cmd| !(first_def.range()).in_range(&cmd.span()))
             .skip(1);
 
         // Append to bad commands list if second def found

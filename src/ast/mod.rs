@@ -13,7 +13,7 @@ use crate::{
     spanned_error::{SpannedError, WithSpan},
     spans::{Point, Span},
 };
-use std::fmt::Display;
+use std::{fmt::Display, str::Utf8Error};
 
 use tree_sitter::{Node, Tree};
 
@@ -87,7 +87,6 @@ pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, PartialAst>
 }
 
 /// A command in the LAMMPS Input Script
-///  TODO: rename this to be a command node???
 #[derive(Debug, PartialEq, Clone)]
 pub struct CommandNode {
     pub command_type: CommandType,
@@ -95,7 +94,7 @@ pub struct CommandNode {
 }
 
 impl CommandNode {
-    pub fn range(&self) -> Span {
+    pub fn span(&self) -> Span {
         self.range
     }
 }
@@ -134,9 +133,40 @@ impl FromNode for CommandType {
     }
 }
 
+#[derive(Clone, Default, PartialEq, Eq, PartialOrd, Ord, Debug)]
+pub struct Word {
+    pub contents: String,
+    pub span: Span,
+}
+impl Display for Word {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.contents.fmt(f)
+    }
+}
+
+impl Word {
+    pub fn as_str(&self) -> &str {
+        &self.contents.as_str()
+    }
+
+    pub(crate) fn parse_word(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Utf8Error> {
+        let contents = node.utf8_text(text.as_ref())?.to_owned();
+        let span = node.range().into();
+
+        Ok(Word { contents, span })
+    }
+}
+
+impl FromNode for Word {
+    type Error = FromNodeError;
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
+        Ok(Word::parse_word(node, text)?)
+    }
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub struct GenericCommand {
-    pub name: CommandName,
+    pub name: Word,
     pub args: Vec<Argument>,
     pub start: Point,
     pub end: Point,
@@ -163,7 +193,7 @@ impl FromNode for GenericCommand {
         cursor.goto_first_child();
 
         // TODO: use a field in the TS grammar
-        let name = cursor.node().utf8_text(text)?;
+        let name = Word::from_node(&cursor.node(), text)?;
 
         while cursor.goto_next_sibling() {
             for node in cursor.node().children(&mut cursor) {
@@ -173,7 +203,7 @@ impl FromNode for GenericCommand {
 
         cursor.goto_parent();
         Ok(GenericCommand {
-            name: name.into(),
+            name,
             args,
             start: start.into(),
             end: end.into(),
@@ -183,9 +213,15 @@ impl FromNode for GenericCommand {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct Argument {
+    pub kind: ArgumentKind,
+    pub span: Span,
+}
+
 /// Acceptable argument types for LAMMPS commands
 #[derive(Debug, PartialEq, Clone)]
-pub enum Argument {
+pub enum ArgumentKind {
     /// Expression from LAMMPS
     Int(isize),
     Float(f64),
@@ -212,6 +248,20 @@ pub enum Argument {
 }
 
 impl FromNode for Argument {
+    type Error = FromNodeError;
+
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
+        let text = text.as_ref();
+        let kind = ArgumentKind::from_node(node, text)?;
+
+        Ok(Argument {
+            kind,
+            span: node.range().into(),
+        })
+    }
+}
+
+impl FromNode for ArgumentKind {
     type Error = FromNodeError;
     fn from_node(
         node: &Node,
@@ -281,15 +331,21 @@ impl FromNode for Argument {
 
 impl Display for Argument {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.kind.fmt(f)
+    }
+}
+
+impl Display for ArgumentKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // TODO: rework this. This is only really appropriate for debug, not display
         match self {
-            Argument::Int(x) => write!(f, "int: {x}"),
-            Argument::Float(x) => write!(f, "float: {x}"),
-            Argument::Bool(x) => write!(f, "bool: {x}"),
-            Argument::ArgName(x) => write!(f, "argname: {x}"),
-            Argument::VarCurly(x) => write!(f, "var_curly: ${{{0}}}", x.name),
-            Argument::VarRound(x) => write!(f, "var_round: $({x})"),
-            Argument::Concatenation(v) => {
+            Self::Int(x) => write!(f, "int: {x}"),
+            Self::Float(x) => write!(f, "float: {x}"),
+            Self::Bool(x) => write!(f, "bool: {x}"),
+            Self::ArgName(x) => write!(f, "argname: {x}"),
+            Self::VarCurly(x) => write!(f, "var_curly: ${{{0}}}", x.name),
+            Self::VarRound(x) => write!(f, "var_round: $({x})"),
+            Self::Concatenation(v) => {
                 // TODO: this will look really ugly
                 write!(f, "concatenation: ")?;
                 for a in v {
@@ -298,12 +354,12 @@ impl Display for Argument {
                 Ok(())
             }
             // TODO: properly implement string
-            Argument::String(s) => write!(f, "string: {s}"),
-            Argument::Expression(x) => write!(f, "expression: {x}"),
-            Argument::Group => write!(f, "group"),
-            Argument::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),
-            Argument::Word(x) => write!(f, "word: {x}"),
-            Argument::Error => write!(f, "ERROR"),
+            Self::String(s) => write!(f, "string: {s}"),
+            Self::Expression(x) => write!(f, "expression: {x}"),
+            Self::Group => write!(f, "group"),
+            Self::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),
+            Self::Word(x) => write!(f, "word: {x}"),
+            Self::Error => write!(f, "ERROR"),
         }
     }
 }
@@ -356,11 +412,12 @@ impl FromNode for NamedCommand {
 
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct FixDef {
-    pub fix_id: Ident,    // Or just keep as a string?
-    pub group_id: String, // TODO:  Create group identifiers
+    pub fix_id: Ident,  // Or just keep as a string?
+    pub group_id: Word, // TODO:  Create group identifiers
     pub fix_style: FixStyle,
     // Arguments for fix command
     pub args: Vec<Argument>,
+    pub span: Span,
 }
 
 impl FixDef {
@@ -374,6 +431,7 @@ impl FromNode for FixDef {
 
     /// TODO: Hand a cursor instead???
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
+        let span = node.range().into();
         let mut cursor = node.walk();
         let text = text.as_ref();
 
@@ -391,7 +449,7 @@ impl FromNode for FixDef {
             text,
         )?;
 
-        let group_id = children.next().into_err()?.utf8_text(text)?.into();
+        let group_id = Word::from_node(&children.next().into_err()?, text)?;
         let fix_style = children.next().into_err()?.utf8_text(text)?.into();
 
         let args = if let Some(args) = children.next() {
@@ -409,6 +467,7 @@ impl FromNode for FixDef {
             group_id,
             fix_style,
             args,
+            span,
         })
     }
 }
@@ -416,22 +475,24 @@ impl FromNode for FixDef {
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct ComputeDef {
     pub compute_id: Ident, // Or just keep as a string?
-    pub group_id: String,  // TODO:  Create group identifiers
+    pub group_id: Word,    // TODO:  Create group identifiers
     pub compute_style: ComputeStyle,
     // Arguments for fix command
     pub args: Vec<Argument>,
+    pub span: Span,
 }
 
 impl ComputeDef {
     pub fn range(&self) -> Span {
-        self.compute_id.range()
+        self.span
     }
 }
 
 impl FromNode for ComputeDef {
     type Error = FromNodeError;
-    /// TODO: Hand a cursor instead???
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
+        // Note: Might be more efficient to hand a cursor instead.
+        let span = node.range().into();
         let mut cursor = node.walk();
 
         // TODO: handle case this is false
@@ -442,7 +503,7 @@ impl FromNode for ComputeDef {
         // skip the fix keyword
         children.next();
         let compute_id = Ident::new(&children.next().into_err()?, text)?;
-        let group_id = children.next().into_err()?.utf8_text(text)?.into();
+        let group_id = Word::from_node(&children.next().into_err()?, text)?;
         let compute_style = children.next().into_err()?.utf8_text(text)?.into();
 
         let args = if let Some(args) = children.next() {
@@ -460,6 +521,7 @@ impl FromNode for ComputeDef {
             group_id,
             compute_style,
             args,
+            span,
         })
     }
 }

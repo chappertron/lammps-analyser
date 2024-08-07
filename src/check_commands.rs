@@ -57,7 +57,8 @@ impl Ast {
                     check_fix(fix_def).err().map(InvalidCommand::from)
                 }
                 CommandType::GenericCommand(command) => {
-                    if let CommandName::InvalidCommand(name) = &command.name {
+                    let command_name = CommandName::from(command.name.as_str());
+                    if let CommandName::InvalidCommand(name) = command_name {
                         Some(InvalidCommand::UnknownCommand(
                             name.clone(),
                             Span {

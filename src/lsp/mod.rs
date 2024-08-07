@@ -4,6 +4,7 @@ use crate::ast::{
 };
 use crate::check_commands;
 use crate::check_styles::check_styles;
+use crate::commands::CommandName;
 use crate::docs::docs_map::DOCS_MAP;
 use crate::docs::DOCS_CONTENTS;
 use crate::error_finder::ErrorFinder;
@@ -269,7 +270,8 @@ impl LanguageServer for Backend {
                 })) => DOCS_MAP.computes().get(compute_style),
 
                 CommandType::GenericCommand(GenericCommand { name, .. }) => {
-                    DOCS_MAP.commands().get(name)
+                    let name = CommandName::from(name.as_str());
+                    DOCS_MAP.commands().get(&name)
                 }
 
                 _ => None,

@@ -5,7 +5,7 @@
 //!
 //!
 
-use crate::ast::{Argument, FixDef};
+use crate::ast::{Argument, ArgumentKind, FixDef};
 
 use super::invalid_arguments;
 
@@ -18,8 +18,8 @@ pub(crate) fn kwarg_expected_enum<'a>(
 ) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     for i in 0..n_args {
         if let Some(x) = iter.next() {
-            match x {
-                Argument::ArgName(x) => {
+            match &x.kind {
+                ArgumentKind::ArgName(x) => {
                     if !options.contains(&x.as_ref()) {
                         Err(invalid_arguments::InvalidArgumentsType::InvalidOption {
                             kwarg: kwarg.into(),
@@ -53,11 +53,11 @@ pub(crate) fn kwarg_expected_floats<'a>(
 ) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     for i in 0..n_expected {
         if let Some(x) = iter.next() {
-            match x {
-                Argument::Float(_) => (),
-                Argument::Int(_) => (),
-                Argument::VarRound(_) => (),
-                Argument::VarCurly(_) => (),
+            match x.kind {
+                ArgumentKind::Float(_) => (),
+                ArgumentKind::Int(_) => (),
+                ArgumentKind::VarRound(_) => (),
+                ArgumentKind::VarCurly(_) => (),
                 _ => Err(invalid_arguments::InvalidArgumentsType::IncorrectType {
                     expected: "float".into(),
                     provided: x.to_string(),
@@ -84,8 +84,8 @@ pub(crate) fn kwarg_expected_bool<'a>(
 ) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     for i in 0..n_expected {
         if let Some(x) = iter.next() {
-            match x {
-                Argument::Bool(_) => (),
+            match x.kind {
+                ArgumentKind::Bool(_) => (),
                 _ => Err(invalid_arguments::InvalidArgumentsType::IncorrectType {
                     expected: "bool".into(),
                     provided: x.to_string(),
@@ -112,8 +112,8 @@ pub(crate) fn kwarg_expected_str<'a>(
 ) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     for i in 0..n_expected {
         if let Some(x) = iter.next() {
-            match x {
-                Argument::ArgName(_) => (),
+            match x.kind {
+                ArgumentKind::ArgName(_) => (),
                 _ => Err(invalid_arguments::InvalidArgumentsType::IncorrectType {
                     expected: "string".into(),
                     provided: x.to_string(),

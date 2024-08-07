@@ -10,7 +10,7 @@ use crate::{identifinder::Ident, utils::into_error::IntoError};
 use std::convert::TryFrom;
 use thiserror::Error;
 
-use super::from_node::MissingNode;
+use super::{from_node::MissingNode, Word};
 
 #[derive(Debug, Default, PartialEq, Clone)]
 /// An mathematical expression in LAMMPS
@@ -32,15 +32,14 @@ pub enum Expression {
     BinaryOp(Box<Expression>, BinaryOp, Box<Expression>),
     /// A built-in function. Slightly deviates from grammar, by only having one function type.
     // TODO: Make a cow for name?
-    Function(String, Vec<Expression>),
+    Function(Word, Vec<Expression>),
     /// An expression wrapped in brackets.
-    /// TODO: Perhaps just ignore brackets?
     Parens(Box<Expression>),
     /// Thermo keyword
     /// TODO: Use an enum instead
-    ThermoKeyword(String),
+    ThermoKeyword(Word),
     /// TODO: Word might not actually be implemented for expr
-    Word(String),
+    Word(Word),
 }
 
 impl Display for Expression {
@@ -71,6 +70,8 @@ impl Display for Expression {
     }
 }
 
+// TODO: Flatten this into the FromNodeError?
+// This means that conversion from word can't be done
 #[allow(clippy::enum_variant_names)]
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 pub enum ParseExprError {
@@ -145,7 +146,8 @@ impl Expression {
                 let mut cursor = node.walk();
 
                 let mut args = Vec::new();
-                let name = &node.child(0).into_err()?.utf8_text(text)?;
+                let name_node = &node.child(0).into_err()?;
+                let name = Word::parse_word(name_node, text)?;
 
                 // child 0 = function name
                 // child 1 = opening bracket
@@ -159,7 +161,7 @@ impl Expression {
                     }
                     args.push(Self::parse_expression(&node, text)?);
                 }
-                Ok(Self::Function(name.to_string(), args))
+                Ok(Self::Function(name, args))
             }
 
             "int" => Ok(Self::Int(node.utf8_text(text)?.parse()?)),
@@ -177,8 +179,8 @@ impl Expression {
                 "false" | "off" | "no" => Ok(Self::Bool(false)),
                 _ => unreachable!(), // TODO: Verify this is the case?
             },
-            "thermo_kwarg" => Ok(Self::ThermoKeyword(node.utf8_text(text)?.to_string())),
-            "word" => Ok(Self::Word(node.utf8_text(text)?.to_string())),
+            "thermo_kwarg" => Ok(Self::ThermoKeyword(Word::parse_word(node, text)?)),
+            "word" => Ok(Self::Word(Word::parse_word(node, text)?)),
             "ERROR" => Err(ParseExprError::ErrorNode),
             x => Err(ParseExprError::UnknownExpressionType(x.to_owned())),
         }
