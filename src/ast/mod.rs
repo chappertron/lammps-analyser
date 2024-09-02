@@ -445,8 +445,6 @@ impl FromNode for FixDef {
         let mut cursor = node.walk();
         let text = text.as_ref();
 
-        // TODO: handle case this is false
-        cursor.goto_first_child();
         let mut children = node.children(&mut cursor);
 
         // skip the fix keyword
@@ -505,8 +503,6 @@ impl FromNode for ComputeDef {
         let span = node.range().into();
         let mut cursor = node.walk();
 
-        // TODO: handle case this is false
-        cursor.goto_first_child();
         let mut children = node.children(&mut cursor);
         let text = text.as_ref();
 
@@ -588,6 +584,7 @@ impl TryFrom<&str> for NamedCommand {
 #[allow(clippy::unwrap_used)]
 #[allow(clippy::expect_used)]
 mod tests {
+
     use pretty_assertions::assert_eq;
     use tree_sitter::Parser;
 
