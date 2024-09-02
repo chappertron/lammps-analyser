@@ -45,6 +45,12 @@ impl Point {
     }
 }
 
+impl From<(usize, usize)> for Point {
+    fn from((row, column): (usize, usize)) -> Self {
+        Self { row, column }
+    }
+}
+
 #[derive(Debug, Default, PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash)]
 pub struct Span {
     pub start: Point,
@@ -62,6 +68,32 @@ impl From<tree_sitter::Range> for Span {
 
 impl From<lsp_types::Range> for Span {
     fn from(value: lsp_types::Range) -> Self {
+        Self {
+            start: value.start.into(),
+            end: value.end.into(),
+        }
+    }
+}
+
+impl From<((usize, usize), (usize, usize))> for Span {
+    fn from((start, end): ((usize, usize), (usize, usize))) -> Self {
+        let start = start.into();
+        let end = end.into();
+
+        Self { start, end }
+    }
+}
+impl From<(Point, Point)> for Span {
+    fn from((start, end): (Point, Point)) -> Self {
+        Self { start, end }
+    }
+}
+
+impl<P> From<std::ops::Range<P>> for Span
+where
+    P: Into<Point>,
+{
+    fn from(value: std::ops::Range<P>) -> Self {
         Self {
             start: value.start.into(),
             end: value.end.into(),

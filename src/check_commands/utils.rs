@@ -169,7 +169,7 @@ mod tests {
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVE");
-        assert_eq!(fix.group_id, "all");
+        assert_eq!(fix.group_id.contents, "all");
         assert_eq!(fix.fix_style, FixStyle::Nve);
         assert!(fix.args.is_empty());
 
@@ -185,7 +185,7 @@ mod tests {
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVE");
-        assert_eq!(fix.group_id, "all");
+        assert_eq!(fix.group_id.contents, "all");
         assert_eq!(fix.fix_style, FixStyle::Nve);
         assert!(!fix.args.is_empty());
 

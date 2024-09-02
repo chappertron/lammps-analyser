@@ -286,9 +286,12 @@ impl TryFrom<&str> for UnaryOp {
 #[allow(clippy::expect_used)]
 mod tests {
 
+    use pretty_assertions::assert_eq;
+
     use crate::identifinder::IdentType;
 
     use super::*;
+    use crate::spans::{Point, Span};
     use tree_sitter::Parser;
     fn setup_parser() -> Parser {
         let mut parser = Parser::new();
@@ -411,10 +414,13 @@ mod tests {
                     Box::new(Expression::UnderscoreIdent(Ident {
                         name: "example".into(),
                         ident_type: IdentType::Variable,
-                        ..Default::default()
+                        span: ((0, 24)..(0, 31)).into()
                     })),
                     BinaryOp::Add,
-                    Box::new(Expression::ThermoKeyword("temp".into()))
+                    Box::new(Expression::ThermoKeyword(Word {
+                        contents: "temp".to_owned(),
+                        span: ((0, 32), (0, 36)).into()
+                    }))
                 ))))
             )
         );
@@ -440,11 +446,14 @@ mod tests {
             // ast.commands[0],
             Expression::parse_expression(&expr_node, source_bytes.as_slice()),
             Ok(Expression::Function(
-                "abs".into(),
+                Word {
+                    contents: "abs".into(),
+                    span: ((0, 17), (0, 20)).into()
+                },
                 vec!(Expression::UnderscoreIdent(Ident {
                     name: "example".into(),
                     ident_type: IdentType::Variable,
-                    ..Default::default()
+                    span: ((0, 23), (0, 30)).into()
                 })),
             ))
         );
@@ -470,12 +479,15 @@ mod tests {
             // ast.commands[0],
             Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
             Expression::Function(
-                "ramp".into(),
+                Word {
+                    contents: "ramp".into(),
+                    span: ((0, 17), (0, 21)).into()
+                },
                 vec![
                     Expression::UnderscoreIdent(Ident {
                         name: "example".into(),
                         ident_type: IdentType::Variable,
-                        ..Default::default()
+                        span: ((0, 22), (0, 31)).into()
                     }),
                     Expression::Float(3.0)
                 ],
@@ -504,12 +516,15 @@ mod tests {
             // ast.commands[0],
             func,
             Expression::Function(
-                "ramp".into(),
+                Word {
+                    contents: "ramp".into(),
+                    span: ((0, 17)..(0, 21)).into()
+                },
                 vec![
                     Expression::UnderscoreIdent(Ident {
                         name: "example".into(),
                         ident_type: IdentType::Variable,
-                        ..Default::default()
+                        span: ((0, 24)..(0, 31)).into()
                     }),
                     Expression::Float(3.0)
                 ],

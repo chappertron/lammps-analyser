@@ -1,6 +1,8 @@
-use crate::ast::{Argument, ArgumentKind};
-use crate::check_commands::utils;
-use crate::{ast::FixDef, check_commands::invalid_arguments, fix_styles::FixStyle};
+use crate::{
+    ast::{ArgumentKind, FixDef},
+    check_commands::{invalid_arguments, utils},
+    fix_styles::FixStyle,
+};
 
 /// Generic Parsing of the Nose-Hoover Fixes
 /// TODO: Finish ME
@@ -156,7 +158,7 @@ mod tests {
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVT");
-        assert_eq!(fix.group_id, "all");
+        assert_eq!(fix.group_id.contents, "all");
         assert_eq!(fix.fix_style, FixStyle::Nvt);
         assert!(!fix.args.is_empty());
 
@@ -172,7 +174,7 @@ mod tests {
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "NPT");
-        assert_eq!(fix.group_id, "all");
+        assert_eq!(fix.group_id.contents, "all");
         assert_eq!(fix.fix_style, FixStyle::Npt);
         assert!(!fix.args.is_empty());
 
@@ -188,7 +190,7 @@ mod tests {
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "2");
-        assert_eq!(fix.group_id, "ice");
+        assert_eq!(fix.group_id.contents, "ice");
         assert_eq!(fix.fix_style, FixStyle::Nph);
         assert!(!fix.args.is_empty());
 
@@ -204,7 +206,7 @@ mod tests {
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVT");
-        assert_eq!(fix.group_id, "all");
+        assert_eq!(fix.group_id.contents, "all");
         assert_eq!(fix.fix_style, FixStyle::Nvt);
         assert!(!fix.args.is_empty());
 

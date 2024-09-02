@@ -9,7 +9,6 @@ pub mod find_node;
 pub mod from_node;
 
 use crate::{
-    commands::CommandName,
     spanned_error::{SpannedError, WithSpan},
     spans::{Point, Span},
 };
@@ -178,7 +177,6 @@ impl FromNode for GenericCommand {
     type Error = FromNodeError;
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
         let mut cursor = node.walk();
-        // let kind = node.kind().to_string();
         let start = node.start_position();
         let end = node.end_position();
         let start_byte = node.start_byte();
@@ -216,7 +214,17 @@ impl FromNode for GenericCommand {
 #[derive(Debug, PartialEq, Clone)]
 pub struct Argument {
     pub kind: ArgumentKind,
+    // TODO: Make the span be put on the kind rather than here?
     pub span: Span,
+}
+
+impl Argument {
+    pub fn new(kind: ArgumentKind, span: impl Into<Span>) -> Argument {
+        Argument {
+            kind,
+            span: span.into(),
+        }
+    }
 }
 
 /// Acceptable argument types for LAMMPS commands
@@ -367,6 +375,7 @@ impl Display for ArgumentKind {
 /// Commands that have a special form in the tree sitter grammar
 /// TODO: add arguments
 /// TODO: Add command location
+/// TODO: Reduce the number of these, both here and in the grammar.
 #[derive(Debug, PartialEq, Clone)]
 pub enum NamedCommand {
     /// A Fix defintion
@@ -378,7 +387,8 @@ pub enum NamedCommand {
     AtomStyle,
     Boundary,
     /// A variable definition
-    VariableDef,
+    // TODO: readd
+    VariableDef, //(VariableDef),
     ThermoStyle,
     Thermo,
     Units,
@@ -526,6 +536,32 @@ impl FromNode for ComputeDef {
     }
 }
 
+//TODO: finish me
+#[derive(Debug, Default, PartialEq, Clone)]
+struct VariableDef {
+    pub variable_id: Ident, // Or just keep as a string?
+    pub variable_kind: Word,
+    // Arguments for fix command
+    pub args: Vec<Argument>,
+    pub span: Span,
+}
+
+impl FromNode for VariableDef {
+    type Error = FromNodeError;
+
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
+        let text = text.as_ref();
+        let span: Span = node.range().into();
+        let mut cursor = node.walk();
+
+        let variable_command = cursor.node();
+        assert_eq!(variable_command.utf8_text(&text)?, "variable");
+        assert!(cursor.goto_next_sibling());
+
+        todo!("Work out the the best way to parse this!!")
+    }
+}
+
 /// This doesn't work for the new case that the fix has data
 impl TryFrom<&str> for NamedCommand {
     type Error = String;
@@ -552,11 +588,13 @@ impl TryFrom<&str> for NamedCommand {
 #[allow(clippy::unwrap_used)]
 #[allow(clippy::expect_used)]
 mod tests {
+    use pretty_assertions::assert_eq;
     use tree_sitter::Parser;
 
     use crate::ast::expressions::{BinaryOp, Expression};
     use crate::ast::from_node::FromNode;
     use crate::ast::{Argument, ComputeDef, FixDef};
+    use crate::ast::{ArgumentKind, Word};
     use crate::compute_styles::ComputeStyle;
     use crate::fix_styles::FixStyle;
     use crate::identifinder::{Ident, IdentType};
@@ -609,11 +647,15 @@ mod tests {
                 fix_id: Ident {
                     name: "NVE".into(),
                     ident_type: IdentType::Fix,
-                    ..Default::default()
+                    span: ((0, 4)..(0, 7)).into()
                 },
-                group_id: "all".into(),
+                group_id: Word {
+                    contents: "all".into(),
+                    span: ((0, 8)..(0, 11)).into()
+                },
                 fix_style: FixStyle::Nve,
                 args: vec![],
+                span: ((0, 0)..(0, 15)).into(),
             }
         );
     }
@@ -654,6 +696,7 @@ mod tests {
 
         dbg!(fix_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
+        use ArgumentKind as AK;
         assert_eq!(
             // ast.commands[0],
             FixDef::from_node(&fix_node, source_bytes.as_slice()).unwrap(),
@@ -661,20 +704,31 @@ mod tests {
                 fix_id: Ident {
                     name: "NVT".into(),
                     ident_type: IdentType::Fix,
-                    ..Default::default()
+                    span: ((0, 4)..(0, 7)).into()
                 },
-                group_id: "all".into(),
+                group_id: Word {
+                    contents: "all".into(),
+                    span: ((0, 8)..(0, 11)).into()
+                },
                 fix_style: FixStyle::Nvt,
                 args: vec![
-                    Argument::Word("temp".into()),
-                    Argument::Int(1),
-                    Argument::Float(1.5),
-                    Argument::VarRound(Expression::BinaryOp(
-                        Expression::Float(100.0).into(),
-                        BinaryOp::Multiply,
-                        Expression::ThermoKeyword("dt".into()).into(),
-                    ))
+                    Argument::new(AK::Word("temp".into()), (0, 16)..(0, 20)),
+                    Argument::new(AK::Int(1), (0, 21)..(0, 22)),
+                    Argument::new(AK::Float(1.5), (0, 23)..(0, 26)),
+                    Argument::new(
+                        AK::VarRound(Expression::BinaryOp(
+                            Expression::Float(100.0).into(),
+                            BinaryOp::Multiply,
+                            Expression::ThermoKeyword(Word {
+                                contents: "dt".into(),
+                                span: ((0, 35)..(0, 37)).into()
+                            })
+                            .into(),
+                        )),
+                        (0, 27)..(0, 38)
+                    )
                 ],
+                span: ((0, 0)..(0, 38)).into()
             }
         );
     }
@@ -702,13 +756,43 @@ mod tests {
                 compute_id: Ident {
                     name: "T_hot".into(),
                     ident_type: IdentType::Compute,
-                    ..Default::default()
+                    span: ((0, 8), (0, 13)).into()
                 },
-                group_id: "water".into(),
+                group_id: Word {
+                    contents: "water".into(),
+                    span: ((0, 14), (0, 19)).into()
+                },
                 compute_style: ComputeStyle::TempRegion,
                 // TODO: Change to a more generic word argument
-                args: vec![Argument::Word("hot_region".into()),],
+                args: vec![Argument::new(
+                    ArgumentKind::Word("hot_region".into()),
+                    ((0, 32), (0, 42))
+                ),],
+                span: ((0, 0), (0, 42)).into()
             }
         );
+    }
+
+    #[test]
+    fn parse_variable_def() {
+        let mut parser = setup_parser();
+        let source_bytes = b"variable a equals 1.0*dt";
+
+        let tree = parser.parse(source_bytes, None).unwrap();
+
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let command_node = tree.root_node().child(0).unwrap();
+        dbg!(command_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let variable_node = dbg!(command_node.child(0)).unwrap();
+
+        let dbg_node = variable_node.child(2).unwrap();
+
+        dbg!(&dbg_node);
+        dbg![dbg_node.utf8_text(source_bytes)];
+        // assert_eq!(ast.commands.len(), 1);
+
+        assert!(false)
     }
 }

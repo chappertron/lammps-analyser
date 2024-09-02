@@ -58,6 +58,7 @@ impl Ast {
                 }
                 CommandType::GenericCommand(command) => {
                     let command_name = CommandName::from(command.name.as_str());
+
                     if let CommandName::InvalidCommand(name) = command_name {
                         Some(InvalidCommand::UnknownCommand(
                             name.clone(),

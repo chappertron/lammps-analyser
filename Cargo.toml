@@ -33,6 +33,7 @@ tree-sitter-lammps = { path = "../tree-sitter-lammps" }
 
 [dev-dependencies]
 criterion = "0.3"
+pretty_assertions = "1.4.0"
 
 [[bench]]
 name = "on_change_bench"
