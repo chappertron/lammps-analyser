@@ -388,7 +388,7 @@ pub enum NamedCommand {
     Boundary,
     /// A variable definition
     // TODO: readd
-    VariableDef, //(VariableDef),
+    VariableDef(VariableDef),
     ThermoStyle,
     Thermo,
     Units,
@@ -406,7 +406,9 @@ impl FromNode for NamedCommand {
             "modify" => Ok(NamedCommand::Modify),
             "atom_style" => Ok(NamedCommand::AtomStyle),
             "boundary" => Ok(NamedCommand::Boundary),
-            "variable" => Ok(NamedCommand::VariableDef),
+            "variable" => Ok(NamedCommand::VariableDef(VariableDef::from_node(
+                node, text,
+            )?)),
             "thermo_style" => Ok(NamedCommand::ThermoStyle),
             "thermo" => Ok(NamedCommand::Thermo),
             "units" => Ok(NamedCommand::Units),
@@ -452,8 +454,7 @@ impl FromNode for FixDef {
         let fix_id = Ident::new(
             &children
                 .next()
-                // TODO: This causes issues further up the chain.
-                .ok_or(FromNodeError::PartialNode("Missing identifier".into()))?,
+                .ok_or(FromNodeError::PartialNode("Missing fix identifier".into()))?,
             text,
         )?;
 
@@ -534,9 +535,9 @@ impl FromNode for ComputeDef {
 
 //TODO: finish me
 #[derive(Debug, Default, PartialEq, Clone)]
-struct VariableDef {
+pub struct VariableDef {
     pub variable_id: Ident, // Or just keep as a string?
-    pub variable_kind: Word,
+    pub variable_style: Word,
     // Arguments for fix command
     pub args: Vec<Argument>,
     pub span: Span,
@@ -550,11 +551,74 @@ impl FromNode for VariableDef {
         let span: Span = node.range().into();
         let mut cursor = node.walk();
 
-        let variable_command = cursor.node();
-        assert_eq!(variable_command.utf8_text(&text)?, "variable");
-        assert!(cursor.goto_next_sibling());
+        let mut children = node.children(&mut cursor);
 
-        todo!("Work out the the best way to parse this!!")
+        let variable_keyword = children
+            .next()
+            // Should basically be impossible
+            .ok_or(Self::Error::PartialNode(
+                "missing variable keyword".to_string(),
+            ))?;
+
+        debug_assert_eq!(variable_keyword.utf8_text(&text)?, "variable");
+
+        let variable_ident = children
+            .next()
+            // Should basically be impossible
+            .ok_or(Self::Error::PartialNode(
+                "missing variable identifier".to_string(),
+            ))?;
+
+        let variable_ident = dbg!(Ident::new(&variable_ident, &text)?);
+
+        // TODO: Make this missing thing nicer.
+        let variable_kind = Word::from_node(
+            &children.next().ok_or(Self::Error::PartialNode(
+                "missing variable style".to_string(),
+            ))?,
+            &text,
+        )?;
+
+        let args: Result<Vec<Argument>, _> = children
+            .map(|arg| Argument::from_node(&arg, &text))
+            .collect();
+
+        let args = args?;
+
+        if args.is_empty() {
+            return Err(Self::Error::PartialNode(
+                "missing arguments in variable command".to_string(),
+            ));
+        }
+
+        // TODO: Ensure that the style is valid.
+
+        // These styles expect just a single expression.
+        if matches!(variable_kind.contents.as_str(), "equal" | "vector" | "atom") {
+            match args[0].kind {
+                ArgumentKind::Expression(_) => (),
+                _ => {
+                    return Err(Self::Error::PartialNode(format!(
+                        "expected expression for variable style {}",
+                        variable_kind.contents
+                    )));
+                }
+            }
+
+            if args.len() > 1 {
+                return Err(Self::Error::PartialNode(format!(
+                    "only one argument expected for variable style {}",
+                    variable_kind.contents
+                )));
+            }
+        }
+
+        Ok(VariableDef {
+            variable_id: variable_ident,
+            variable_style: variable_kind,
+            args,
+            span,
+        })
     }
 }
 
@@ -569,7 +633,7 @@ impl TryFrom<&str> for NamedCommand {
             "modify" => Ok(Self::Modify),
             "atom_style" => Ok(Self::AtomStyle),
             "boundary" => Ok(Self::Boundary),
-            "variable" => Ok(Self::VariableDef),
+            "variable" => Ok(Self::VariableDef(VariableDef::default())),
             "thermo_style" => Ok(Self::ThermoStyle),
             "thermo" => Ok(Self::Thermo),
             "units" => Ok(Self::Units),
@@ -590,7 +654,7 @@ mod tests {
 
     use crate::ast::expressions::{BinaryOp, Expression};
     use crate::ast::from_node::FromNode;
-    use crate::ast::{Argument, ComputeDef, FixDef};
+    use crate::ast::{Argument, ComputeDef, FixDef, VariableDef};
     use crate::ast::{ArgumentKind, Word};
     use crate::compute_styles::ComputeStyle;
     use crate::fix_styles::FixStyle;
@@ -773,23 +837,44 @@ mod tests {
     #[test]
     fn parse_variable_def() {
         let mut parser = setup_parser();
-        let source_bytes = b"variable a equals 1.0*dt";
+        let source_bytes = b"variable a equal 1.0*dt";
 
         let tree = parser.parse(source_bytes, None).unwrap();
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
         let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
-        // Lots of tedium to parsing this...
-        let variable_node = dbg!(command_node.child(0)).unwrap();
 
-        let dbg_node = variable_node.child(2).unwrap();
+        let variable_node = command_node.child(0).unwrap();
 
-        dbg!(&dbg_node);
-        dbg![dbg_node.utf8_text(source_bytes)];
-        // assert_eq!(ast.commands.len(), 1);
+        let expected = VariableDef {
+            variable_id: Ident {
+                name: "a".into(),
+                ident_type: IdentType::Variable,
+                // TODO: Check this is the type expected.
+                span: ((0, 9), (0, 10)).into(),
+            },
+            variable_style: Word {
+                contents: "equal".into(),
+                span: ((0, 11), (0, 16)).into(),
+            },
 
-        assert!(false)
+            args: vec![Argument {
+                kind: ArgumentKind::Expression(Expression::BinaryOp(
+                    Box::new(Expression::Float(1.0)),
+                    BinaryOp::Multiply,
+                    Box::new(Expression::ThermoKeyword(Word {
+                        contents: "dt".to_owned(),
+                        span: ((0, 21), (0, 23)).into(),
+                    })),
+                )),
+                span: ((0, 17), (0, 23)).into(),
+            }],
+            span: ((0, 0), (0, 23)).into(),
+        };
+
+        let variable_node = command_node.child(0).expect("Should find child node.");
+        let parsed = VariableDef::from_node(&variable_node, &source_bytes);
+        assert_eq!(parsed, Ok(expected));
     }
 }

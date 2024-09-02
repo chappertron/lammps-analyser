@@ -54,7 +54,7 @@ pub(crate) struct MissingNode;
 
 impl From<MissingNode> for FromNodeError {
     fn from(_: MissingNode) -> Self {
-        Self::PartialNode("Missing node".to_string())
+        Self::PartialNode("Missing node".to_owned())
     }
 }
 

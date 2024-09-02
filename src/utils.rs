@@ -83,6 +83,7 @@ pub(crate) mod into_error {
     /// error types with the question mark operator.
     pub(crate) trait IntoError<T> {
         type Error;
+        // TODO: allow for custom messages
         fn into_err(self) -> Result<T, Self::Error>;
     }
 }
