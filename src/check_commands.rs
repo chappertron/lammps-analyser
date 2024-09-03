@@ -61,7 +61,7 @@ impl Ast {
 
                     if let CommandName::InvalidCommand(name) = command_name {
                         Some(InvalidCommand::UnknownCommand(
-                            name.clone(),
+                            name,
                             Span {
                                 start: command.start,
                                 end: command.end,

@@ -20,7 +20,8 @@ fn main() -> BResult<()> {
 
     generate_docs_map(all_the_docs, crate_root)?;
 
-    for style_kind in [StyleKind::PairStyle] {
+    {
+        let style_kind = StyleKind::PairStyle;
         generate_styles(style_kind)?;
     }
 
@@ -103,7 +104,7 @@ fn generate_styles(style_kind: StyleKind) -> BResult<()> {
 
     let output = Path::new(&env::var("OUT_DIR")?)
         .join("styles")
-        .join(&style_kind.out_path());
+        .join(style_kind.out_path());
 
     create_dir_all(output.parent().expect("Should have parent dir"))?;
 
@@ -130,12 +131,12 @@ fn generate_styles(style_kind: StyleKind) -> BResult<()> {
 /// Words that are snake case also get further split
 fn camelify_lammps(src: &str) -> String {
     // TODO: Enforce that the string must be ascii??
-    src.split('/').map(|s| camelify_snake(s)).collect()
+    src.split('/').map(camelify_snake).collect()
 }
 
 fn camelify_snake(src: &str) -> String {
     // TODO: Enforce that the string must be ascii??
-    src.split('_').map(|s| uppercase_first_letter(s)).collect()
+    src.split('_').map(uppercase_first_letter).collect()
 }
 
 fn uppercase_first_letter(s: &str) -> String {

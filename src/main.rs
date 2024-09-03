@@ -59,7 +59,7 @@ impl<'src> InputScript<'src> {
         let mut issues: Vec<ScriptIssue> = Vec::new();
         let mut diagnostics: Vec<Diagnostic> = Vec::new();
 
-        let ast = ts_to_ast(&tree, &source_code);
+        let ast = ts_to_ast(&tree, source_code);
         // Somewhat gracefully exit
 
         let (ast, ast_errors) = match ast {

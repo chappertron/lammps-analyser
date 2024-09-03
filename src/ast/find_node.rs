@@ -52,7 +52,7 @@ compute mycompute2 all ke/atom
         let mut parser = crate::utils::testing::setup_parser();
         let tree = parser.parse(text, None).expect("Should be able to parse");
 
-        let ast = super::super::ts_to_ast(&tree, &text).expect("Failed to generated AST");
+        let ast = super::super::ts_to_ast(&tree, text).expect("Failed to generated AST");
         dbg!(&ast.commands);
 
         // Don't care about exact definition, just the type

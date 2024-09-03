@@ -291,7 +291,7 @@ mod tests {
     use crate::identifinder::IdentType;
 
     use super::*;
-    use crate::spans::{Point, Span};
+    
     use tree_sitter::Parser;
     fn setup_parser() -> Parser {
         let mut parser = Parser::new();

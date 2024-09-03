@@ -145,7 +145,7 @@ impl Display for Word {
 
 impl Word {
     pub fn as_str(&self) -> &str {
-        &self.contents.as_str()
+        self.contents.as_str()
     }
 
     pub(crate) fn parse_word(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Utf8Error> {
@@ -560,7 +560,7 @@ impl FromNode for VariableDef {
                 "missing variable keyword".to_string(),
             ))?;
 
-        debug_assert_eq!(variable_keyword.utf8_text(&text)?, "variable");
+        debug_assert_eq!(variable_keyword.utf8_text(text)?, "variable");
 
         let variable_ident = children
             .next()
@@ -569,18 +569,18 @@ impl FromNode for VariableDef {
                 "missing variable identifier".to_string(),
             ))?;
 
-        let variable_ident = dbg!(Ident::new(&variable_ident, &text)?);
+        let variable_ident = dbg!(Ident::new(&variable_ident, text)?);
 
         // TODO: Make this missing thing nicer.
         let variable_kind = Word::from_node(
             &children.next().ok_or(Self::Error::PartialNode(
                 "missing variable style".to_string(),
             ))?,
-            &text,
+            text,
         )?;
 
         let args: Result<Vec<Argument>, _> = children
-            .map(|arg| Argument::from_node(&arg, &text))
+            .map(|arg| Argument::from_node(&arg, text))
             .collect();
 
         let args = args?;
@@ -679,7 +679,7 @@ mod tests {
         let source_bytes = include_bytes!("../../example_input_scripts/in.nemd");
         let tree = parser.parse(source_bytes, None).unwrap();
 
-        let ast = ts_to_ast(&tree, source_bytes);
+        let _ast = ts_to_ast(&tree, source_bytes);
         // dbg!(ast.unwrap());
 
         unimplemented!()
@@ -845,8 +845,6 @@ mod tests {
 
         let command_node = tree.root_node().child(0).unwrap();
 
-        let variable_node = command_node.child(0).unwrap();
-
         let expected = VariableDef {
             variable_id: Ident {
                 name: "a".into(),
@@ -874,7 +872,7 @@ mod tests {
         };
 
         let variable_node = command_node.child(0).expect("Should find child node.");
-        let parsed = VariableDef::from_node(&variable_node, &source_bytes);
+        let parsed = VariableDef::from_node(&variable_node, source_bytes);
         assert_eq!(parsed, Ok(expected));
     }
 }
