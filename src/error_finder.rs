@@ -42,6 +42,7 @@ impl ErrorFinder {
     }
 
     /// Find any syntax errors in the provided tree-sitter syntax tree.
+    /// TODO: return these in the error path, not the Ok path.
     pub fn find_syntax_errors(
         &mut self,
         tree: &Tree,
