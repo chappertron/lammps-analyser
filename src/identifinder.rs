@@ -54,17 +54,6 @@ impl SymbolDefsAndRefs {
     }
 }
 
-// #[derive(Debug, Clone, Default)]
-// pub enum SymbolDef {
-//     /// Single Definition
-//     Single(Ident),
-//     /// Multiple Definitions
-//     Multiple(Vec<Ident>),
-//     /// No Definition
-//     #[default]
-//     None,
-// }
-
 #[derive(Debug, Clone, Default)]
 pub struct SymbolDef {
     pub defs: Vec<Ident>,
@@ -110,13 +99,8 @@ impl IdentiFinder {
             query_def,
             query_ref,
             cursor: QueryCursor::new(),
-            // ident_defs: HashSet::new(),
-            // ident_refs: Vec::new(),
             symbols: HashMap::new(),
         };
-
-        // i.find_defs(tree, text)?;
-        // i.find_refs(tree, text)?;
 
         Ok(i)
     }
@@ -153,19 +137,7 @@ impl IdentiFinder {
             };
 
             let entry = self.symbols.entry(name_and_type).or_default();
-            // match &mut entry.defs {
-            //     SymbolDef::Multiple(v) => {
-            //         v.push(ident);
-            //     }
-            //     SymbolDef::Single(ident_0) => {
-            //         // `std::mem::take` done to avoid clone. Might not be better because a new default is
-            //         // still created???
-            //         entry.defs = SymbolDef::Multiple(vec![std::mem::take(ident_0), ident]);
-            //     }
-            //     SymbolDef::None => {
-            //         entry.defs = SymbolDef::Single(ident);
-            //     }
-            // }
+
             entry.defs.defs.push(ident);
         }
         // references
@@ -189,36 +161,6 @@ impl IdentiFinder {
 
         Ok(&self.symbols)
     }
-
-    // pub fn find_refs(&mut self, tree: &Tree, text: &[u8]) -> Result<&Vec<Ident>> {
-    //     let captures = self
-    //         .cursor
-    //         .captures(&self.query_ref, tree.root_node(), text);
-
-    //     self.ident_refs.extend(captures.map(|(mtch, _cap_id)| {
-    //         let node = mtch.captures[0].node;
-
-    //         // TODO: Properly handle errors
-    //         Ident::new(&node, text).unwrap()
-    //     }));
-
-    //     Ok(&self.ident_refs)
-    // }
-
-    // pub fn find_defs(&mut self, tree: &Tree, text: &[u8]) -> Result<&HashSet<Ident>> {
-    //     let captures = self
-    //         .cursor
-    //         .captures(&self.query_def, tree.root_node(), text);
-
-    //     self.ident_defs.extend(captures.map(|(mtch, _cap_id)| {
-    //         let node = mtch.captures[0].node;
-
-    //         // TODO: perhaps better to check for this in another way?
-    //         Ident::new(&node, text).unwrap()
-    //     }));
-
-    //     Ok(&self.ident_defs)
-    // }
 
     /// Check for symbols that have been used without being defined
     /// TODO: Does not currently verify order or if the fix has been deleted at point of definition
@@ -244,20 +186,6 @@ impl IdentiFinder {
         } else {
             Err(undefined_fixes)
         }
-        // let used_fixes: HashSet<_> = self.ident_refs.iter().collect();
-
-        // let undefined_fixes: Vec<_> = used_fixes
-        //     .difference(&self.ident_defs.iter().collect())
-        //     .map(|&x| UndefinedIdent { ident: x.clone() })
-        //     .collect();
-        // assert_ne!(undefined_fixes.len(), used_fixes.len());
-        // if undefined_fixes.is_empty() {
-        //     Ok(())
-        // } else {
-        //     Err(undefined_fixes)
-        // }
-        //
-        // todo!("New version of the checking symbols!!")
     }
 
     pub fn symbols(&self) -> &HashMap<NameAndType, SymbolDefsAndRefs> {
@@ -277,7 +205,7 @@ pub fn unused_variables(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<Un
             }
         })
         .flatten()
-        // BOO CLONE
+        // TODO: BOO CLONE
         .map(|x| UnusedIdent { ident: x.clone() })
         .collect()
 }
@@ -344,7 +272,8 @@ impl Ident {
     /// Uses the node kind to determine the identifinder type
     /// Uses the text to extract the name of the identifier
     ///
-    /// # Panics if the node matches an invalid identifier type.
+    /// # Panics
+    /// Panics if the node matches an invalid identifier type.
     pub fn new(node: &Node, text: &[u8]) -> Result<Self, Utf8Error> {
         let name = node.utf8_text(text)?.to_string();
 
@@ -437,6 +366,8 @@ pub enum IdentType {
 
 impl From<&str> for IdentType {
     /// Converts from capture name to `IdentType`
+    ///
+    /// # Panics
     /// Panics if the string does not end with "fix", "compute", or "variable"
     fn from(value: &str) -> Self {
         if value.to_lowercase().ends_with("compute") {
@@ -503,21 +434,6 @@ impl From<UndefinedIdent> for lsp_types::Diagnostic {
         lsp_types::Diagnostic::new_simple(value.ident.range().into_lsp_types(), value.to_string())
     }
 }
-
-// use crate::diagnostic_report::ReportDiagnostic;
-// use ariadne::{Label, ReportKind,Span};
-
-// impl<S:Span> ReportDiagnostic<S> for UndefinedIdent {
-//     fn make_report(&self, source_id: &str) -> ariadne::Report<'_,S>
-//     {
-//         ariadne::Report::build(ReportKind::Error, source_id, self.ident.start_byte)
-//             .with_label(
-//                 Label::new((source_id, self.ident.start_byte..self.ident.end_byte))
-//                     .with_message(format!("{}", self)),
-//             )
-//             .finish()
-//     }
-// }
 
 #[cfg(test)]
 mod tests {}
