@@ -352,6 +352,10 @@ impl Ident {
             "fix_id" => IdentType::Fix,
             "compute_id" => IdentType::Compute,
             "variable" => IdentType::Variable,
+            // FIXME: These were added to fix a bug. I don't know if this is correct
+            "f_" => IdentType::Fix,
+            "c_" => IdentType::Compute,
+            "v_" => IdentType::Variable,
             x => unreachable!("Unknown identifier type {x}"), // TODO: Make this not panic
         };
 
