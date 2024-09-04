@@ -46,6 +46,8 @@ pub enum FromNodeError {
     #[error("{0}")]
     // TODO: This perhaps should not be a full error. Or make it incomplete node?
     PartialNode(String),
+    #[error("syntax error")]
+    InvalidSyntax,
 }
 
 #[derive(Debug, Error, Clone)]
@@ -87,6 +89,7 @@ impl ReportSimple for FromNodeError {
 
             Self::ParseExpression(e) => format!("{}", e.bright_red()),
             Self::PartialNode(e) => format!("{}", e.bright_red()),
+            e => format!("{}", e.bright_red()),
         }
     }
 }

@@ -121,6 +121,8 @@ pub enum CommandType {
 impl FromNode for CommandType {
     type Error = FromNodeError;
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
+        // TODO: just try parsing this first.
+        // TODO: Flatten the enum have generic just be the last command type.
         let cmd = if NamedCommand::try_from(node.kind()).is_ok() {
             // TODO: add arguments
             CommandType::NamedCommand(NamedCommand::from_node(node, text)?)
@@ -144,6 +146,13 @@ impl Display for Word {
 }
 
 impl Word {
+    pub fn new(contents: String, span: impl Into<Span>) -> Self {
+        let contents = contents.to_owned();
+        let span = span.into();
+
+        Self { contents, span }
+    }
+
     pub fn as_str(&self) -> &str {
         self.contents.as_str()
     }
@@ -188,9 +197,13 @@ impl FromNode for GenericCommand {
 
         debug_assert!(cursor.node() == *node);
 
-        cursor.goto_first_child();
+        if !cursor.goto_first_child() {
+            return Err(FromNodeError::PartialNode(
+                "missing command name".to_owned(),
+            ));
+        }
 
-        // TODO: use a field in the TS grammar
+        // TODO: use a field in the TS grammar instead?
         let name = Word::from_node(&cursor.node(), text)?;
 
         while cursor.goto_next_sibling() {
@@ -199,7 +212,6 @@ impl FromNode for GenericCommand {
             }
         }
 
-        cursor.goto_parent();
         Ok(GenericCommand {
             name,
             args,
@@ -249,6 +261,7 @@ pub enum ArgumentKind {
     Group,
     /// A variable/fix/compute name prefixed by v_/f_/c_
     UnderscoreIdent(Ident),
+    // TODO: Make the contents of this a [`Word`]
     /// A white-space delimited word
     Word(String),
     /// Indicates an invalid node in the tree-sitter grammar
@@ -387,7 +400,6 @@ pub enum NamedCommand {
     AtomStyle,
     Boundary,
     /// A variable definition
-    // TODO: readd
     VariableDef(VariableDef),
     ThermoStyle,
     Thermo,
@@ -406,7 +418,7 @@ impl FromNode for NamedCommand {
             "modify" => Ok(NamedCommand::Modify),
             "atom_style" => Ok(NamedCommand::AtomStyle),
             "boundary" => Ok(NamedCommand::Boundary),
-            "variable" => Ok(NamedCommand::VariableDef(VariableDef::from_node(
+            "variable_def" => Ok(NamedCommand::VariableDef(VariableDef::from_node(
                 node, text,
             )?)),
             "thermo_style" => Ok(NamedCommand::ThermoStyle),
@@ -633,7 +645,7 @@ impl TryFrom<&str> for NamedCommand {
             "modify" => Ok(Self::Modify),
             "atom_style" => Ok(Self::AtomStyle),
             "boundary" => Ok(Self::Boundary),
-            "variable" => Ok(Self::VariableDef(VariableDef::default())),
+            "variable_def" => Ok(Self::VariableDef(VariableDef::default())),
             "thermo_style" => Ok(Self::ThermoStyle),
             "thermo" => Ok(Self::Thermo),
             "units" => Ok(Self::Units),
@@ -649,12 +661,14 @@ impl TryFrom<&str> for NamedCommand {
 #[allow(clippy::expect_used)]
 mod tests {
 
+    use core::panic;
+
     use pretty_assertions::assert_eq;
     use tree_sitter::Parser;
 
     use crate::ast::expressions::{BinaryOp, Expression};
     use crate::ast::from_node::FromNode;
-    use crate::ast::{Argument, ComputeDef, FixDef, VariableDef};
+    use crate::ast::{Argument, ComputeDef, FixDef, NamedCommand, VariableDef};
     use crate::ast::{ArgumentKind, Word};
     use crate::compute_styles::ComputeStyle;
     use crate::fix_styles::FixStyle;
@@ -722,23 +736,50 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Not yet fully implemented"]
     // TODO: Finish this test
     fn parse_index_variable() {
         let mut parser = setup_parser();
-        let text = b"variable index step4.1.aatm";
+        let text = b"variable file_name index step4.1.atm\n";
 
         let tree = parser.parse(text, None).unwrap();
 
+        dbg!(tree.root_node().to_sexp());
+        let cmd_node = tree.root_node().child(0).unwrap(); // command node
+        let var_def_node = cmd_node.child(0).unwrap(); // variable node
+
+        dbg!(tree.root_node().to_sexp());
+
+        let expected = VariableDef {
+            variable_id: Ident {
+                name: "file_name".to_string(),
+                ident_type: IdentType::Variable,
+                span: ((0, 9)..(0, 18)).into(),
+            },
+            variable_style: Word::new("index".to_string(), (0, 19)..(0, 24)),
+            args: vec![Argument {
+                kind: ArgumentKind::Word("step4.1.atm".to_string()),
+                span: ((0, 25)..(0, 36)).into(),
+            }],
+            span: ((0, 0)..(0, 36)).into(),
+        };
+
+        assert_eq!(
+            VariableDef::from_node(&var_def_node, text).as_ref(),
+            Ok(&expected)
+        );
+
         let ast = ts_to_ast(&tree, text);
+        assert!(ast.is_ok());
 
-        if ast.is_err() {
-            dbg!(ast.unwrap_err());
-        } else {
-            dbg!(ast.unwrap());
+        if let Ok(ast) = ast {
+            assert_eq!(ast.commands.len(), 1);
+            match &ast.commands[0].command_type {
+                crate::ast::CommandType::NamedCommand(NamedCommand::VariableDef(var)) => {
+                    assert_eq!(*var, expected)
+                }
+                cmd => panic!("Unexpected command {cmd:?}"),
+            }
         }
-
-        unimplemented!()
     }
 
     #[test]

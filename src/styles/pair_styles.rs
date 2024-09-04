@@ -115,6 +115,7 @@ impl PairStyle {
 mod tests {
 
     #[test]
+    #[ignore = "test is incomplete."]
     fn correct_number_of_args_in_context() {
         todo!("try all styles that have infos and check if the context message matches the expected number of args and funcs.
 
