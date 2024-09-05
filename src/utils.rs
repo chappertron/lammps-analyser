@@ -97,6 +97,11 @@ pub(crate) mod testing {
         parser.set_language(tree_sitter_lammps::language()).unwrap();
         parser
     }
+    pub(crate) fn parse(source_bytes: impl AsRef<[u8]>) -> tree_sitter::Tree {
+        let source_bytes = source_bytes.as_ref();
+        let mut parser = setup_parser();
+        parser.parse(source_bytes, None).unwrap()
+    }
 }
 
 #[cfg(test)]

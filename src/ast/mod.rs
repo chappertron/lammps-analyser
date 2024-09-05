@@ -588,10 +588,7 @@ impl FromNode for VariableDef {
 #[allow(clippy::expect_used)]
 mod tests {
 
-    use core::panic;
-
     use pretty_assertions::assert_eq;
-    use tree_sitter::Parser;
 
     use crate::ast::expressions::{BinaryOp, Expression};
     use crate::ast::from_node::FromNode;
@@ -600,25 +597,16 @@ mod tests {
     use crate::compute_styles::ComputeStyle;
     use crate::fix_styles::FixStyle;
     use crate::identifinder::{Ident, IdentType};
+    use crate::utils::testing::parse;
 
     use super::ts_to_ast;
-
-    fn setup_parser() -> Parser {
-        let mut parser = Parser::new();
-
-        parser
-            .set_language(tree_sitter_lammps::language())
-            .expect("Could not load language");
-        parser
-    }
 
     #[test]
     #[ignore = "Not yet fully implemented"]
     fn test_ast() {
-        let mut parser = setup_parser();
         // let source_bytes = include_bytes!("../../fix.lmp");
         let source_bytes = include_bytes!("../../example_input_scripts/in.nemd");
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parse(source_bytes);
 
         let _ast = ts_to_ast(&tree, source_bytes);
         // dbg!(ast.unwrap());
@@ -628,17 +616,15 @@ mod tests {
 
     #[test]
     fn parse_fix_no_args() {
-        let mut parser = setup_parser();
         let source_bytes = b"fix NVE all nve";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parse(source_bytes);
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
         // Lots of tedium to parsing this...
-        let fix_node = dbg!(command_node.child(0)).unwrap();
+        let fix_node = dbg!(root_node.child(0)).unwrap();
 
         dbg!(fix_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -663,16 +649,14 @@ mod tests {
     }
 
     #[test]
-    // TODO: Finish this test
     fn parse_index_variable() {
-        let mut parser = setup_parser();
         let text = b"variable file_name index step4.1.atm\n";
 
-        let tree = parser.parse(text, None).unwrap();
+        let tree = parse(text);
 
         dbg!(tree.root_node().to_sexp());
-        let cmd_node = tree.root_node().child(0).unwrap(); // command node
-        let var_def_node = cmd_node.child(0).unwrap(); // variable node
+        let root_node = tree.root_node();
+        let var_def_node = root_node.child(0).unwrap(); // variable node
 
         dbg!(tree.root_node().to_sexp());
 
@@ -711,17 +695,16 @@ mod tests {
 
     #[test]
     fn parse_fix_with_args() {
-        let mut parser = setup_parser();
         let source_bytes = b"fix NVT all nvt temp 1 1.5 $(100.0*dt)";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parse(source_bytes);
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let fix_node = dbg!(command_node.child(0)).unwrap();
+        let fix_node = dbg!(root_node.child(0)).unwrap();
 
         dbg!(fix_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -764,17 +747,16 @@ mod tests {
 
     #[test]
     fn parse_compute_with_args() {
-        let mut parser = setup_parser();
         let source_bytes = b"compute T_hot water temp/region hot_region";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parse(source_bytes);
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let compute_node = dbg!(command_node.child(0)).unwrap();
+        let compute_node = dbg!(root_node.child(0)).unwrap();
 
         dbg!(compute_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -804,25 +786,22 @@ mod tests {
 
     #[test]
     fn parse_variable_def() {
-        let mut parser = setup_parser();
         let source_bytes = b"variable a equal 1.0*dt";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parse(source_bytes);
 
-        // let ast = ts_to_ast(&tree, source_bytes);
-
-        let command_node = tree.root_node().child(0).unwrap();
+        let root_node = tree.root_node();
 
         let expected = VariableDef {
             variable_id: Ident {
                 name: "a".into(),
                 ident_type: IdentType::Variable,
                 // TODO: Check this is the type expected.
-                span: ((0, 9), (0, 10)).into(),
+                span: ((0, 9)..(0, 10)).into(),
             },
             variable_style: Word {
                 contents: "equal".into(),
-                span: ((0, 11), (0, 16)).into(),
+                span: ((0, 11)..(0, 16)).into(),
             },
 
             args: vec![Argument {
@@ -831,22 +810,16 @@ mod tests {
                     BinaryOp::Multiply,
                     Box::new(Expression::ThermoKeyword(Word {
                         contents: "dt".to_owned(),
-                        span: ((0, 21), (0, 23)).into(),
+                        span: ((0, 21)..(0, 23)).into(),
                     })),
                 )),
-                span: ((0, 17), (0, 23)).into(),
+                span: ((0, 17)..(0, 23)).into(),
             }],
-            span: ((0, 0), (0, 23)).into(),
+            span: ((0, 0)..(0, 23)).into(),
         };
 
-        let variable_node = command_node.child(0).expect("Should find child node.");
+        let variable_node = root_node.child(0).expect("Should find child node.");
         let parsed = VariableDef::from_node(&variable_node, source_bytes);
         assert_eq!(parsed, Ok(expected));
-    }
-
-    fn parse(source_bytes: impl AsRef<[u8]>) -> tree_sitter::Tree {
-        let source_bytes = source_bytes.as_ref();
-        let mut parser = setup_parser();
-        parser.parse(source_bytes, None).unwrap()
     }
 }
