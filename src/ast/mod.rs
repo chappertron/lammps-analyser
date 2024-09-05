@@ -843,4 +843,10 @@ mod tests {
         let parsed = VariableDef::from_node(&variable_node, source_bytes);
         assert_eq!(parsed, Ok(expected));
     }
+
+    fn parse(source_bytes: impl AsRef<[u8]>) -> tree_sitter::Tree {
+        let source_bytes = source_bytes.as_ref();
+        let mut parser = setup_parser();
+        parser.parse(source_bytes, None).unwrap()
+    }
 }
