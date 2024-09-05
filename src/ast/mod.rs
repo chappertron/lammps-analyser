@@ -55,23 +55,15 @@ pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, PartialAst>
     let mut errors = vec![];
     cursor.goto_first_child();
 
-    loop {
-        // Advance cursor and skip if a comment
-        if cursor.goto_first_child() && cursor.node().kind() != "comment" {
-            let result = CommandNode::from_node(&cursor.node(), text)
-                .with_span(cursor.node().range().into());
+    for node in tree.root_node().children(&mut cursor) {
+        if node.kind() != "comment" {
+            let result = CommandNode::from_node(&node, text).with_span(node.range().into());
 
             match result {
                 Ok(cmd) => commands.push(cmd),
                 Err(err) => errors.push(err),
             }
 
-            cursor.goto_parent();
-        }
-
-        // If no more commands, break!
-        if !cursor.goto_next_sibling() {
-            break;
         }
     }
 
