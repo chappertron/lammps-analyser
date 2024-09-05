@@ -2,11 +2,8 @@ use crate::check_commands;
 use crate::issues::Issue as ScriptIssue;
 use crate::lammps_errors::Warnings;
 use crate::{
-    ast::{from_node::FromNodeError, NamedCommand},
-    check_styles::check_styles,
-    diagnostics::Issue,
-    error_finder::ErrorFinder,
-    spanned_error::SpannedError,
+    ast::from_node::FromNodeError, check_styles::check_styles, diagnostics::Issue,
+    error_finder::ErrorFinder, spanned_error::SpannedError,
 };
 
 use crate::identifinder::unused_variables;
@@ -67,11 +64,9 @@ impl<'src> InputScript<'src> {
             .iter()
             .filter_map(|command| {
                 // TODO: Use a checkcommand function that checks all command types.
-                if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
+                if let CommandType::Fix(fix) = &command.command_type {
                     Some(check_commands::fixes::check_fix(fix))
-                } else if let CommandType::NamedCommand(NamedCommand::Compute(compute)) =
-                    &command.command_type
-                {
+                } else if let CommandType::Compute(compute) = &command.command_type {
                     Some(check_commands::computes::check_compute(compute))
                 } else {
                     None

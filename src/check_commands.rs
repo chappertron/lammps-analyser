@@ -3,7 +3,7 @@
 use thiserror::Error;
 
 use crate::{
-    ast::{Ast, CommandType, NamedCommand},
+    ast::{Ast, CommandType},
     commands::CommandName,
     diagnostics::{self, Diagnostic, Issue},
     spans::Span,
@@ -52,9 +52,13 @@ impl Ast {
         self.commands
             .iter()
             .filter_map(|command| match &command.command_type {
-                CommandType::NamedCommand(NamedCommand::Fix(fix_def)) => {
+                CommandType::Fix(fix_def) => {
                     // Check if the fixes are ok.
                     check_fix(fix_def).err().map(InvalidCommand::from)
+                }
+                // Not sure about other named commands yet...
+                CommandType::Compute(compute) => {
+                    check_compute(compute).err().map(InvalidCommand::from)
                 }
                 CommandType::GenericCommand(command) => {
                     let command_name = CommandName::from(command.name.as_str());
@@ -70,10 +74,6 @@ impl Ast {
                     } else {
                         None
                     }
-                }
-                // Not sure about other named commands yet...
-                CommandType::NamedCommand(NamedCommand::Compute(compute)) => {
-                    check_compute(compute).err().map(InvalidCommand::from)
                 }
                 _ => todo!(),
             })

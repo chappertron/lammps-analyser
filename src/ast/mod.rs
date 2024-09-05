@@ -63,7 +63,6 @@ pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, PartialAst>
                 Ok(cmd) => commands.push(cmd),
                 Err(err) => errors.push(err),
             }
-
         }
     }
 
@@ -107,22 +106,27 @@ impl FromNode for CommandNode {
 #[derive(Debug, PartialEq, Clone)]
 pub enum CommandType {
     GenericCommand(GenericCommand),
-    NamedCommand(NamedCommand),
+    /// A Fix defintion
+    Fix(FixDef),
+    /// A compute definition
+    Compute(ComputeDef),
+    /// A variable definition
+    VariableDef(VariableDef),
+    Shell,
 }
 
 impl FromNode for CommandType {
     type Error = FromNodeError;
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
-        // TODO: just try parsing this first.
-        // TODO: Flatten the enum have generic just be the last command type.
-        let cmd = if NamedCommand::try_from(node.kind()).is_ok() {
-            // TODO: add arguments
-            CommandType::NamedCommand(NamedCommand::from_node(node, text)?)
-        } else {
-            CommandType::GenericCommand(GenericCommand::from_node(node, text)?)
-        };
-
-        Ok(cmd)
+        dbg!(node.to_sexp());
+        match dbg!(node.kind()) {
+            "fix" => Ok(Self::Fix(FixDef::from_node(node, text)?)),
+            "compute" => Ok(Self::Compute(ComputeDef::from_node(node, text)?)),
+            "variable_def" => Ok(Self::VariableDef(VariableDef::from_node(node, text)?)),
+            "shell" => Ok(Self::Shell),
+            // Fall back to the generic command type
+            cmd => Ok(Self::GenericCommand(GenericCommand::from_node(node, text)?)),
+        }
     }
 }
 
@@ -377,55 +381,6 @@ impl Display for ArgumentKind {
     }
 }
 
-/// Commands that have a special form in the tree sitter grammar
-/// TODO: add arguments
-/// TODO: Add command location
-/// TODO: Reduce the number of these, both here and in the grammar.
-#[derive(Debug, PartialEq, Clone)]
-pub enum NamedCommand {
-    /// A Fix defintion
-    Fix(FixDef),
-    /// A compute definition
-    Compute(ComputeDef),
-    Style,
-    Modify,
-    AtomStyle,
-    Boundary,
-    /// A variable definition
-    VariableDef(VariableDef),
-    ThermoStyle,
-    Thermo,
-    Units,
-    Run,
-    Shell,
-}
-
-impl FromNode for NamedCommand {
-    type Error = FromNodeError;
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<NamedCommand, Self::Error> {
-        match node.kind() {
-            "fix" => Ok(NamedCommand::Fix(FixDef::from_node(node, text)?)),
-            "compute" => Ok(NamedCommand::Compute(ComputeDef::from_node(node, text)?)),
-            "style" => Ok(NamedCommand::Style),
-            "modify" => Ok(NamedCommand::Modify),
-            "atom_style" => Ok(NamedCommand::AtomStyle),
-            "boundary" => Ok(NamedCommand::Boundary),
-            "variable_def" => Ok(NamedCommand::VariableDef(VariableDef::from_node(
-                node, text,
-            )?)),
-            "thermo_style" => Ok(NamedCommand::ThermoStyle),
-            "thermo" => Ok(NamedCommand::Thermo),
-            "units" => Ok(NamedCommand::Units),
-            "run" => Ok(NamedCommand::Run),
-            "shell" => Ok(NamedCommand::Shell),
-            _ => Err(FromNodeError::UnknownCommand {
-                name: node.kind(),
-                start: node.start_position(),
-            }),
-        }
-    }
-}
-
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct FixDef {
     pub fix_id: Ident,  // Or just keep as a string?
@@ -447,6 +402,7 @@ impl FromNode for FixDef {
 
     /// TODO: Hand a cursor instead???
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
+        dbg!(node.to_sexp());
         let span = node.range().into();
         let mut cursor = node.walk();
         let text = text.as_ref();
@@ -626,27 +582,6 @@ impl FromNode for VariableDef {
     }
 }
 
-/// This doesn't work for the new case that the fix has data
-impl TryFrom<&str> for NamedCommand {
-    type Error = String;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "fix" => Ok(Self::Fix(FixDef::default())),
-            "compute" => Ok(Self::Compute(ComputeDef::default())),
-            "style" => Ok(Self::Style),
-            "modify" => Ok(Self::Modify),
-            "atom_style" => Ok(Self::AtomStyle),
-            "boundary" => Ok(Self::Boundary),
-            "variable_def" => Ok(Self::VariableDef(VariableDef::default())),
-            "thermo_style" => Ok(Self::ThermoStyle),
-            "thermo" => Ok(Self::Thermo),
-            "units" => Ok(Self::Units),
-            "run" => Ok(Self::Run),
-            s => Err(format!("Unknown named command: {s}")),
-        }
-    }
-}
-
 #[cfg(test)]
 // Allow unwraps in the tests module, but not in the parent module.
 #[allow(clippy::unwrap_used)]
@@ -660,7 +595,7 @@ mod tests {
 
     use crate::ast::expressions::{BinaryOp, Expression};
     use crate::ast::from_node::FromNode;
-    use crate::ast::{Argument, ComputeDef, FixDef, NamedCommand, VariableDef};
+    use crate::ast::{Argument, ComputeDef, FixDef, VariableDef};
     use crate::ast::{ArgumentKind, Word};
     use crate::compute_styles::ComputeStyle;
     use crate::fix_styles::FixStyle;
@@ -766,7 +701,7 @@ mod tests {
         if let Ok(ast) = ast {
             assert_eq!(ast.commands.len(), 1);
             match &ast.commands[0].command_type {
-                crate::ast::CommandType::NamedCommand(NamedCommand::VariableDef(var)) => {
+                crate::ast::CommandType::VariableDef(var) => {
                     assert_eq!(*var, expected)
                 }
                 cmd => panic!("Unexpected command {cmd:?}"),

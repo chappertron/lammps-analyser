@@ -1,7 +1,5 @@
 //! Alternative implementation for the lsp using the `tower-lsp` crate.
-use crate::ast::{
-    ts_to_ast, Ast, CommandType, ComputeDef, FixDef, GenericCommand, NamedCommand, PartialAst,
-};
+use crate::ast::{ts_to_ast, Ast, CommandType, ComputeDef, FixDef, GenericCommand, PartialAst};
 use crate::check_commands;
 use crate::check_styles::check_styles;
 use crate::commands::CommandName;
@@ -261,13 +259,10 @@ impl LanguageServer for Backend {
         // FIXME: For unknown fix/compute styles does some weird stuff.
         if let Some(command) = command {
             let doc_name = match &command.command_type {
-                CommandType::NamedCommand(NamedCommand::Fix(FixDef { fix_style, .. })) => {
-                    DOCS_MAP.fixes().get(fix_style)
+                CommandType::Fix(FixDef { fix_style, .. }) => DOCS_MAP.fixes().get(fix_style),
+                CommandType::Compute(ComputeDef { compute_style, .. }) => {
+                    DOCS_MAP.computes().get(compute_style)
                 }
-                CommandType::NamedCommand(NamedCommand::Compute(ComputeDef {
-                    compute_style,
-                    ..
-                })) => DOCS_MAP.computes().get(compute_style),
 
                 CommandType::GenericCommand(GenericCommand { name, .. }) => {
                     let name = CommandName::from(name.as_str());
@@ -376,7 +371,7 @@ impl Backend {
             .commands
             .iter()
             .filter_map(|command| {
-                if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
+                if let CommandType::Fix(fix) = &command.command_type {
                     Some(check_commands::fixes::check_fix(fix))
 
                 // TODO: add checking for computes here.

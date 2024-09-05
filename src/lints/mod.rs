@@ -1,6 +1,6 @@
 use crate::ast::FixDef;
 use crate::{
-    ast::{Ast, CommandType, NamedCommand},
+    ast::{Ast, CommandType},
     identifinder::{Ident, IdentMap},
 };
 
@@ -57,22 +57,21 @@ pub fn fix_redef_before_run<'a>(
         // Append to bad commands list if second def found
 
         // Take until the next run command
-        let other_defs: Vec<_> =
-            commands_iter
-                .take_while(|cmd| {
-                    !matches!(
-                        cmd.command_type,
-                        CommandType::NamedCommand(NamedCommand::Run)
-                    )
-                })
-                .filter_map(|cmd| match &cmd.command_type {
-                    // TODO: Add compute support too
-                    CommandType::NamedCommand(NamedCommand::Fix(FixDef {
-                        fix_id: ident, ..
-                    })) if ident == first_def => Some(ident),
-                    _ => None,
-                })
-                .collect();
+        let other_defs: Vec<_> = commands_iter
+            .take_while(|cmd| {
+                if let CommandType::GenericCommand(cmd) = &cmd.command_type {
+                    !(cmd.name.contents == "run")
+                } else {
+                    // not generic so can't be run command
+                    true
+                }
+            })
+            .filter_map(|cmd| match &cmd.command_type {
+                // TODO: Add compute support too
+                CommandType::Fix(FixDef { fix_id: ident, .. }) if ident == first_def => Some(ident),
+                _ => None,
+            })
+            .collect();
 
         if !other_defs.is_empty() {
             redefined.push(MultiplyDefinedBeforeRun {

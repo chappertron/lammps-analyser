@@ -291,7 +291,7 @@ mod tests {
     use crate::identifinder::IdentType;
 
     use super::*;
-    
+
     use tree_sitter::Parser;
     fn setup_parser() -> Parser {
         let mut parser = Parser::new();
@@ -310,10 +310,10 @@ mod tests {
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -337,10 +337,10 @@ mod tests {
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -365,10 +365,10 @@ mod tests {
         dbg!(tree.root_node().to_sexp());
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -397,10 +397,10 @@ mod tests {
         dbg!(tree.root_node().to_sexp());
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -435,10 +435,10 @@ mod tests {
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -468,10 +468,10 @@ mod tests {
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -504,10 +504,10 @@ mod tests {
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
