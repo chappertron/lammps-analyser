@@ -132,6 +132,7 @@ impl FromNode for CommandType {
             )?)),
             _ => Ok(Self::Error),
         };
+
         if let Ok(Self::Error) = result {
             // NOTE: Check the child node and infer what type of node it was supposed to be
             // and pass to that parser.
@@ -493,11 +494,23 @@ impl FromNode for ComputeDef {
         children.next();
         let compute_id = children
             .next()
-            .ok_or(Self::Error::PartialNode("missing `compute_id`".to_string()))?;
+            .ok_or(Self::Error::PartialNode("missing compute ID".to_string()))?;
 
         let compute_id = Ident::new(&compute_id, text)?;
-        let group_id = Word::from_node(&children.next().into_err()?, text)?;
-        let compute_style = children.next().into_err()?.utf8_text(text)?.into();
+
+        let group_id = Word::from_node(
+            &children
+                .next()
+                .ok_or(Self::Error::PartialNode("missing group ID".to_string()))?,
+            text,
+        )?;
+        let compute_style = children
+            .next()
+            .ok_or(Self::Error::PartialNode(
+                "missing compute style".to_string(),
+            ))?
+            .utf8_text(text)?
+            .into();
 
         let args = if let Some(args) = children.next() {
             // No longer needed beyond args. Lets us use cursor again
@@ -693,7 +706,6 @@ mod tests {
         let root_node = tree.root_node();
         let var_def_node = root_node.child(0).unwrap(); // variable node
 
-
         let expected = VariableDef {
             variable_id: Ident {
                 name: "file_name".to_string(),
@@ -886,8 +898,33 @@ mod tests {
 
         let ast = ts_to_ast(&tree, &source_bytes);
         dbg!(ast);
+
         let variable_node = root_node.child(0).expect("Should find child node.");
         let parsed = VariableDef::from_node(&variable_node, source_bytes);
         assert_eq!(parsed, Ok(expected));
+    }
+
+    #[test]
+    fn parse_incomplete_compute_def() {
+        let source_bytes = b"compute a ";
+
+        let tree = parse(source_bytes);
+
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
+        assert!(!root_node.is_missing());
+
+        let ast = ts_to_ast(&tree, &source_bytes);
+
+        // TODO: double check more about the syntax tree.
+        assert!(ast.is_err());
+
+        let compute_node = root_node.child(0).expect("Should find child node.");
+        let parsed = ComputeDef::from_node(&compute_node, source_bytes);
+        use crate::ast::from_node::FromNodeError;
+        assert_eq!(
+            parsed,
+            Err(FromNodeError::PartialNode("missing group ID".to_string()))
+        );
     }
 }
