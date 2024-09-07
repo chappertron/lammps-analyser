@@ -23,7 +23,6 @@ impl ErrorFinder {
             tree_sitter_lammps::language(),
             "
             (ERROR) @syntax_error
-            ;(MISSING) @syntax_error
             ",
         )?;
         let cursor = QueryCursor::new();
@@ -72,11 +71,14 @@ impl ErrorFinder {
     /// Missing nodes are also not reported as errors, so this is needed.
     /// TODO: Walk back from missing nodes to work out the expected node?
     pub fn find_missing_nodes(&mut self, tree: &Tree) -> Result<&Vec<SyntaxError>> {
-        fn recur_missing(cursor: &mut TreeCursor, missing_nodes: &mut Vec<Point>) {
+        fn recur_missing<'tree>(
+            cursor: &mut TreeCursor<'tree>,
+            missing_nodes: &mut Vec<tree_sitter::Node<'tree>>,
+        ) {
             if cursor.node().child_count() == 0 {
                 if cursor.node().is_missing() {
                     let node = cursor.node();
-                    missing_nodes.push(node.start_position().into());
+                    missing_nodes.push(node);
                 }
             } else {
                 // Go to the first child, then recur
@@ -94,11 +96,18 @@ impl ErrorFinder {
         let mut missing_nodes = vec![];
 
         recur_missing(&mut cursor, &mut missing_nodes);
-        self.syntax_errors.extend(
-            missing_nodes.iter().map(|start_position| {
-                SyntaxError::MissingToken(MissingToken::new(*start_position))
-            }),
-        );
+        self.syntax_errors.extend(missing_nodes.iter().map(|node| {
+            dbg!(node.to_sexp());
+            dbg!(node.parent().unwrap().to_sexp());
+            dbg!(node.parent().unwrap().parent().unwrap().to_sexp());
+            SyntaxError::MissingToken(MissingToken::new(
+                node.start_position().into(),
+                // Go to parent, because missing token is
+                // "inserted"
+                // FIXME: Remove expect.
+                node.parent().expect("REMOVE ME").kind().to_owned(),
+            ))
+        }));
 
         Ok(&self.syntax_errors)
     }
@@ -204,14 +213,15 @@ impl Issue for ParseError {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Error)]
-#[error("Invalid Syntax: Missing Token")]
+#[error("Syntax error: missing {kind}")]
 pub struct MissingToken {
     pub start: Point,
+    pub kind: String,
 }
 
 impl MissingToken {
-    fn new(start: Point) -> MissingToken {
-        MissingToken { start }
+    fn new(start: Point, kind: String) -> MissingToken {
+        MissingToken { start, kind }
     }
 }
 

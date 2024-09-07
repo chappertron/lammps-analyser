@@ -16,7 +16,7 @@ use super::{from_node::MissingNode, Word};
 /// An mathematical expression in LAMMPS
 pub enum Expression {
     #[default]
-    None,
+    Missing,
     /// LAMMPS Identifier for a fix/compute/variable that is
     /// proceeded by f_/c_/v_ to indicate the type.
     UnderscoreIdent(Ident),
@@ -45,7 +45,7 @@ pub enum Expression {
 impl Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::None => write!(f, ""),
+            Self::Missing => write!(f, ""),
             Self::UnderscoreIdent(ident) => write!(f, "{}", ident.underscore_ident()),
             Self::Int(i) => write!(f, "{i}"),
             Self::Float(fl) => write!(f, "{fl}"),
@@ -85,12 +85,12 @@ pub enum ParseExprError {
     InvalidUnaryOperator(String), // TODO: make &'a str
     #[error("Invalid binary operator: {0}")]
     InvalidBinaryOperator(String), // TODO: Make &'a str
-    #[error("Incomplete Node")]
-    IncompleteNode,
     #[error("Tree-sitter Error Node Found")]
     ErrorNode,
     #[error("Unknown Expression type: {0}")]
     UnknownExpressionType(String),
+    #[error("Syntax Error: expected expression")]
+    MissingToken,
 }
 
 impl From<std::num::ParseFloatError> for ParseExprError {
@@ -113,7 +113,7 @@ impl From<std::str::Utf8Error> for ParseExprError {
 impl From<MissingNode> for ParseExprError {
     fn from(_: MissingNode) -> Self {
         // TODO: Add more context here. What went wrong?
-        Self::IncompleteNode
+        Self::MissingToken
     }
 }
 
@@ -121,6 +121,17 @@ impl Expression {
     /// TODO: Handle Errors
     pub(crate) fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Self, ParseExprError> {
         // dbg!(node);
+
+        // TODO: Handle missing node
+        if node.is_missing() {
+            return Err(ParseExprError::MissingToken);
+        }
+
+        if let Some(child) = node.child(0) {
+            if child.is_missing() {
+                return Err(ParseExprError::MissingToken);
+            }
+        }
 
         match node.kind() {
             // Child 0 is the identifier

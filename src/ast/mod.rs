@@ -55,7 +55,8 @@ pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, PartialAst>
     let mut errors = vec![];
     cursor.goto_first_child();
 
-    for node in tree.root_node().children(&mut cursor) {
+    for node in tree.root_node().named_children(&mut cursor) {
+        // TODO: This if-statement may be removeable
         if node.kind() != "comment" {
             let result = CommandNode::from_node(&node, text).with_span(node.range().into());
 
@@ -113,20 +114,41 @@ pub enum CommandType {
     /// A variable definition
     VariableDef(VariableDef),
     Shell,
+    Error,
 }
 
 impl FromNode for CommandType {
     type Error = FromNodeError;
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
         dbg!(node.to_sexp());
-        match dbg!(node.kind()) {
-            "fix" => Ok(Self::Fix(FixDef::from_node(node, text)?)),
-            "compute" => Ok(Self::Compute(ComputeDef::from_node(node, text)?)),
-            "variable_def" => Ok(Self::VariableDef(VariableDef::from_node(node, text)?)),
+        let mut result = match dbg!(node.kind()) {
+            "fix" => Ok(Self::Fix(FixDef::from_node(node, &text)?)),
+            "compute" => Ok(Self::Compute(ComputeDef::from_node(node, &text)?)),
+            "variable_def" => Ok(Self::VariableDef(VariableDef::from_node(node, &text)?)),
             "shell" => Ok(Self::Shell),
             // Fall back to the generic command type
-            cmd => Ok(Self::GenericCommand(GenericCommand::from_node(node, text)?)),
+            "command" => Ok(Self::GenericCommand(GenericCommand::from_node(
+                node, &text,
+            )?)),
+            _ => Ok(Self::Error),
+        };
+        if let Ok(Self::Error) = result {
+            // NOTE: Check the child node and infer what type of node it was supposed to be
+            // and pass to that parser.
+
+            result = match node.child(0).map(|node| node.kind()) {
+                // Try and pass this as a compute
+                Some("compute") => Ok(Self::Compute(ComputeDef::from_node(node, &text)?)),
+                Some("fix_id") => Ok(Self::Fix(FixDef::from_node(node, &text)?)),
+                Some("variable") => Ok(Self::VariableDef(VariableDef::from_node(node, &text)?)),
+                // Cannot further process
+                // NOTE: This is `Ok` rather than `Error` because syntax errors are also
+                // found within `ErrorFinder`
+                _ => Ok(Self::Error),
+            };
         }
+
+        result
     }
 }
 
@@ -467,9 +489,13 @@ impl FromNode for ComputeDef {
         let mut children = node.children(&mut cursor);
         let text = text.as_ref();
 
-        // skip the fix keyword
+        // skip the compute keyword
         children.next();
-        let compute_id = Ident::new(&children.next().into_err()?, text)?;
+        let compute_id = children
+            .next()
+            .ok_or(Self::Error::PartialNode("missing `compute_id`".to_string()))?;
+
+        let compute_id = Ident::new(&compute_id, text)?;
         let group_id = Word::from_node(&children.next().into_err()?, text)?;
         let compute_style = children.next().into_err()?.utf8_text(text)?.into();
 
@@ -539,8 +565,16 @@ impl FromNode for VariableDef {
             text,
         )?;
 
+        // TODO: Check if is missing node here?
         let args: Result<Vec<Argument>, _> = children
-            .map(|arg| Argument::from_node(&arg, text))
+            .map(|arg| {
+                if arg.is_missing() {
+                    return Err(FromNodeError::PartialNode(
+                        "missing variable expression".to_string(),
+                    ));
+                }
+                Argument::from_node(&arg, text)
+            })
             .collect();
 
         let args = args?;
@@ -650,7 +684,8 @@ mod tests {
 
     #[test]
     fn parse_index_variable() {
-        let text = b"variable file_name index step4.1.atm\n";
+        // let text = "variable file_name index step4.1.atm";
+        let text = include_str!("../../example_input_scripts/in.variable_index");
 
         let tree = parse(text);
 
@@ -658,7 +693,6 @@ mod tests {
         let root_node = tree.root_node();
         let var_def_node = root_node.child(0).unwrap(); // variable node
 
-        dbg!(tree.root_node().to_sexp());
 
         let expected = VariableDef {
             variable_id: Ident {
@@ -683,6 +717,7 @@ mod tests {
         assert!(ast.is_ok());
 
         if let Ok(ast) = ast {
+            dbg!(&ast);
             assert_eq!(ast.commands.len(), 1);
             match &ast.commands[0].command_type {
                 crate::ast::CommandType::VariableDef(var) => {
@@ -818,6 +853,39 @@ mod tests {
             span: ((0, 0)..(0, 23)).into(),
         };
 
+        let variable_node = root_node.child(0).expect("Should find child node.");
+        let parsed = VariableDef::from_node(&variable_node, source_bytes);
+        assert_eq!(parsed, Ok(expected));
+    }
+
+    #[test]
+    fn parse_incomplete_variable_def() {
+        let source_bytes = b"variable a equal";
+
+        let tree = parse(source_bytes);
+
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
+        assert!(!root_node.is_missing());
+
+        let expected = VariableDef {
+            variable_id: Ident {
+                name: "a".into(),
+                ident_type: IdentType::Variable,
+                // TODO: Check this is the type expected.
+                span: ((0, 9)..(0, 10)).into(),
+            },
+            variable_style: Word {
+                contents: "equal".into(),
+                span: ((0, 11)..(0, 16)).into(),
+            },
+
+            args: vec![],
+            span: ((0, 0)..(0, 23)).into(),
+        };
+
+        let ast = ts_to_ast(&tree, &source_bytes);
+        dbg!(ast);
         let variable_node = root_node.child(0).expect("Should find child node.");
         let parsed = VariableDef::from_node(&variable_node, source_bytes);
         assert_eq!(parsed, Ok(expected));

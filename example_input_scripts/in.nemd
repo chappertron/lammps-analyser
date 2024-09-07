@@ -101,7 +101,7 @@ reset_timestep 0
 
 timestep        1
 
-fix 2 all nve what
+fix 2 all nve what 
 
 log ${outputname}.log
 
