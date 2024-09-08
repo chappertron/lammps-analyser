@@ -212,9 +212,7 @@ pub fn unused_variables(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<Un
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 #[error(
-            "{}:{}: {} {} `{}`",
-            ident.start().row + 1,
-            ident.start().column + 1,
+            "{} {} `{}`",
             "Unused",
             ident.ident_type,
             ident.name
@@ -226,7 +224,7 @@ pub struct UnusedIdent {
 impl From<UnusedIdent> for lsp_types::Diagnostic {
     fn from(value: UnusedIdent) -> Self {
         lsp_types::Diagnostic {
-            message: format!("Unused {}: {}", value.ident.ident_type, value.ident.name),
+            message: format!("unused {}: {}", value.ident.ident_type, value.ident.name),
             range: value.ident.range().into_lsp_types(),
             severity: Some(lsp_types::DiagnosticSeverity::WARNING),
             ..Default::default()

@@ -1,7 +1,10 @@
 use owo_colors::OwoColorize;
 use tree_sitter::{Node, Point, TreeCursor};
 
-use crate::{diagnostic_report::ReportSimple, utils::into_error::IntoError};
+use crate::{
+    diagnostic_report::ReportSimple, diagnostics, spanned_error::SpannedError,
+    utils::into_error::IntoError,
+};
 use thiserror::Error;
 
 use super::expressions::ParseExprError;
@@ -23,7 +26,7 @@ pub trait FromNode: Sized {
 // }
 
 // TODO: Just wrap expression parse error??
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 /// An error associated with converting a tree-sitter `Node`.
 pub enum FromNodeError {
     #[error("Could not parse text as UTF-8 {0}")]
@@ -64,6 +67,28 @@ impl<'a> IntoError<Node<'a>> for Option<Node<'a>> {
     type Error = MissingNode;
     fn into_err(self) -> Result<Node<'a>, Self::Error> {
         self.ok_or(MissingNode)
+    }
+}
+
+impl diagnostics::Issue for SpannedError<FromNodeError> {
+    fn diagnostic(&self) -> diagnostics::Diagnostic {
+        let name = match self.error {
+            FromNodeError::Utf8Error(_) => "UTF-8 error",
+            FromNodeError::ParseIntError(_) => "parsing int failed",
+            FromNodeError::ParseFloatError(_) => "parsing float failed",
+            FromNodeError::UnknownCommand { .. } => "unknown command",
+            FromNodeError::UnknownCustom { .. } => "custom error",
+            FromNodeError::ParseExpression(_) => "expression error",
+            FromNodeError::PartialNode(_) => "incomplete command",
+            FromNodeError::InvalidSyntax => "invalid syntax",
+        };
+
+        diagnostics::Diagnostic {
+            name: name.to_string(),
+            severity: diagnostics::Severity::Error,
+            span: self.span,
+            message: self.to_string(),
+        }
     }
 }
 

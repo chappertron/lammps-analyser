@@ -7,7 +7,10 @@
 use anyhow::{Context, Result};
 
 use clap::Parser as ClapParser;
-use lammps_analyser::{diagnostic_report::ReportSimple, input_script};
+use lammps_analyser::{
+    diagnostic_report::{FileNameReport, ReportSimple},
+    input_script,
+};
 use owo_colors::OwoColorize;
 use std::fs::File;
 use tree_sitter::Parser;
@@ -35,7 +38,7 @@ fn main() -> Result<()> {
         .set_language(tree_sitter_lammps::language())
         .context("Could not load tree-sitter language")?;
 
-    let state = input_script::InputScript::new(&source_code, &mut parser)?;
+    let state = input_script::InputScript::new(&source_code)?;
 
     // Output a syntax tree for debugging.
     if cli.output_tree {
@@ -43,25 +46,18 @@ fn main() -> Result<()> {
         state.tree.print_dot_graph(&dot_file);
     }
 
-    // Errors
-    if !state.ast_errors.is_empty() {
-        for error in &state.ast_errors {
-            println!("{}:{}", cli.source.bold(), error.make_simple_report());
-        }
-    }
-
     for issue in &state.issues {
         println!("{}", issue.make_simple_report());
     }
 
     for diagnostic in &state.diagnostics {
-        println!("{}", diagnostic.make_simple_report());
+        println!("{}", diagnostic.make_file_name_report(&cli.source));
     }
-    if !state.issues.is_empty() && !state.diagnostics.is_empty() {
+    if !state.issues.is_empty() || !state.diagnostics.is_empty() {
         // TODO:   Count warnings separately!!!
         let n_errors = state.issues.len() + state.diagnostics.len();
         println!(
-            "{}: {} issues{} found 😞",
+            "{}: {} issue{} found 😞",
             cli.source.bold(),
             n_errors.bright_red(),
             if n_errors == 1 { "" } else { "s" },

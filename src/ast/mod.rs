@@ -120,8 +120,7 @@ pub enum CommandType {
 impl FromNode for CommandType {
     type Error = FromNodeError;
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
-        dbg!(node.to_sexp());
-        let mut result = match dbg!(node.kind()) {
+        let mut result = match node.kind() {
             "fix" => Ok(Self::Fix(FixDef::from_node(node, &text)?)),
             "compute" => Ok(Self::Compute(ComputeDef::from_node(node, &text)?)),
             "variable_def" => Ok(Self::VariableDef(VariableDef::from_node(node, &text)?)),
@@ -425,7 +424,6 @@ impl FromNode for FixDef {
 
     /// TODO: Hand a cursor instead???
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
-        dbg!(node.to_sexp());
         let span = node.range().into();
         let mut cursor = node.walk();
         let text = text.as_ref();
@@ -568,7 +566,7 @@ impl FromNode for VariableDef {
                 "missing variable identifier".to_string(),
             ))?;
 
-        let variable_ident = dbg!(Ident::new(&variable_ident, text)?);
+        let variable_ident = Ident::new(&variable_ident, text)?;
 
         // TODO: Make this missing thing nicer.
         let variable_kind = Word::from_node(

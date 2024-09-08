@@ -8,6 +8,11 @@ pub trait ReportSimple {
     fn make_simple_report(&self) -> String;
 }
 
+pub trait FileNameReport {
+    /// Simply output a string that is printed to the screen.
+    fn make_file_name_report(&self, filename: &str) -> String;
+}
+
 pub trait LspDiagnostic: Display {
     /// Convert the error into an LSP Diagnostic
     /// If the report requires more information than is on the type and the source code,

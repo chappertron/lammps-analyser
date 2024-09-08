@@ -1,6 +1,7 @@
 use crate::check_commands::invalid_arguments::InvalidArguments;
 use crate::check_styles::InvalidStyle;
 use crate::diagnostic_report::ReportSimple;
+use crate::diagnostics::Issue;
 use crate::error_finder::SyntaxError;
 use crate::identifinder::{UndefinedIdent, UnusedIdent};
 
@@ -42,6 +43,22 @@ impl From<Warnings> for lsp_types::Diagnostic {
     fn from(value: Warnings) -> Self {
         match value {
             Warnings::UnusedIdent(e) => e.into(),
+        }
+    }
+}
+
+impl Issue for Warnings {
+    fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
+        match self {
+            Self::UnusedIdent(v) => {
+                let name = "unused identifier";
+                crate::diagnostics::Diagnostic {
+                    name: name.to_string(),
+                    severity: crate::diagnostics::Severity::Warning,
+                    span: v.ident.span,
+                    message: self.to_string(),
+                }
+            }
         }
     }
 }

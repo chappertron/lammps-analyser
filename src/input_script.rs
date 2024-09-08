@@ -1,6 +1,10 @@
-use crate::check_commands;
+use std::fmt::Debug;
+
+use crate::check_commands::{self};
+use crate::error_finder::SyntaxError;
 use crate::issues::Issue as ScriptIssue;
 use crate::lammps_errors::Warnings;
+use crate::utils;
 use crate::{
     ast::from_node::FromNodeError, check_styles::check_styles, diagnostics::Issue,
     error_finder::ErrorFinder, spanned_error::SpannedError,
@@ -34,15 +38,24 @@ pub struct InputScript<'src> {
     pub tree: Tree,
     /// The higher level abstract syntax tree
     pub ast: Ast,
-    pub ast_errors: Vec<SpannedError<FromNodeError>>,
     pub identifinder: IdentiFinder,
     pub error_finder: ErrorFinder,
+    parser: LmpParser,
+}
+
+/// Implemented so `Debug` can be derived for `InputScript`
+struct LmpParser(Parser);
+impl Debug for LmpParser {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("LmpParser").field(&"Parser").finish()
+    }
 }
 
 impl<'src> InputScript<'src> {
     /// Monolithic method that reads the lammps source code.
     /// Parser is taken as input rather than stored because it does not implement debug.
-    pub fn new(source_code: &'src str, parser: &mut Parser) -> Result<Self> {
+    pub fn new(source_code: &'src str) -> Result<Self> {
+        let mut parser = utils::parsing::setup_parser();
         let tree = parser
             .parse(source_code, None)
             .context("Failed to load the TS grammar.")?;
@@ -90,11 +103,15 @@ impl<'src> InputScript<'src> {
 
         let invalid_styles = check_styles(&tree, source_code)?;
 
-        issues.extend(
-            syntax_errors
-                .iter()
-                .map(|x| LammpsError::from(x.clone()).into()),
+        diagnostics.extend(
+            unused_variables(identifinder.symbols())
+                .into_iter()
+                .map(|x| Warnings::from(x).diagnostic()),
         );
+
+        // TODO: convert to diagnostics
+        diagnostics.extend(syntax_errors.iter().cloned().map(|x| x.diagnostic()));
+
         issues.extend(
             undefined_fixes
                 .into_iter()
@@ -105,23 +122,29 @@ impl<'src> InputScript<'src> {
                 .into_iter()
                 .map(|x| LammpsError::from(x).into()),
         );
+
         issues.extend(
-            unused_variables(identifinder.symbols())
+            ast_errors
                 .into_iter()
-                .map(|x| Warnings::from(x).into()),
+                .map(|x| LammpsError::from(SyntaxError::from(x)).into()),
         );
 
         diagnostics.extend(fix_errors);
 
         Ok(Self {
+            parser: LmpParser(parser),
             source_code,
             tree,
             issues,
             ast,
-            ast_errors,
             diagnostics,
             identifinder,
             error_finder,
         })
+    }
+
+    fn issues(&self) -> impl Iterator<Item = Diagnostic> {
+        todo!();
+        vec![].into_iter()
     }
 }

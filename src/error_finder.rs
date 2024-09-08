@@ -1,3 +1,5 @@
+use crate::ast::from_node::{self, FromNodeError};
+use crate::spanned_error::SpannedError;
 use crate::spans::Point;
 use crate::{diagnostics::Issue, spans::Span};
 use anyhow::{Context, Result};
@@ -121,19 +123,31 @@ impl Debug for ErrorFinder {
     }
 }
 
-#[derive(Error, Debug, PartialEq, Eq, Clone, Hash)]
+#[derive(Error, Debug, PartialEq, Eq, Clone)]
 #[error("{0}")]
 pub enum SyntaxError {
     /// A token was expected, but none was found.
     MissingToken(MissingToken),
     /// Some other parsing error.
     ParseError(ParseError),
+    /// There was an error parsing the AST
+    AstError(AstError),
 }
+
+impl From<AstError> for SyntaxError {
+    fn from(v: AstError) -> Self {
+        Self::AstError(v)
+    }
+}
+
+type AstError = SpannedError<FromNodeError>;
+
 impl ReportSimple for SyntaxError {
     fn make_simple_report(&self) -> String {
         match self {
             Self::ParseError(parse_error) => parse_error.make_simple_report(),
             Self::MissingToken(missing_token) => missing_token.make_simple_report(),
+            Self::AstError(err) => err.make_simple_report(),
         }
     }
 }
@@ -143,6 +157,7 @@ impl Issue for SyntaxError {
         match self {
             Self::MissingToken(err) => err.diagnostic(),
             Self::ParseError(err) => err.diagnostic(),
+            Self::AstError(err) => err.diagnostic(),
         }
     }
 }
@@ -174,13 +189,23 @@ impl From<SyntaxError> for lsp_types::Diagnostic {
                 None,
                 None,
             ),
+
+            SyntaxError::AstError(err) => LspDiagnostic::new(
+                err.span.into_lsp_types(),
+                Some(DiagnosticSeverity::ERROR),
+                None,
+                None,
+                err.to_string(),
+                None,
+                None,
+            ),
         }
     }
 }
 
 // Perhaps store message into this
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Error)]
-#[error(" {} `{}`", "Invalid Syntax", text)]
+#[error(" {} `{}`", "invalid syntax:", text)]
 pub struct ParseError {
     pub text: String,
     pub start: Point,
@@ -192,7 +217,7 @@ impl ReportSimple for ParseError {
             "{}:{}: {} `{}`",
             self.start.row + 1,
             self.start.column + 1,
-            "Invalid Syntax:".bright_red(),
+            "invalid syntax:".bright_red(),
             self.text
         )
     }
@@ -201,19 +226,19 @@ impl ReportSimple for ParseError {
 impl Issue for ParseError {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         crate::diagnostics::Diagnostic {
-            name: "Syntax error:".to_owned(),
-            severity: crate::diagnostics::Severity::Warning,
+            name: "syntax error:".to_owned(),
+            severity: crate::diagnostics::Severity::Error,
             span: Span {
                 start: self.start,
                 end: self.end,
             },
-            message: format!("Invalid Syntax `{}`", self.text),
+            message: format!("invalid syntax `{}`", self.text),
         }
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Hash, Error)]
-#[error("Syntax error: missing {kind}")]
+#[error("syntax error: missing {kind}")]
 pub struct MissingToken {
     pub start: Point,
     pub kind: String,

@@ -1,6 +1,10 @@
 use std::{error::Error, fmt::Display};
 
-use crate::{diagnostic_report::ReportSimple, spans::Span};
+use crate::{
+    diagnostic_report::ReportSimple,
+    diagnostics::{self, Issue},
+    spans::Span,
+};
 use thiserror::Error;
 
 /// A simple type that adds an associated `Span` to an error.

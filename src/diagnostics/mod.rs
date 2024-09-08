@@ -1,7 +1,10 @@
 use owo_colors::OwoColorize;
 use std::fmt::Display;
 
-use crate::{diagnostic_report::ReportSimple, spans::Span};
+use crate::{
+    diagnostic_report::{FileNameReport, ReportSimple},
+    spans::Span,
+};
 
 /// Indicate that the implement represents an issue that within a LAMMPS script.
 ///
@@ -14,7 +17,7 @@ pub trait Issue: Sized {
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
 pub struct Diagnostic {
     /// Name of the diagnostic.
-    pub name: String,
+    pub name: String, // TODO: make a static str
     /// How bad is the diagnostic?
     pub severity: Severity,
     /// The span of the input script responsible for the diagnostic.
@@ -28,12 +31,28 @@ impl ReportSimple for Diagnostic {
         let start = self.span.start;
 
         format!(
-            "{}: {}:{}: {}",
-            self.severity.coloured_display(),
+            "{}: {}:{}:  {}",
+            self.severity.coloured_display().bold(),
             start.row + 1,
             start.column + 1,
             // TODO: Colour this based on the severity of the Issue.
-            self.message
+            self.message.bold()
+        )
+    }
+}
+
+impl FileNameReport for Diagnostic {
+    fn make_file_name_report(&self, filename: &str) -> String {
+        let start = self.span.start;
+
+        format!(
+            "{}: {} in {}:{}:{}",
+            self.severity.coloured_display().bold(),
+            // TODO: Colour this based on the severity of the Issue.
+            self.message.bold(),
+            filename,
+            start.row + 1,
+            start.column + 1,
         )
     }
 }
@@ -84,11 +103,12 @@ impl From<Severity> for lsp_types::DiagnosticSeverity {
 
 impl Severity {
     fn coloured_display(&self) -> String {
+        let repr = self.to_string().to_lowercase();
         match self {
-            Self::Hint => format!("{}", self.bright_green()),
-            Self::Info => format!("{}", self.bright_blue()),
-            Self::Warning => format!("{}", self.bright_yellow()),
-            Self::Error => format!("{}", self.bright_red()),
+            Self::Hint => format!("{}", repr.bright_green()),
+            Self::Info => format!("{}", repr.bright_blue()),
+            Self::Warning => format!("{}", repr.bright_yellow()),
+            Self::Error => format!("{}", repr.bright_red()),
         }
     }
 }
