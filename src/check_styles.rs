@@ -1,11 +1,12 @@
 use crate::compute_styles::ComputeStyle;
-use crate::utils::point_to_position;
+use crate::diagnostics::{self, Issue};
+use crate::spans::{Point, Span};
 use crate::{diagnostic_report::ReportSimple, fix_styles::FixStyle};
 use anyhow::Result;
 use owo_colors::OwoColorize;
 use std::fmt::Display;
 use thiserror::Error;
-use tree_sitter::{Point, Query, QueryCursor, Tree};
+use tree_sitter::{Query, QueryCursor, Tree};
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[error("{}:{}: {} {} `{}`",start.row+1,start.column+1,"Invalid",style_type,name)]
@@ -27,12 +28,27 @@ impl ReportSimple for InvalidStyle {
         )
     }
 }
+
+impl Issue for InvalidStyle {
+    fn diagnostic(&self) -> diagnostics::Diagnostic {
+        diagnostics::Diagnostic {
+            name: "invalid style".to_string(),
+            severity: diagnostics::Severity::Error,
+            span: Span {
+                start: self.start,
+                end: self.end,
+            },
+            message: format!("invalid {}: `{}`", self.style_type, self.name),
+        }
+    }
+}
+
 impl From<InvalidStyle> for lsp_types::Diagnostic {
     fn from(value: InvalidStyle) -> Self {
         lsp_types::Diagnostic::new_simple(
             lsp_types::Range {
-                start: point_to_position(&value.start),
-                end: point_to_position(&value.end),
+                start: value.start.into_lsp_type(),
+                end: value.end.into_lsp_type(),
             },
             value.to_string(),
         )
@@ -85,8 +101,8 @@ pub fn check_styles(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Vec<InvalidSt
 
             if let (StyleType::Fix, FixStyle::InvalidStyle) = (&style_type, style.into()) {
                 Some(InvalidStyle {
-                    start: mat.captures[0].node.start_position(),
-                    end: mat.captures[0].node.end_position(),
+                    start: mat.captures[0].node.start_position().into(),
+                    end: mat.captures[0].node.end_position().into(),
                     name: style.to_string(),
                     style_type: StyleType::Fix,
                 })
@@ -94,8 +110,8 @@ pub fn check_styles(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Vec<InvalidSt
                 (&style_type, style.into())
             {
                 Some(InvalidStyle {
-                    start: mat.captures[0].node.start_position(),
-                    end: mat.captures[0].node.end_position(),
+                    start: mat.captures[0].node.start_position().into(),
+                    end: mat.captures[0].node.end_position().into(),
                     name: style.to_string(),
                     style_type: StyleType::Compute,
                 })

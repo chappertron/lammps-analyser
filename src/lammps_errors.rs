@@ -50,15 +50,18 @@ impl From<Warnings> for lsp_types::Diagnostic {
 impl Issue for Warnings {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         match self {
-            Self::UnusedIdent(v) => {
-                let name = "unused identifier";
-                crate::diagnostics::Diagnostic {
-                    name: name.to_string(),
-                    severity: crate::diagnostics::Severity::Warning,
-                    span: v.ident.span,
-                    message: self.to_string(),
-                }
-            }
+            Self::UnusedIdent(v) => v.diagnostic(),
+        }
+    }
+}
+
+impl Issue for LammpsError {
+    fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
+        match self {
+            Self::SyntaxError(e) => e.diagnostic(),
+            Self::InvalidStyle(e) => e.diagnostic(),
+            Self::UndefinedIdent(e) => e.diagnostic(),
+            Self::InvalidArguments(e) => e.diagnostic(),
         }
     }
 }

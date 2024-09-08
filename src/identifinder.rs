@@ -1,4 +1,7 @@
-use crate::spans::{Point, Span};
+use crate::{
+    diagnostics::Issue,
+    spans::{Point, Span},
+};
 use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use std::{
@@ -211,12 +214,7 @@ pub fn unused_variables(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<Un
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
-#[error(
-            "{} {} `{}`",
-            "Unused",
-            ident.ident_type,
-            ident.name
-)]
+#[error("unused {} `{}`", ident.ident_type, ident.name)]
 pub struct UnusedIdent {
     pub ident: Ident,
 }
@@ -224,7 +222,7 @@ pub struct UnusedIdent {
 impl From<UnusedIdent> for lsp_types::Diagnostic {
     fn from(value: UnusedIdent) -> Self {
         lsp_types::Diagnostic {
-            message: format!("unused {}: {}", value.ident.ident_type, value.ident.name),
+            message: format!("unused {} `{}`", value.ident.ident_type, value.ident.name),
             range: value.ident.range().into_lsp_types(),
             severity: Some(lsp_types::DiagnosticSeverity::WARNING),
             ..Default::default()
@@ -405,13 +403,31 @@ impl From<IdentType> for lsp_types::SymbolKind {
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
-#[error("{}:{}: {} {} `{}`",
-        ident.span.start.row+1,
-        ident.span.start.column+1,
-        "Undefined",
-        ident.ident_type,ident.name)]
+#[error("undefined {} `{}`", ident.ident_type,ident.name)]
 pub struct UndefinedIdent {
     pub ident: Ident,
+}
+impl Issue for UnusedIdent {
+    fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
+        let name = "unused identifier";
+        crate::diagnostics::Diagnostic {
+            name: name.to_string(),
+            severity: crate::diagnostics::Severity::Warning,
+            span: self.ident.span,
+            message: self.to_string(),
+        }
+    }
+}
+impl Issue for UndefinedIdent {
+    fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
+        let name = "undefined identifier";
+        crate::diagnostics::Diagnostic {
+            name: name.to_string(),
+            severity: crate::diagnostics::Severity::Error,
+            span: self.ident.span,
+            message: self.to_string(),
+        }
+    }
 }
 
 impl ReportSimple for UndefinedIdent {

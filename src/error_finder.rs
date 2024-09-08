@@ -1,4 +1,4 @@
-use crate::ast::from_node::{self, FromNodeError};
+use crate::ast::from_node::FromNodeError;
 use crate::spanned_error::SpannedError;
 use crate::spans::Point;
 use crate::{diagnostics::Issue, spans::Span};
