@@ -880,8 +880,6 @@ mod tests {
 
         let expected =
             FromNodeError::PartialNode("missing arguments in variable command".to_string());
-        let ast = ts_to_ast(&tree, &source_bytes);
-        dbg!(ast);
 
         let variable_node = root_node.child(0).expect("Should find child node.");
         let parsed = VariableDef::from_node(&variable_node, source_bytes);

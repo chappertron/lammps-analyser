@@ -123,3 +123,22 @@ impl Display for Severity {
         }
     }
 }
+
+impl From<Diagnostic> for lsp_types::Diagnostic {
+    fn from(value: Diagnostic) -> Self {
+        let Diagnostic {
+            severity,
+            span,
+            message,
+            ..
+        } = value;
+
+        lsp_types::Diagnostic {
+            range: span.into_lsp_types(),
+            severity: Some(severity.into()),
+            source: Some("lammps-analyser".into()),
+            message: message,
+            ..Default::default()
+        }
+    }
+}
