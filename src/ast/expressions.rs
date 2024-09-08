@@ -120,8 +120,6 @@ impl From<MissingNode> for ParseExprError {
 impl Expression {
     /// TODO: Handle Errors
     pub(crate) fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Self, ParseExprError> {
-        // dbg!(node);
-
         // TODO: Handle missing node
         if node.is_missing() {
             return Err(ParseExprError::MissingToken);
@@ -163,7 +161,7 @@ impl Expression {
                 // child 0 = function name
                 // child 1 = opening bracket
                 for node in node.children(&mut cursor).skip(2) {
-                    dbg!(node.utf8_text(text)?);
+                    node.utf8_text(text)?;
                     if node.kind() == ")" {
                         break;
                     }

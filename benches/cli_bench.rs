@@ -15,7 +15,7 @@ pub fn read_script_w_errors(c: &mut Criterion) {
 
     c.bench_function("read in.nemd", |b| {
         b.iter(|| {
-            black_box(InputScript::new(source, &mut parser).expect("failed to catch errors."));
+            black_box(InputScript::new(source).expect("failed to catch errors."));
         })
     });
 }
