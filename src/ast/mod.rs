@@ -636,7 +636,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use crate::ast::expressions::{BinaryOp, Expression};
-    use crate::ast::from_node::FromNode;
+    use crate::ast::from_node::{FromNode, FromNodeError};
     use crate::ast::{Argument, ComputeDef, FixDef, VariableDef};
     use crate::ast::{ArgumentKind, Word};
     use crate::compute_styles::ComputeStyle;
@@ -878,28 +878,14 @@ mod tests {
         dbg!(root_node.to_sexp());
         assert!(!root_node.is_missing());
 
-        let expected = VariableDef {
-            variable_id: Ident {
-                name: "a".into(),
-                ident_type: IdentType::Variable,
-                // TODO: Check this is the type expected.
-                span: ((0, 9)..(0, 10)).into(),
-            },
-            variable_style: Word {
-                contents: "equal".into(),
-                span: ((0, 11)..(0, 16)).into(),
-            },
-
-            args: vec![],
-            span: ((0, 0)..(0, 23)).into(),
-        };
-
+        let expected =
+            FromNodeError::PartialNode("missing arguments in variable command".to_string());
         let ast = ts_to_ast(&tree, &source_bytes);
         dbg!(ast);
 
         let variable_node = root_node.child(0).expect("Should find child node.");
         let parsed = VariableDef::from_node(&variable_node, source_bytes);
-        assert_eq!(parsed, Ok(expected));
+        assert_eq!(parsed, Err(expected));
     }
 
     #[test]
