@@ -7,10 +7,7 @@
 use anyhow::{Context, Result};
 
 use clap::Parser as ClapParser;
-use lammps_analyser::{
-    diagnostic_report::{FileNameReport, ReportSimple},
-    input_script,
-};
+use lammps_analyser::{diagnostic_report::FileNameReport, input_script};
 use owo_colors::OwoColorize;
 use std::fs::File;
 use tree_sitter::Parser;
@@ -46,16 +43,12 @@ fn main() -> Result<()> {
         state.tree.print_dot_graph(&dot_file);
     }
 
-    for issue in &state.issues {
-        println!("{}", issue.make_simple_report());
-    }
-
     for diagnostic in &state.diagnostics {
         println!("{}", diagnostic.make_file_name_report(&cli.source));
     }
-    if !state.issues.is_empty() || !state.diagnostics.is_empty() {
+    if !state.diagnostics.is_empty() {
         // TODO:   Count warnings separately!!!
-        let n_errors = state.issues.len() + state.diagnostics.len();
+        let n_errors = state.diagnostics.len();
         println!(
             "{}: {} issue{} found 😞",
             cli.source.bold(),

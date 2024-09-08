@@ -2,13 +2,9 @@ use std::fmt::Debug;
 
 use crate::check_commands::{self};
 use crate::error_finder::SyntaxError;
-use crate::issues::Issue as ScriptIssue;
 use crate::lammps_errors::Warnings;
 use crate::utils;
-use crate::{
-    ast::from_node::FromNodeError, check_styles::check_styles, diagnostics::Issue,
-    error_finder::ErrorFinder, spanned_error::SpannedError,
-};
+use crate::{check_styles::check_styles, diagnostics::Issue, error_finder::ErrorFinder};
 
 use crate::identifinder::unused_variables;
 
@@ -33,18 +29,18 @@ pub struct InputScript<'src> {
     // TODO: add a file name.
     pub source_code: &'src str,
     pub diagnostics: Vec<Diagnostic>,
-    pub issues: Vec<ScriptIssue>, // TODO: Use the new issue trait?
     /// The tree_sitter concrete tree
     pub tree: Tree,
     /// The higher level abstract syntax tree
     pub ast: Ast,
     pub identifinder: IdentiFinder,
     pub error_finder: ErrorFinder,
-    parser: LmpParser,
+    _parser: LmpParser,
 }
 
 /// Implemented so `Debug` can be derived for `InputScript`
 struct LmpParser(Parser);
+
 impl Debug for LmpParser {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("LmpParser").field(&"Parser").finish()
@@ -60,7 +56,6 @@ impl<'src> InputScript<'src> {
             .parse(source_code, None)
             .context("Failed to load the TS grammar.")?;
 
-        let mut issues: Vec<ScriptIssue> = Vec::new();
         let mut diagnostics: Vec<Diagnostic> = Vec::new();
 
         let ast = ts_to_ast(&tree, source_code);
@@ -76,7 +71,7 @@ impl<'src> InputScript<'src> {
             .commands
             .iter()
             .filter_map(|command| {
-                // TODO: Use a checkcommand function that checks all command types.
+                // TODO: Use a check command function that checks all command types.
                 if let CommandType::Fix(fix) = &command.command_type {
                     Some(check_commands::fixes::check_fix(fix))
                 } else if let CommandType::Compute(compute) = &command.command_type {
@@ -97,11 +92,16 @@ impl<'src> InputScript<'src> {
         };
 
         let mut error_finder = ErrorFinder::new()?;
-        _ = error_finder.find_syntax_errors(&tree, source_code)?;
+
+        error_finder.find_syntax_errors(&tree, source_code)?;
         error_finder.find_missing_nodes(&tree)?;
+
         let syntax_errors = error_finder.syntax_errors();
 
         let invalid_styles = check_styles(&tree, source_code)?;
+
+        // These first because they are likely least severe.
+        diagnostics.extend(fix_errors);
 
         diagnostics.extend(
             unused_variables(identifinder.symbols())
@@ -109,33 +109,32 @@ impl<'src> InputScript<'src> {
                 .map(|x| Warnings::from(x).diagnostic()),
         );
 
-        // TODO: convert to diagnostics
+        // TODO: return owned syntax errors to remove cloning
         diagnostics.extend(syntax_errors.iter().cloned().map(|x| x.diagnostic()));
 
-        issues.extend(
+        // TODO: convert to diagnostics
+        diagnostics.extend(
             undefined_fixes
                 .into_iter()
-                .map(|x| LammpsError::from(x).into()),
+                .map(|x| LammpsError::from(x).diagnostic()),
         );
-        issues.extend(
+
+        diagnostics.extend(
             invalid_styles
                 .into_iter()
-                .map(|x| LammpsError::from(x).into()),
+                .map(|x| LammpsError::from(x).diagnostic()),
         );
 
-        issues.extend(
+        diagnostics.extend(
             ast_errors
                 .into_iter()
-                .map(|x| LammpsError::from(SyntaxError::from(x)).into()),
+                .map(|x| LammpsError::from(SyntaxError::from(x)).diagnostic()),
         );
 
-        diagnostics.extend(fix_errors);
-
         Ok(Self {
-            parser: LmpParser(parser),
+            _parser: LmpParser(parser),
             source_code,
             tree,
-            issues,
             ast,
             diagnostics,
             identifinder,
@@ -143,8 +142,7 @@ impl<'src> InputScript<'src> {
         })
     }
 
-    fn issues(&self) -> impl Iterator<Item = Diagnostic> {
-        todo!();
-        vec![].into_iter()
+    pub fn diagnostics(&self) -> impl Iterator<Item = &Diagnostic> {
+        self.diagnostics.iter()
     }
 }
