@@ -1,6 +1,6 @@
 [package]
 name = "lammps-analyser"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 repository = "https://github.com/chappertron/lammps-analyser"
 
@@ -32,7 +32,7 @@ tokio = { version = "1.32.0", features = [
 ] }
 tower-lsp = "0.20.0"
 tree-sitter = "0.20.10"
-tree-sitter-lammps = { path = "../tree-sitter-lammps" }
+tree-sitter-lammps = { path = "../tree-sitter-lammps", version = "0.0.2" }
 
 [dev-dependencies]
 criterion = "0.3"
