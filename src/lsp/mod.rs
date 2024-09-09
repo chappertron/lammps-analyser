@@ -57,6 +57,9 @@ pub const TOKEN_TYPES: [SemanticTokenType; 3] = [ST::KEYWORD, ST::TYPE, ST::FUNC
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
+        let new: Arc<[u8]> = vec![1u8; 20].into_boxed_slice().into();
+        let new_scalar: Arc<u8> = Arc::new(1u8);
+
         Ok(InitializeResult {
             server_info: Some(ServerInfo {
                 name: "LAMMPS Analyser".into(),

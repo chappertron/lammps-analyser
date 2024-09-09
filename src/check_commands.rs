@@ -20,7 +20,7 @@ pub mod utils;
 
 #[derive(Debug, Clone, Eq, PartialEq, Error)]
 pub enum InvalidCommand {
-    #[error("Unknown command: {0}")]
+    #[error("unknown command: `{0}`")]
     UnknownCommand(String, Span),
     #[error("{0}")]
     InvalidArguments(InvalidArguments),
@@ -75,7 +75,7 @@ impl Ast {
                         None
                     }
                 }
-                _ => todo!(),
+                _ => None,
             })
     }
 }

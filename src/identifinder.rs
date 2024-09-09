@@ -1,4 +1,5 @@
 use crate::{
+    ast::from_node::{FromNode, FromNodeError},
     diagnostics::Issue,
     spans::{Point, Span},
 };
@@ -8,7 +9,6 @@ use std::{
     collections::HashMap,
     fmt::{Debug, Display},
     hash::Hash,
-    str::Utf8Error,
 };
 use thiserror::Error;
 use tree_sitter::{Node, Query, QueryCursor, Tree};
@@ -263,6 +263,36 @@ pub struct Ident {
     pub ident_type: IdentType,
     pub span: Span,
 }
+
+impl FromNode for Ident {
+    type Error = FromNodeError;
+
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> std::result::Result<Self, Self::Error> {
+        let text = text.as_ref();
+        let ident_type = match node.kind() {
+            "fix_id" => IdentType::Fix,
+            "compute_id" => IdentType::Compute,
+            "variable" => IdentType::Variable,
+            "f_" => IdentType::Fix,
+            "c_" => IdentType::Compute,
+            "v_" => IdentType::Variable,
+            k => {
+                return Err(FromNodeError::PartialNode(format!(
+                    "invalid identifier kind {k}"
+                )))
+            }
+        };
+
+        let name = node.utf8_text(text)?.to_string();
+
+        Ok(Ident {
+            name,
+            ident_type,
+            span: node.range().into(),
+        })
+    }
+}
+
 impl Ident {
     /// Parses the node and text into an Ident
     /// Uses the node kind to determine the identifinder type
@@ -270,25 +300,8 @@ impl Ident {
     ///
     /// # Panics
     /// Panics if the node matches an invalid identifier type.
-    pub fn new(node: &Node, text: &[u8]) -> Result<Self, Utf8Error> {
-        let name = node.utf8_text(text)?.to_string();
-
-        let ident_type = match node.kind() {
-            "fix_id" => IdentType::Fix,
-            "compute_id" => IdentType::Compute,
-            "variable" => IdentType::Variable,
-            // FIXME: These were added to fix a bug. I don't know if this is correct
-            "f_" => IdentType::Fix,
-            "c_" => IdentType::Compute,
-            "v_" => IdentType::Variable,
-            x => unreachable!("Unknown identifier type {x}"), // TODO: Make this not panic
-        };
-
-        Ok(Ident {
-            name,
-            ident_type,
-            span: node.range().into(),
-        })
+    pub fn new(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+        Self::from_node(node, text)
     }
 
     pub fn range(&self) -> Span {

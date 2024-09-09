@@ -10,7 +10,10 @@ use crate::{identifinder::Ident, utils::into_error::IntoError};
 use std::convert::TryFrom;
 use thiserror::Error;
 
-use super::{from_node::MissingNode, Word};
+use super::{
+    from_node::{FromNodeError, MissingNode},
+    Word,
+};
 
 #[derive(Debug, Default, PartialEq, Clone)]
 /// An mathematical expression in LAMMPS
@@ -119,15 +122,15 @@ impl From<MissingNode> for ParseExprError {
 
 impl Expression {
     /// TODO: Handle Errors
-    pub(crate) fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Self, ParseExprError> {
+    pub(crate) fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Self, FromNodeError> {
         // TODO: Handle missing node
         if node.is_missing() {
-            return Err(ParseExprError::MissingToken);
+            return Err(ParseExprError::MissingToken.into());
         }
 
         if let Some(child) = node.child(0) {
             if child.is_missing() {
-                return Err(ParseExprError::MissingToken);
+                return Err(ParseExprError::MissingToken.into());
             }
         }
 
@@ -190,8 +193,8 @@ impl Expression {
             },
             "thermo_kwarg" => Ok(Self::ThermoKeyword(Word::parse_word(node, text)?)),
             "word" => Ok(Self::Word(Word::parse_word(node, text)?)),
-            "ERROR" => Err(ParseExprError::ErrorNode),
-            x => Err(ParseExprError::UnknownExpressionType(x.to_owned())),
+            "ERROR" => Err(ParseExprError::ErrorNode.into()),
+            x => Err(ParseExprError::UnknownExpressionType(x.to_owned()).into()),
         }
         // todo!()
     }
