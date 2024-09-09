@@ -103,6 +103,8 @@ impl<'src> InputScript<'src> {
         // These first because they are likely least severe.
         diagnostics.extend(fix_errors);
 
+        diagnostics.extend(ast.check_commands().map(|e| e.diagnostic()));
+
         diagnostics.extend(
             unused_variables(identifinder.symbols())
                 .into_iter()
