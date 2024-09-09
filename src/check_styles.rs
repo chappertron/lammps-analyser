@@ -3,7 +3,7 @@ use crate::diagnostics::{self, Issue};
 use crate::fix_styles::FixStyle;
 use crate::spans::{Point, Span};
 use anyhow::Result;
-use owo_colors::OwoColorize;
+use once_cell::sync::Lazy;
 use std::fmt::Display;
 use thiserror::Error;
 use tree_sitter::{Query, QueryCursor, Tree};
@@ -63,30 +63,36 @@ impl Display for StyleType {
         }
     }
 }
+static STYLE_QUERY: Lazy<Query> = Lazy::new(|| {
+    Query::new(
+        tree_sitter_lammps::language(),
+        "(fix (fix_style) @definition.fix) (compute (compute_style) @definition.compute) ",
+    )
+    .expect("Invalid TS query")
+});
 
 // TODO: Check these by using the AST
+// TODO: Also check other types of style.
 /// Checks the tree for different fix and compute styles and checks if they exist or not!!!
 pub fn check_styles(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Vec<InvalidStyle>> {
     let text = text.as_ref();
-    let query = Query::new(
-        tree.language(),
-        "(fix (fix_style) @definition.fix) (compute (compute_style) @definition.compute) ",
-    )?;
 
     let mut query_cursor = QueryCursor::new();
 
-    let matches = query_cursor.matches(&query, tree.root_node(), text);
+    let matches = query_cursor.matches(&STYLE_QUERY, tree.root_node(), text);
 
     Ok(matches
         .into_iter()
         .filter_map(|mat| {
             let style = mat.captures[0].node.utf8_text(text).ok()?;
+
             let style_type = match mat.captures[0].node.kind() {
                 "fix_style" => StyleType::Fix,
                 "compute_style" => StyleType::Compute,
                 _ => unreachable!(),
             };
 
+            // TODO: make this a match statement somehow
             if let (StyleType::Fix, FixStyle::InvalidStyle) = (&style_type, style.into()) {
                 Some(InvalidStyle {
                     start: mat.captures[0].node.start_position().into(),
