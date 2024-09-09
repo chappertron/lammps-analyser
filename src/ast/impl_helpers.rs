@@ -1,0 +1,70 @@
+use itertools::Itertools;
+
+use crate::spans::{Point, Span};
+
+use crate::ast;
+
+impl ast::Ast {
+    /// Find the command corresponding to a given point
+    pub fn find_point(&self, point: &Point) -> Option<&ast::CommandNode> {
+        self.commands
+            .iter()
+            .find(|cmd| cmd.range.start <= *point && cmd.range.end >= *point)
+    }
+
+    /// An iterator over references to run commands
+    pub fn find_run_commands(&self) -> impl Iterator<Item = &ast::CommandNode> {
+        // TODO: also include `minimize` and `rerun` commands
+        self.commands.iter().filter(|cmd| {
+            if let ast::CommandType::GenericCommand(c) = &cmd.command_type {
+                c.name.contents == "run"
+            } else {
+                false
+            }
+        })
+    }
+
+    // TODO: Is this lifetime bound correct?
+    /// Find the spans of commands before a each run command.
+    ///
+    /// These spans start at the end of the previous run command and end at the start of teh
+    /// current run command
+    ///
+    /// The first span starts at line zero column zero
+    pub fn find_run_blocks(&self) -> impl Iterator<Item = Span> + '_ {
+        let run_definitions = self.find_run_commands();
+        // spans of the run command themsevles
+        let run_spans = run_definitions.map(|cmd| cmd.span());
+
+        // The spans of the blocks of commands defined before run commands.
+        std::iter::once(Span {
+            start: Default::default(),
+            end: Default::default(),
+        })
+        .chain(run_spans)
+        .tuple_windows()
+        .map(|(cmd1, cmd2)| Span {
+            start: cmd1.end,
+            end: cmd2.start,
+        })
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::input_script::InputScript;
+
+    use super::*;
+    #[test]
+    fn test_find_run_commands() {
+        let file = include_str!("../../example_input_scripts/in.nemd");
+
+        let input_script = InputScript::new(&file).unwrap();
+
+        let run_commands: Vec<_> = input_script.ast.find_run_commands().cloned().collect();
+
+        assert_eq!(run_commands.len(), 2);
+        assert_eq!(run_commands[0].span(), Span::from((130, 0)..(130, 17)));
+        assert_eq!(run_commands[1].span(), Span::from((141, 0)..(141, 6)));
+    }
+}

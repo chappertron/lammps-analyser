@@ -7,6 +7,7 @@
 pub mod expressions;
 pub mod find_node;
 pub mod from_node;
+pub mod impl_helpers;
 
 use crate::{
     spanned_error::SpannedError,
@@ -35,15 +36,6 @@ pub struct Ast {
 pub struct PartialAst {
     pub ast: Ast,
     pub errors: Vec<SpannedError<FromNodeError>>,
-}
-
-impl Ast {
-    /// Find the command corresponding to a given point
-    pub fn find_point(&self, point: &Point) -> Option<&CommandNode> {
-        self.commands
-            .iter()
-            .find(|cmd| cmd.range.start <= *point && cmd.range.end >= *point)
-    }
 }
 
 /// TODO: return both the partial AST and the Errors
