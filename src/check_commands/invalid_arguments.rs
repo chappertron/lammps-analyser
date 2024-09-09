@@ -1,7 +1,6 @@
 use crate::diagnostics::{Diagnostic, Issue};
 use crate::spans::{Point, Span};
 use lsp_types::DiagnosticSeverity;
-use owo_colors::OwoColorize;
 use thiserror::Error;
 
 use crate::fix_styles::FixStyle;
@@ -9,7 +8,7 @@ use crate::fix_styles::FixStyle;
 use super::fixes::CommandAndStyle;
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
-#[error("{}:{}: {err_type} for {style}",range.start.row+1,range.start.column+1)]
+#[error("{err_type} for {style}")]
 pub struct InvalidArguments {
     pub(crate) err_type: InvalidArgumentsType,
     pub(crate) range: Span,
@@ -61,10 +60,10 @@ impl From<InvalidArguments> for lsp_types::Diagnostic {
 
 #[derive(Debug, Error, PartialEq, Eq, Clone)]
 pub enum InvalidArgumentsType {
-    #[error("Incorrect number of arguments: {provided} provided, expected {expected}")]
+    #[error("incorrect number of arguments: {provided} provided, expected {expected}")]
     IncorrectNumberArguments { provided: usize, expected: usize },
     #[error(
-        "Incorrect keyword arguments for `{kwarg}`. Expected {n_expected} arguments: {expected}. Only {n_provided} provided."
+        "incorrect arguments for keyword `{kwarg}`. expected {n_expected} arguments: {expected}. {n_provided} provided."
     )]
     MissingKwargField {
         kwarg: String,
@@ -72,7 +71,7 @@ pub enum InvalidArgumentsType {
         n_expected: usize,
         n_provided: usize,
     },
-    #[error("Incorrect argument type. Expected: {expected}. Provided: {provided}.")]
+    #[error("incorrect argument type. expected: {expected}. provided: {provided}.")]
     IncorrectType { expected: String, provided: String },
     #[error("{0}")]
     /// Error for specific fixes
