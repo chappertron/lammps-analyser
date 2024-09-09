@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::Display};
 
-use crate::{diagnostic_report::ReportSimple, spans::Span};
+use crate::spans::Span;
 use thiserror::Error;
 
 /// A simple type that adds an associated `Span` to an error.
@@ -62,20 +62,3 @@ where
         write!(f, "{}", self.error)
     }
 }
-
-impl<E> ReportSimple for SpannedError<E>
-where
-    E: ReportSimple,
-{
-    fn make_simple_report(&self) -> String {
-        let start = self.span.start;
-        format!(
-            "{}:{}: {}",
-            start.row,
-            start.column,
-            self.error.make_simple_report()
-        )
-    }
-}
-
-// TODO: Implement the report trait??

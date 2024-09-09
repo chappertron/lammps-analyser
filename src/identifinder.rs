@@ -12,7 +12,6 @@ use std::{
 use thiserror::Error;
 use tree_sitter::{Node, Query, QueryCursor, Tree};
 
-use crate::diagnostic_report::ReportSimple;
 use once_cell::sync::Lazy;
 
 pub type IdentMap = HashMap<NameAndType, SymbolDefsAndRefs>;
@@ -222,19 +221,6 @@ impl From<UnusedIdent> for lsp_types::Diagnostic {
     }
 }
 
-impl ReportSimple for UnusedIdent {
-    fn make_simple_report(&self) -> String {
-        format!(
-            "{}:{}: {} {} `{}`",
-            self.ident.start().row + 1,
-            self.ident.start().column + 1,
-            "Unused".bright_yellow(),
-            self.ident.ident_type.bright_yellow(),
-            self.ident.name
-        )
-    }
-}
-
 impl From<Ident> for UnusedIdent {
     fn from(ident: Ident) -> Self {
         Self { ident }
@@ -432,19 +418,6 @@ impl Issue for UndefinedIdent {
             span: self.ident.span,
             message: self.to_string(),
         }
-    }
-}
-
-impl ReportSimple for UndefinedIdent {
-    fn make_simple_report(&self) -> String {
-        format!(
-            "{}:{}: {} {} `{}`",
-            self.ident.span.start.row + 1,
-            self.ident.span.start.column + 1,
-            "Undefined".bright_red(),
-            self.ident.ident_type.bright_red(),
-            self.ident.name
-        )
     }
 }
 

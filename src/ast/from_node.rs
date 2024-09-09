@@ -1,10 +1,6 @@
-use owo_colors::OwoColorize;
 use tree_sitter::{Node, Point, TreeCursor};
 
-use crate::{
-    diagnostic_report::ReportSimple, diagnostics, spanned_error::SpannedError,
-    utils::into_error::IntoError,
-};
+use crate::{diagnostics, spanned_error::SpannedError, utils::into_error::IntoError};
 use thiserror::Error;
 
 use super::expressions::ParseExprError;
@@ -88,33 +84,6 @@ impl diagnostics::Issue for SpannedError<FromNodeError> {
             severity: diagnostics::Severity::Error,
             span: self.span,
             message: self.to_string(),
-        }
-    }
-}
-
-impl ReportSimple for FromNodeError {
-    fn make_simple_report(&self) -> String {
-        match self {
-            Self::Utf8Error(e) => format!("Could not parse text as UTF-8 {}", e.bright_red()),
-            Self::ParseIntError(e) => format!("Could not parse text as int {}", e.bright_red()),
-            Self::ParseFloatError(e) => format!("Could not parse text as float {}", e.bright_red()),
-            Self::UnknownCommand { name, start } => format!(
-                "{}:{}: Unknown command {} at",
-                start.row + 1,
-                start.column + 1,
-                name.bright_red(),
-            ),
-            Self::UnknownCustom { kind, name, start } => format!(
-                "{}:{}: Unknown {}: {} ",
-                start.row + 1,
-                start.column + 1,
-                kind.bright_red(),
-                name.bright_red(),
-            ),
-
-            Self::ParseExpression(e) => format!("{}", e.bright_red()),
-            Self::PartialNode(e) => format!("{}", e.bright_red()),
-            e => format!("{}", e.bright_red()),
         }
     }
 }

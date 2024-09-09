@@ -6,12 +6,9 @@ use anyhow::{Context, Result};
 use lsp_types::Diagnostic as LspDiagnostic;
 use lsp_types::DiagnosticSeverity;
 use once_cell::sync::Lazy;
-use owo_colors::OwoColorize;
 use std::fmt::Debug;
 use thiserror::Error;
 use tree_sitter::{Query, QueryCursor, Tree, TreeCursor};
-
-use crate::diagnostic_report::ReportSimple;
 
 /// Finds syntax issues in the file.
 pub struct ErrorFinder {
@@ -144,16 +141,6 @@ impl From<AstError> for SyntaxError {
 
 type AstError = SpannedError<FromNodeError>;
 
-impl ReportSimple for SyntaxError {
-    fn make_simple_report(&self) -> String {
-        match self {
-            Self::ParseError(parse_error) => parse_error.make_simple_report(),
-            Self::MissingToken(missing_token) => missing_token.make_simple_report(),
-            Self::AstError(err) => err.make_simple_report(),
-        }
-    }
-}
-
 impl Issue for SyntaxError {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         match self {
@@ -213,17 +200,6 @@ pub struct ParseError {
     pub start: Point,
     pub end: Point,
 }
-impl ReportSimple for ParseError {
-    fn make_simple_report(&self) -> String {
-        format!(
-            "{}:{}: {} `{}`",
-            self.start.row + 1,
-            self.start.column + 1,
-            "invalid syntax:".bright_red(),
-            self.text
-        )
-    }
-}
 
 impl Issue for ParseError {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
@@ -263,18 +239,5 @@ impl Issue for MissingToken {
             },
             message: self.to_string(),
         }
-    }
-}
-
-// TODO: remove this implementation. Only have it implemented on diagnostic????
-impl ReportSimple for MissingToken {
-    fn make_simple_report(&self) -> String {
-        format!(
-            "{}:{}: {} `{}`",
-            self.start.row + 1,
-            self.start.column + 1,
-            "Invalid Syntax:".bright_red(),
-            "Missing Token",
-        )
     }
 }

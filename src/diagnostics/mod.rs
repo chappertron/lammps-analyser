@@ -1,10 +1,7 @@
 use owo_colors::OwoColorize;
 use std::fmt::Display;
 
-use crate::{
-    diagnostic_report::{FileNameReport, ReportSimple},
-    spans::Span,
-};
+use crate::{diagnostic_report::FileNameReport, spans::Span};
 
 /// Indicate that the implement represents an issue that within a LAMMPS script.
 ///
@@ -34,21 +31,6 @@ pub struct Diagnostic {
 //     pub message: String,
 //     pub span: Span,
 // }
-
-impl ReportSimple for Diagnostic {
-    fn make_simple_report(&self) -> String {
-        let start = self.span.start;
-
-        format!(
-            "{}: {}:{}:  {}",
-            self.severity.coloured_display().bold(),
-            start.row + 1,
-            start.column + 1,
-            // TODO: Colour this based on the severity of the Issue.
-            self.message.bold()
-        )
-    }
-}
 
 impl FileNameReport for Diagnostic {
     fn make_file_name_report(&self, filename: &str) -> String {

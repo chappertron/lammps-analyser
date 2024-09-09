@@ -1,4 +1,3 @@
-use crate::diagnostic_report::ReportSimple;
 use crate::diagnostics::{Diagnostic, Issue};
 use crate::spans::{Point, Span};
 use lsp_types::DiagnosticSeverity;
@@ -57,18 +56,6 @@ impl From<InvalidArguments> for lsp_types::Diagnostic {
 
             ..Default::default()
         }
-    }
-}
-
-impl ReportSimple for InvalidArguments {
-    fn make_simple_report(&self) -> String {
-        format!(
-            "{}:{}: {} for fix: {}",
-            self.start().row + 1,
-            self.start().column + 1,
-            self.err_type.bright_red(),
-            self.style.bright_red(),
-        )
     }
 }
 

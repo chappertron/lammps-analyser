@@ -1,7 +1,7 @@
 use crate::compute_styles::ComputeStyle;
 use crate::diagnostics::{self, Issue};
+use crate::fix_styles::FixStyle;
 use crate::spans::{Point, Span};
-use crate::{diagnostic_report::ReportSimple, fix_styles::FixStyle};
 use anyhow::Result;
 use owo_colors::OwoColorize;
 use std::fmt::Display;
@@ -15,18 +15,6 @@ pub struct InvalidStyle {
     pub end: Point,
     pub name: String,
     pub style_type: StyleType,
-}
-impl ReportSimple for InvalidStyle {
-    fn make_simple_report(&self) -> String {
-        format!(
-            "{}:{}: {} {} `{}`",
-            self.start.row + 1,
-            self.start.column + 1,
-            "Invalid".bright_red(),
-            self.style_type.bright_red(),
-            self.name
-        )
-    }
 }
 
 impl Issue for InvalidStyle {

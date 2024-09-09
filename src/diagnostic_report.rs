@@ -1,13 +1,5 @@
 use std::fmt::Display;
 
-/// Trait to impl on errors for colourising the output
-/// Meant to be for simple output to the commandline
-/// TODO: deprecate and write a trait that returns a Diagnostic
-pub(crate) trait ReportSimple {
-    /// Simply output a string that is printed to the screen.
-    fn make_simple_report(&self) -> String;
-}
-
 pub trait FileNameReport {
     /// Simply output a string that is printed to the screen.
     fn make_file_name_report(&self, filename: &str) -> String;
