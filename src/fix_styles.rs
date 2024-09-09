@@ -305,6 +305,13 @@ impl FixStyle {
     pub fn is_invalid(&self) -> bool {
         matches!(self, FixStyle::InvalidStyle)
     }
+
+    pub fn is_integrator(&self) -> bool {
+        use FixStyle as FS;
+
+        // TODO: support other non standard ones...
+        matches!(self, FS::Nve | FS::Nvt | FS::Npt | FS::Nph)
+    }
 }
 
 #[cfg(test)]

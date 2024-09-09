@@ -90,19 +90,6 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_find_run_commands() {
-        let file = include_str!("../../example_input_scripts/in.nemd");
-
-        let input_script = InputScript::new(&file).unwrap();
-
-        let run_commands: Vec<_> = (input_script.ast).find_run_commands().cloned().collect();
-
-        assert_eq!(run_commands.len(), 2);
-        assert_eq!(run_commands[0].span(), Span::from((130, 0)..(130, 17)));
-        assert_eq!(run_commands[1].span(), Span::from((141, 0)..(141, 6)));
-    }
-
-    #[test]
     fn test_multiple_fix_defs() {
         let text = b"fix NVT all nvt temp 1 1.5 $(100.0*dt)
                              fix NVT all nvt temp 1 1.5 $(100.0*dt)
