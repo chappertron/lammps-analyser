@@ -24,7 +24,16 @@ pub struct Diagnostic {
     pub span: Span,
     /// Message of the diagnostic.
     pub message: String,
+    // Extra information that can be used to understand the issue.
+    // TODO: Re add this field once we work out how to add the URI to it..
+    // pub information: Vec<Info>,
 }
+
+// #[derive(Default, Clone, Eq, PartialEq, Debug)]
+// pub struct Info {
+//     pub message: String,
+//     pub span: Span,
+// }
 
 impl ReportSimple for Diagnostic {
     fn make_simple_report(&self) -> String {
