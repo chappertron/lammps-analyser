@@ -3,7 +3,6 @@ use crate::{
     diagnostics::Issue,
     spans::{Point, Span},
 };
-use anyhow::{Context, Result};
 use owo_colors::OwoColorize;
 use std::{
     collections::HashMap,
@@ -106,7 +105,7 @@ impl IdentiFinder {
     }
 
     /// Create a new `Identifinder` and search for symbols.
-    pub fn new(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Self> {
+    pub fn new(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
         let text = text.as_ref();
         let mut i = Self::new_no_parse();
         i.find_symbols(tree, text)?;
@@ -117,7 +116,7 @@ impl IdentiFinder {
         &mut self,
         tree: &Tree,
         text: &[u8],
-    ) -> Result<&HashMap<NameAndType, SymbolDefsAndRefs>> {
+    ) -> Result<&HashMap<NameAndType, SymbolDefsAndRefs>, FromNodeError> {
         let captures = self.cursor.captures(&QUERY_DEF, tree.root_node(), text);
 
         // TODO: Clear the symbols in a smarter way, perhaps only removing old ones

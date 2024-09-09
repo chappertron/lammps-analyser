@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use crate::diagnostics::Issue;
 use crate::spans::Span;
 use crate::{
-    ast::{Ast, CommandType},
+    ast::Ast,
     identifinder::{Ident, IdentMap},
 };
 
@@ -83,9 +83,7 @@ impl Issue for RedfinedIdent<'_> {
 mod tests {
     use pretty_assertions::assert_eq;
 
-    use crate::{
-        ast::ts_to_ast, identifinder::IdentiFinder, input_script::InputScript, spans::Span, utils,
-    };
+    use crate::{ast::ts_to_ast, identifinder::IdentiFinder, utils};
 
     use super::*;
 
