@@ -5,6 +5,7 @@ use crate::{diagnostics::Issue, spans::Span};
 use anyhow::{Context, Result};
 use lsp_types::Diagnostic as LspDiagnostic;
 use lsp_types::DiagnosticSeverity;
+use once_cell::sync::Lazy;
 use owo_colors::OwoColorize;
 use std::fmt::Debug;
 use thiserror::Error;
@@ -14,24 +15,25 @@ use crate::diagnostic_report::ReportSimple;
 
 /// Finds syntax issues in the file.
 pub struct ErrorFinder {
-    pub query: Query,
     cursor: QueryCursor,
     pub syntax_errors: Vec<SyntaxError>,
 }
+static ERROR_QUERY: Lazy<Query> = Lazy::new(|| {
+    Query::new(
+        tree_sitter_lammps::language(),
+        "
+            (ERROR) @syntax_error
+            ",
+    )
+    .expect("internal error: Invalid TS lammps query")
+});
 
 impl ErrorFinder {
     pub fn new() -> Result<Self> {
-        let query = Query::new(
-            tree_sitter_lammps::language(),
-            "
-            (ERROR) @syntax_error
-            ",
-        )?;
         let cursor = QueryCursor::new();
         let syntax_errors = vec![];
 
         Ok(Self {
-            query,
             cursor,
             syntax_errors,
         })
@@ -52,7 +54,7 @@ impl ErrorFinder {
         let source_code = source_code.as_ref();
         let matches = self
             .cursor
-            .matches(&self.query, tree.root_node(), source_code);
+            .matches(&ERROR_QUERY, tree.root_node(), source_code);
         for mat in matches {
             let text = mat.captures[0]
                 .node
