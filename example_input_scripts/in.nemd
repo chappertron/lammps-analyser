@@ -133,7 +133,13 @@ write_data      ${outputname}.data pair ij
 
 compute  1 all rdf
 
+# Invalid fix styles
+compute  1 all hellop
+fix  12 all what
+
 invalid_command
+
+run  2 
 
 fix # Here to show what happens with in-complete commands.
 
