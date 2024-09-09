@@ -9,7 +9,7 @@ pub mod find_node;
 pub mod from_node;
 
 use crate::{
-    spanned_error::{SpannedError, WithSpan},
+    spanned_error::SpannedError,
     spans::{Point, Span},
 };
 use std::{fmt::Display, str::Utf8Error};
@@ -58,11 +58,17 @@ pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, PartialAst>
     for node in tree.root_node().named_children(&mut cursor) {
         // TODO: This if-statement may be removeable
         if node.kind() != "comment" {
-            let result = CommandNode::from_node(&node, text).with_span(node.range().into());
+            let result = CommandNode::from_node(&node, text); //.with_span(node.range().into());
 
             match result {
-                Ok(cmd) => commands.push(cmd),
-                Err(err) => errors.push(err),
+                Ok(cmd) => {
+                    commands.push(cmd);
+                }
+                Err((cmd, error)) => {
+                    // Add ERROR nodes.
+                    commands.push(cmd);
+                    errors.push(SpannedError::new(error, node.range()));
+                }
             }
         }
     }
@@ -91,16 +97,23 @@ impl CommandNode {
 }
 
 impl FromNode for CommandNode {
-    type Error = FromNodeError;
+    type Error = (Self, FromNodeError);
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
         let range = node.range().into();
 
-        let command_type = CommandType::from_node(node, text)?;
-
-        Ok(CommandNode {
-            command_type,
-            range,
-        })
+        match CommandType::from_node(node, text) {
+            Ok(command_type) => Ok(CommandNode {
+                command_type,
+                range,
+            }),
+            Err((command_type, err)) => Err((
+                CommandNode {
+                    command_type,
+                    range,
+                },
+                err,
+            )),
+        }
     }
 }
 
@@ -118,17 +131,24 @@ pub enum CommandType {
 }
 
 impl FromNode for CommandType {
-    type Error = FromNodeError;
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
+    // NOTE: This is chosen as the error type so an error node can be returned instead
+    type Error = (Self, FromNodeError);
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, (Self, FromNodeError)> {
         let mut result = match node.kind() {
-            "fix" => Ok(Self::Fix(FixDef::from_node(node, &text)?)),
-            "compute" => Ok(Self::Compute(ComputeDef::from_node(node, &text)?)),
-            "variable_def" => Ok(Self::VariableDef(VariableDef::from_node(node, &text)?)),
+            "fix" => Ok(Self::Fix(
+                FixDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+            )),
+            "compute" => Ok(Self::Compute(
+                ComputeDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+            )),
+            "variable_def" => Ok(Self::VariableDef(
+                VariableDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+            )),
             "shell" => Ok(Self::Shell),
             // Fall back to the generic command type
-            "command" => Ok(Self::GenericCommand(GenericCommand::from_node(
-                node, &text,
-            )?)),
+            "command" => Ok(Self::GenericCommand(
+                GenericCommand::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+            )),
             _ => Ok(Self::Error),
         };
 
@@ -138,9 +158,15 @@ impl FromNode for CommandType {
 
             result = match node.child(0).map(|node| node.kind()) {
                 // Try and pass this as a compute
-                Some("compute") => Ok(Self::Compute(ComputeDef::from_node(node, &text)?)),
-                Some("fix_id") => Ok(Self::Fix(FixDef::from_node(node, &text)?)),
-                Some("variable") => Ok(Self::VariableDef(VariableDef::from_node(node, &text)?)),
+                Some("compute") => Ok(Self::Compute(
+                    ComputeDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                )),
+                Some("fix_id") => Ok(Self::Fix(
+                    FixDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                )),
+                Some("variable") => Ok(Self::VariableDef(
+                    VariableDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                )),
                 // Cannot further process
                 // NOTE: This is `Ok` rather than `Error` because syntax errors are also
                 // found within `ErrorFinder`

@@ -1,22 +1,19 @@
 //! Implementation for the lsp using the `tower-lsp` crate.
-use crate::ast::{ts_to_ast, Ast, CommandType, ComputeDef, FixDef, GenericCommand, PartialAst};
-use crate::check_styles::check_styles;
+use crate::ast::{Ast, CommandType, ComputeDef, FixDef, GenericCommand};
 use crate::commands::CommandName;
 use crate::docs::docs_map::DOCS_MAP;
 use crate::docs::DOCS_CONTENTS;
-use crate::error_finder::ErrorFinder;
-use crate::identifinder::{unused_variables, IdentiFinder};
+use crate::identifinder::IdentiFinder;
+use crate::input_script;
 use crate::input_script::InputScript;
-use crate::lammps_errors::Warnings;
 use crate::utils::get_symbol_at_point;
-use crate::{check_commands, input_script};
 use dashmap::DashMap;
 use std::str::FromStr;
 use std::sync::Arc;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
-use tree_sitter::{Parser, Tree};
+use tree_sitter::Tree;
 
 /// Core LSP Server Application
 #[derive(Debug)]
@@ -54,9 +51,6 @@ pub const TOKEN_TYPES: [SemanticTokenType; 3] = [ST::KEYWORD, ST::TYPE, ST::FUNC
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
     async fn initialize(&self, _: InitializeParams) -> Result<InitializeResult> {
-        let new: Arc<[u8]> = vec![1u8; 20].into_boxed_slice().into();
-        let new_scalar: Arc<u8> = Arc::new(1u8);
-
         Ok(InitializeResult {
             server_info: Some(ServerInfo {
                 name: "LAMMPS Analyser".into(),

@@ -14,6 +14,15 @@ pub struct SpannedError<E> {
     pub span: Span,
 }
 
+impl<E> SpannedError<E> {
+    pub fn new(error: E, span: impl Into<Span>) -> Self {
+        SpannedError {
+            error,
+            span: span.into(),
+        }
+    }
+}
+
 impl<V> SpannedError<V> {
     /// Convert the inner error, using the appropriate `From` impl.
     pub fn convert<U>(value: SpannedError<U>) -> Self
