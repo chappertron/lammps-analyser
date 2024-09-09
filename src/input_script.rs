@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use crate::check_commands::{self};
 use crate::error_finder::SyntaxError;
 use crate::lammps_errors::Warnings;
+use crate::lints::redefined_identifiers;
 use crate::utils;
 use crate::{check_styles::check_styles, diagnostics::Issue, error_finder::ErrorFinder};
 
@@ -133,7 +134,7 @@ impl<'src> InputScript<'src> {
                 .map(|x| LammpsError::from(SyntaxError::from(x)).diagnostic()),
         );
 
-        Ok(Self {
+        let mut script = Self {
             _parser: LmpParser(parser),
             source_code,
             tree,
@@ -141,10 +142,19 @@ impl<'src> InputScript<'src> {
             diagnostics,
             identifinder,
             error_finder,
-        })
+        };
+        script.run_lints();
+        Ok(script)
     }
 
     pub fn diagnostics(&self) -> impl Iterator<Item = &Diagnostic> {
         self.diagnostics.iter()
+    }
+
+    pub fn run_lints(&mut self) {
+        self.diagnostics.extend(
+            redefined_identifiers(&self.ast, &self.identifinder.symbols())
+                .map(|id| id.diagnostic()),
+        )
     }
 }
