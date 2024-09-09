@@ -40,10 +40,7 @@ impl Backend {
             client,
             document_map: DashMap::new(),
             tree_map: DashMap::new(),
-            identifinder: IdentiFinder::new_no_parse()
-                // TODO: this error should really just be an expect in `new_no_parse`
-                .expect("Failed to compile Tree-sitter Query")
-                .into(),
+            identifinder: IdentiFinder::new_no_parse().into(),
             ast: Arc::new(Ast::default().into()),
         }
     }

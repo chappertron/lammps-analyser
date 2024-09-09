@@ -14,14 +14,13 @@ use thiserror::Error;
 use tree_sitter::{Node, Query, QueryCursor, Tree};
 
 use crate::diagnostic_report::ReportSimple;
+use once_cell::sync::Lazy;
 
 pub type IdentMap = HashMap<NameAndType, SymbolDefsAndRefs>;
 
 /// Find and store Identifiers in the `tree-sitter` Tree. Stores a `QueryCursor` for re-use
 /// Symbols can be accessed through the `symbols` method.
 pub struct IdentiFinder {
-    pub query_def: Query,
-    pub query_ref: Query,
     cursor: QueryCursor,
     symbols: HashMap<NameAndType, SymbolDefsAndRefs>,
 }
@@ -29,8 +28,6 @@ pub struct IdentiFinder {
 impl Debug for IdentiFinder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("IdentiFinder")
-            .field("query_def", &self.query_def)
-            .field("query_ref", &self.query_ref)
             .field("symbols", &self.symbols)
             .finish()
     }
@@ -76,42 +73,42 @@ impl SymbolDef {
     }
 }
 
-// TODO: make this into a new data structure, holding definitions and all references in one hashmap
-// Use `DashMap` for easier use with the LSP Server???
+static QUERY_DEF: Lazy<Query> = Lazy::new(|| {
+    Query::new(
+        tree_sitter_lammps::language(),
+        "(fix (fix_id ) @definition.fix) 
+                (compute (compute_id) @definition.compute) 
+                (variable_def (variable) @definition.variable )",
+    )
+    .expect("Invalid query for LAMMPS TS Grammar")
+});
+
+static QUERY_REF: Lazy<Query> = Lazy::new(|| {
+    Query::new(
+        tree_sitter_lammps::language(),
+        " (fix_id) @reference.fix  (compute_id) @reference.compute (variable) @reference.variable",
+    )
+    .expect("Invalid query for LAMMPS TS Grammar")
+});
 
 impl IdentiFinder {
     /// Creates a new `IdentiFinder` without searching for the symbols, leaving an empty `symbols`
     /// map
     ///
-    /// Fails if the Query used internally is invalid. TODO: Make this a panic instead?
-    pub fn new_no_parse() -> Result<Self> {
-        let query_def = Query::new(
-            tree_sitter_lammps::language(),
-            "(fix (fix_id ) @definition.fix) 
-                (compute (compute_id) @definition.compute) 
-                (variable_def (variable) @definition.variable )",
-        )
-        .context("Invalid query for LAMMPS TS Grammar")?;
-
-        let query_ref = Query::new(
-            tree_sitter_lammps::language(),
-            " (fix_id) @reference.fix  (compute_id) @reference.compute (variable) @reference.variable",
-        ).context("Invalid query for LAMMPS TS Grammar")?;
-
+    /// Fails if the Query used internally is invalid.
+    pub fn new_no_parse() -> Self {
         let i = IdentiFinder {
-            query_def,
-            query_ref,
             cursor: QueryCursor::new(),
             symbols: HashMap::new(),
         };
 
-        Ok(i)
+        i
     }
 
     /// Create a new `Identifinder` and search for symbols.
     pub fn new(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Self> {
         let text = text.as_ref();
-        let mut i = Self::new_no_parse()?;
+        let mut i = Self::new_no_parse();
         i.find_symbols(tree, text)?;
         Ok(i)
     }
@@ -121,9 +118,7 @@ impl IdentiFinder {
         tree: &Tree,
         text: &[u8],
     ) -> Result<&HashMap<NameAndType, SymbolDefsAndRefs>> {
-        let captures = self
-            .cursor
-            .captures(&self.query_def, tree.root_node(), text);
+        let captures = self.cursor.captures(&QUERY_DEF, tree.root_node(), text);
 
         // TODO: Clear the symbols in a smarter way, perhaps only removing old ones
         // Do this for an incremental method
@@ -144,9 +139,7 @@ impl IdentiFinder {
             entry.defs.defs.push(ident);
         }
         // references
-        let captures = self
-            .cursor
-            .captures(&self.query_ref, tree.root_node(), text);
+        let captures = self.cursor.captures(&QUERY_REF, tree.root_node(), text);
 
         for (mtch, _cap_id) in captures {
             let node = mtch.captures[0].node;
