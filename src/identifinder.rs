@@ -3,7 +3,6 @@ use crate::{
     diagnostics::Issue,
     spans::{Point, Span},
 };
-use owo_colors::OwoColorize;
 use std::{
     collections::HashMap,
     fmt::{Debug, Display},

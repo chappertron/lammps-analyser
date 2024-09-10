@@ -1,6 +1,5 @@
 /// Types for LAMMPS issues and errorsmm
 use crate::lammps_errors::{LammpsError, Warnings};
-use owo_colors::OwoColorize;
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
