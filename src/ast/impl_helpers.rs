@@ -53,6 +53,7 @@ impl ast::Ast {
 #[cfg(test)]
 mod test {
     use crate::input_script::InputScript;
+    use pretty_assertions::assert_eq;
 
     use super::*;
     #[test]
@@ -64,7 +65,7 @@ mod test {
         let run_commands: Vec<_> = input_script.ast.find_run_commands().cloned().collect();
 
         assert_eq!(run_commands.len(), 2);
-        assert_eq!(run_commands[0].span(), Span::from((130, 0)..(130, 17)));
-        assert_eq!(run_commands[1].span(), Span::from((141, 0)..(141, 6)));
+        assert_eq!(run_commands[0].span(), Span::from((131, 0)..(131, 17)));
+        assert_eq!(run_commands[1].span(), Span::from((145, 0)..(145, 6)));
     }
 }

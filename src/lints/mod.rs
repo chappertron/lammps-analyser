@@ -106,8 +106,6 @@ mod tests {
         let v = fix_redef_before_run(&ast, idents.symbols());
         assert_eq!(v.len(), 1);
         dbg!(v);
-
-        assert!(false);
     }
 
     #[test]
@@ -126,7 +124,6 @@ mod tests {
             .expect("Failed to Find Symbols");
 
         assert_eq!(fix_redef_before_run(&ast, idents.symbols()), vec![]);
-        assert!(false);
     }
 
     #[test]
@@ -152,6 +149,5 @@ mod tests {
         let v = fix_redef_before_run(&ast, idents.symbols());
         assert_eq!(v.len(), 1);
         dbg!(v);
-        assert!(false);
     }
 }
