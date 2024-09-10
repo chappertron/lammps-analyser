@@ -9,6 +9,9 @@ pub mod error_finder;
 pub mod fix_styles;
 pub mod hover;
 pub mod identifinder;
+
+pub mod input_script;
+
 pub mod issues;
 pub mod lammps_errors;
 pub mod lsp;

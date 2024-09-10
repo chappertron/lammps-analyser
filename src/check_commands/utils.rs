@@ -157,15 +157,14 @@ mod tests {
     use super::*;
     use crate::{
         ast::from_node::FromNode, check_commands::utils::parse_no_args, fix_styles::FixStyle,
-        utils::testing::setup_parser,
+        utils::testing::parse,
     };
 
     #[test]
     fn valid_zero_arg_fix() {
-        let mut parser = setup_parser();
         let text = "fix NVE all nve";
-        let tree = parser.parse(text, None).unwrap();
-        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let tree = parse(text);
+        let node = tree.root_node().child(0).unwrap();
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVE");
@@ -178,10 +177,9 @@ mod tests {
 
     #[test]
     fn invalid_zero_arg_fix() {
-        let mut parser = setup_parser();
         let text = "fix NVE all nve asdfas";
-        let tree = parser.parse(text, None).unwrap();
-        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let tree = parse(text);
+        let node = tree.root_node().child(0).unwrap();
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVE");

@@ -1,15 +1,11 @@
-//! Alternative implementation for the lsp using the `tower-lsp` crate.
-use crate::ast::{
-    ts_to_ast, Ast, CommandType, ComputeDef, FixDef, GenericCommand, NamedCommand, PartialAst,
-};
-use crate::check_commands;
-use crate::check_styles::check_styles;
+//! Implementation for the lsp using the `tower-lsp` crate.
+use crate::ast::{Ast, CommandType, ComputeDef, FixDef, GenericCommand};
 use crate::commands::CommandName;
 use crate::docs::docs_map::DOCS_MAP;
 use crate::docs::DOCS_CONTENTS;
-use crate::error_finder::ErrorFinder;
-use crate::identifinder::{unused_variables, IdentiFinder};
-use crate::lammps_errors::Warnings;
+use crate::identifinder::IdentiFinder;
+use crate::input_script;
+use crate::input_script::InputScript;
 use crate::utils::get_symbol_at_point;
 use dashmap::DashMap;
 use std::str::FromStr;
@@ -17,7 +13,7 @@ use std::sync::Arc;
 use tower_lsp::jsonrpc::Result;
 use tower_lsp::lsp_types::*;
 use tower_lsp::{Client, LanguageServer};
-use tree_sitter::{Parser, Tree};
+use tree_sitter::Tree;
 
 /// Core LSP Server Application
 #[derive(Debug)]
@@ -41,9 +37,7 @@ impl Backend {
             client,
             document_map: DashMap::new(),
             tree_map: DashMap::new(),
-            identifinder: IdentiFinder::new_no_parse()
-                .expect("Failed to compile Tree-sitter Query")
-                .into(),
+            identifinder: IdentiFinder::new_no_parse().into(),
             ast: Arc::new(Ast::default().into()),
         }
     }
@@ -261,13 +255,10 @@ impl LanguageServer for Backend {
         // FIXME: For unknown fix/compute styles does some weird stuff.
         if let Some(command) = command {
             let doc_name = match &command.command_type {
-                CommandType::NamedCommand(NamedCommand::Fix(FixDef { fix_style, .. })) => {
-                    DOCS_MAP.fixes().get(fix_style)
+                CommandType::Fix(FixDef { fix_style, .. }) => DOCS_MAP.fixes().get(fix_style),
+                CommandType::Compute(ComputeDef { compute_style, .. }) => {
+                    DOCS_MAP.computes().get(compute_style)
                 }
-                CommandType::NamedCommand(NamedCommand::Compute(ComputeDef {
-                    compute_style,
-                    ..
-                })) => DOCS_MAP.computes().get(compute_style),
 
                 CommandType::GenericCommand(GenericCommand { name, .. }) => {
                     let name = CommandName::from(name.as_str());
@@ -318,99 +309,23 @@ impl Backend {
 
         let text = self.document_map.get(&uri.to_string()).unwrap();
 
-        // TODO: Store parser in the state of the backend.
-        let mut parser = Parser::new();
+        let state = input_script::InputScript::new(&text).expect("Failed");
 
-        parser
-            .set_language(tree_sitter_lammps::language())
-            .expect("Could not load language");
-
-        let tree = parser.parse(&*text, None).unwrap();
-
-        let ast = ts_to_ast(&tree, text.as_bytes());
-
-        let ast = match ast {
-            Ok(ast) => ast,
-            Err(PartialAst { ast, errors }) => {
-                for e in errors {
-                    println!("{}", e);
-
-                    self.client
-                        .publish_diagnostics(
-                            uri.clone(),
-                            vec![Diagnostic {
-                                severity: Some(DiagnosticSeverity::ERROR),
-                                message: format!("Error Parsing TS To AST: {}", e),
-                                range: e.span.into_lsp_types(),
-                                ..Default::default()
-                            }],
-                            None,
-                        )
-                        .await;
-                }
-
-                ast
-            }
-        };
+        let InputScript {
+            ast,
+            tree,
+            identifinder,
+            ..
+        } = state;
 
         *self.ast.write().unwrap() = ast;
 
-        // TODO: combine this whole block into a single function
-        let mut error_finder = ErrorFinder::new().unwrap();
-        error_finder.find_syntax_errors(&tree, &*text).unwrap();
-        error_finder.find_missing_nodes(&tree).unwrap();
-        self.identifinder
-            .write()
-            .unwrap()
-            .find_symbols(&tree, text.as_bytes())
-            .unwrap();
+        // Assign with the new identifinder
+        // TODO: Be able to remove this entirely.
+        *self.identifinder.write().unwrap() = identifinder;
 
-        let invalid_styles = check_styles(&tree, text.as_bytes());
-
-        // Parsing fixes
-
-        let fix_errors = self
-            .ast
-            .read()
-            .expect("Taking read lock on ast")
-            .commands
-            .iter()
-            .filter_map(|command| {
-                if let CommandType::NamedCommand(NamedCommand::Fix(fix)) = &command.command_type {
-                    Some(check_commands::fixes::check_fix(fix))
-
-                // TODO: add checking for computes here.
-                } else {
-                    None
-                }
-            })
-            .filter_map(|x| x.err())
-            .collect::<Vec<_>>();
-
-        let mut diagnostics: Vec<Diagnostic> = error_finder
-            // TODO: implement `From<&SyntaxError>` for `Diagnostic` so explicit cloning isn't needed.
-            // TODO: implement into for vec of error
-            .syntax_errors()
-            .iter()
-            .map(|e| e.clone().into())
-            .collect();
-
-        if let Err(v) = self.identifinder.read().unwrap().check_symbols() {
-            diagnostics.extend(v.into_iter().map(|e| e.into()))
-        }
-        if let Ok(v) = invalid_styles {
-            diagnostics.extend(v.into_iter().map(|e| e.into()))
-        }
-
-        // Add unused symbols
-        diagnostics.extend(
-            unused_variables(self.identifinder.read().unwrap().symbols())
-                .into_iter()
-                .map(|x| Warnings::from(x).into()),
-        );
-
-        // Zero or more
-        diagnostics.extend(fix_errors.into_iter().map(|e| e.into()));
+        // Convert into LSP diagnostics
+        let diagnostics = state.diagnostics.into_iter().map(|x| x.into()).collect();
 
         self.client
             .publish_diagnostics(uri.clone(), diagnostics, Some(version))

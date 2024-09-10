@@ -1,7 +1,6 @@
-use owo_colors::OwoColorize;
 use tree_sitter::{Node, Point, TreeCursor};
 
-use crate::{diagnostic_report::ReportSimple, utils::into_error::IntoError};
+use crate::{diagnostics, spanned_error::SpannedError, utils::into_error::IntoError};
 use thiserror::Error;
 
 use super::expressions::ParseExprError;
@@ -23,7 +22,7 @@ pub trait FromNode: Sized {
 // }
 
 // TODO: Just wrap expression parse error??
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
 /// An error associated with converting a tree-sitter `Node`.
 pub enum FromNodeError {
     #[error("Could not parse text as UTF-8 {0}")]
@@ -46,6 +45,8 @@ pub enum FromNodeError {
     #[error("{0}")]
     // TODO: This perhaps should not be a full error. Or make it incomplete node?
     PartialNode(String),
+    #[error("syntax error")]
+    InvalidSyntax,
 }
 
 #[derive(Debug, Error, Clone)]
@@ -65,28 +66,24 @@ impl<'a> IntoError<Node<'a>> for Option<Node<'a>> {
     }
 }
 
-impl ReportSimple for FromNodeError {
-    fn make_simple_report(&self) -> String {
-        match self {
-            Self::Utf8Error(e) => format!("Could not parse text as UTF-8 {}", e.bright_red()),
-            Self::ParseIntError(e) => format!("Could not parse text as int {}", e.bright_red()),
-            Self::ParseFloatError(e) => format!("Could not parse text as float {}", e.bright_red()),
-            Self::UnknownCommand { name, start } => format!(
-                "{}:{}: Unknown command {} at",
-                start.row + 1,
-                start.column + 1,
-                name.bright_red(),
-            ),
-            Self::UnknownCustom { kind, name, start } => format!(
-                "{}:{}: Unknown {}: {} ",
-                start.row + 1,
-                start.column + 1,
-                kind.bright_red(),
-                name.bright_red(),
-            ),
+impl diagnostics::Issue for SpannedError<FromNodeError> {
+    fn diagnostic(&self) -> diagnostics::Diagnostic {
+        let name = match self.error {
+            FromNodeError::Utf8Error(_) => "UTF-8 error",
+            FromNodeError::ParseIntError(_) => "parsing int failed",
+            FromNodeError::ParseFloatError(_) => "parsing float failed",
+            FromNodeError::UnknownCommand { .. } => "unknown command",
+            FromNodeError::UnknownCustom { .. } => "custom error",
+            FromNodeError::ParseExpression(_) => "expression error",
+            FromNodeError::PartialNode(_) => "incomplete command",
+            FromNodeError::InvalidSyntax => "invalid syntax",
+        };
 
-            Self::ParseExpression(e) => format!("{}", e.bright_red()),
-            Self::PartialNode(e) => format!("{}", e.bright_red()),
+        diagnostics::Diagnostic {
+            name: name.to_string(),
+            severity: diagnostics::Severity::Error,
+            span: self.span,
+            message: self.to_string(),
         }
     }
 }

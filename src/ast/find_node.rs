@@ -29,7 +29,7 @@ impl Ast {
 mod tests {
 
     use crate::{
-        ast::{CommandType, FixDef, NamedCommand},
+        ast::{CommandType, FixDef},
         fix_styles::FixStyle,
     };
 
@@ -59,10 +59,10 @@ compute mycompute2 all ke/atom
         let is_fix_def = match ast.find_node(Point { row: 3, column: 0 }) {
             Some(CommandNode {
                 command_type:
-                    CommandType::NamedCommand(NamedCommand::Fix(FixDef {
+                    CommandType::Fix(FixDef {
                         fix_style: FixStyle::Nve,
                         ..
-                    })),
+                    }),
                 ..
             }) => true,
             node => {

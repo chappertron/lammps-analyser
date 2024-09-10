@@ -1,6 +1,6 @@
 [package]
 name = "lammps-analyser"
-version = "0.1.0"
+version = "0.1.2"
 edition = "2021"
 repository = "https://github.com/chappertron/lammps-analyser"
 
@@ -9,13 +9,11 @@ default-run = "lammps-analyser"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 
-
 [build-dependencies]
-cc="*"
+cc = "*"
 
 [dependencies]
 anyhow = "1.0.72"
-ariadne = "0.3.0"
 clap = { version = "4.3.19", features = ["derive"] }
 dashmap = "5.5.1"
 itertools = "0.11.0"
@@ -26,10 +24,15 @@ owo-colors = { version = "3.5.0", features = ["supports-colors"] }
 serde = "1.0.171"
 serde_json = "1.0.105"
 thiserror = "1.0.44"
-tokio = { version = "1.32.0", features = ["io-std", "rt", "macros", "rt-multi-thread"] }
+tokio = { version = "1.32.0", features = [
+    "io-std",
+    "rt",
+    "macros",
+    "rt-multi-thread",
+] }
 tower-lsp = "0.20.0"
 tree-sitter = "0.20.10"
-tree-sitter-lammps = { path = "../tree-sitter-lammps" } 
+tree-sitter-lammps = { path = "../tree-sitter-lammps", version = "0.0.2" }
 
 [dev-dependencies]
 criterion = "0.3"
@@ -39,9 +42,12 @@ pretty_assertions = "1.4.0"
 name = "on_change_bench"
 harness = false
 
+[[bench]]
+name = "cli_bench"
+harness = false
+
 [lints.clippy]
 enum_glob_use = "deny"
 ## missing_panics_doc = "warn"
 redundant_clone = "warn"
 ref_option_ref = "warn"
-

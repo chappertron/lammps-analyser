@@ -1,9 +1,5 @@
 /// Types for LAMMPS issues and errorsmm
-use crate::{
-    diagnostic_report::ReportSimple,
-    lammps_errors::{LammpsError, Warnings},
-};
-use owo_colors::OwoColorize;
+use crate::lammps_errors::{LammpsError, Warnings};
 use thiserror::Error;
 
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
@@ -27,18 +23,6 @@ impl From<Warnings> for Issue {
 impl From<LammpsError> for Issue {
     fn from(v: LammpsError) -> Self {
         Self::Error(v)
-    }
-}
-
-impl ReportSimple for Issue {
-    fn make_simple_report(&self) -> String {
-        match self {
-            Issue::Error(e) => format!("{} {}", "Error:".bright_red(), e.make_simple_report()),
-            Issue::Warning(e) => {
-                format!("{} {}", "Warning:".bright_yellow(), e.make_simple_report())
-            }
-            Issue::Info => "Info".to_string(),
-        }
     }
 }
 

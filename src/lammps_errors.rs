@@ -1,6 +1,6 @@
 use crate::check_commands::invalid_arguments::InvalidArguments;
 use crate::check_styles::InvalidStyle;
-use crate::diagnostic_report::ReportSimple;
+use crate::diagnostics::Issue;
 use crate::error_finder::SyntaxError;
 use crate::identifinder::{UndefinedIdent, UnusedIdent};
 
@@ -30,14 +30,6 @@ impl From<UnusedIdent> for Warnings {
     }
 }
 
-impl ReportSimple for Warnings {
-    fn make_simple_report(&self) -> String {
-        match self {
-            Warnings::UnusedIdent(e) => e.make_simple_report(),
-        }
-    }
-}
-
 impl From<Warnings> for lsp_types::Diagnostic {
     fn from(value: Warnings) -> Self {
         match value {
@@ -46,13 +38,21 @@ impl From<Warnings> for lsp_types::Diagnostic {
     }
 }
 
-impl ReportSimple for LammpsError {
-    fn make_simple_report(&self) -> String {
+impl Issue for Warnings {
+    fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         match self {
-            LammpsError::SyntaxError(e) => e.make_simple_report(),
-            LammpsError::InvalidStyle(e) => e.make_simple_report(),
-            LammpsError::UndefinedIdent(e) => e.make_simple_report(),
-            LammpsError::InvalidArguments(e) => e.make_simple_report(),
+            Self::UnusedIdent(v) => v.diagnostic(),
+        }
+    }
+}
+
+impl Issue for LammpsError {
+    fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
+        match self {
+            Self::SyntaxError(e) => e.diagnostic(),
+            Self::InvalidStyle(e) => e.diagnostic(),
+            Self::UndefinedIdent(e) => e.diagnostic(),
+            Self::InvalidArguments(e) => e.diagnostic(),
         }
     }
 }

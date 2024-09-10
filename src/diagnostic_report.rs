@@ -1,22 +1,8 @@
 use std::fmt::Display;
 
-use ariadne::{Report, Span};
-// use std::fmt::Debug;
-// use std::hash::Hash;
-
-/// Convert an error into a report that can be outputted into terminal
-pub trait ReportDiagnostic<S: Span> {
-    fn make_report(&self, source_id: &str) -> Report<'_, S>;
-    // where
-    //     Id: Debug + Hash + PartialEq + Eq + ToOwned,
-    //     <Id as ToOwned>::Owned: From<Id>;
-}
-
-/// Trait to impl on errors for colourising the output
-/// Meant to be for simple output to the commandline
-pub trait ReportSimple {
+pub trait FileNameReport {
     /// Simply output a string that is printed to the screen.
-    fn make_simple_report(&self) -> String;
+    fn make_file_name_report(&self, filename: &str) -> String;
 }
 
 pub trait LspDiagnostic: Display {

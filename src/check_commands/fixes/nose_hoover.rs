@@ -6,7 +6,6 @@ use crate::{
 
 /// Generic Parsing of the Nose-Hoover Fixes
 /// TODO: Finish ME
-/// TODO:Extract into a separate module
 /// TODO: Error if a temp or barostat keyword is not being used
 pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     let args = &fix.args;
@@ -147,14 +146,13 @@ pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::Inva
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ast::from_node::FromNode, utils::testing::setup_parser};
+    use crate::{ast::from_node::FromNode, utils::testing::parse};
 
     #[test]
     fn valid_nvt() {
-        let mut parser = setup_parser();
         let text = "fix NVT all nvt temp 1 $(v_T*1.5) $(100*dt)";
-        let tree = parser.parse(text, None).unwrap();
-        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let tree = parse(text);
+        let node = tree.root_node().child(0).unwrap();
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVT");
@@ -167,10 +165,9 @@ mod tests {
 
     #[test]
     fn valid_npt() {
-        let mut parser = setup_parser();
         let text = "fix NPT all npt temp 1 $(v_T*1.5) $(100*dt) iso 1 $(v_p*1.5) ${pdamp}";
-        let tree = parser.parse(text, None).unwrap();
-        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let tree = parse(text);
+        let node = tree.root_node().child(0).unwrap();
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "NPT");
@@ -183,10 +180,9 @@ mod tests {
 
     #[test]
     fn complicated_nph() {
-        let mut parser = setup_parser();
         let text = "fix 2 ice nph x 1.0 1.0 0.5 y 2.0 2.0 0.5 z 3.0 3.0 0.5 yz 0.1 0.1 0.5 xz 0.2 0.2 0.5 xy 0.3 0.3 0.5 nreset 1000";
-        let tree = parser.parse(text, None).unwrap();
-        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let tree = parse(text);
+        let node = tree.root_node().child(0).unwrap();
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "2");
@@ -199,10 +195,9 @@ mod tests {
 
     #[test]
     fn invalid_nvt() {
-        let mut parser = setup_parser();
         let text = "fix NVT all nvt temp 1.0 $(v_T*1.5) TEMP";
-        let tree = parser.parse(text, None).unwrap();
-        let node = tree.root_node().child(0).unwrap().child(0).unwrap();
+        let tree = parse(text);
+        let node = tree.root_node().child(0).unwrap();
         let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVT");

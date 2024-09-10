@@ -132,6 +132,11 @@ impl Span {
     pub fn contains(&self, point: &Point) -> bool {
         self.start <= *point && *point <= self.end
     }
+
+    /// Whether the point is in the spans range, inclusively
+    pub fn contains_span(&self, other: &Span) -> bool {
+        self.start <= other.start && other.end <= self.end
+    }
 }
 
 impl PartialOrd<Point> for Span {

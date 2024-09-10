@@ -7,9 +7,10 @@
 pub mod expressions;
 pub mod find_node;
 pub mod from_node;
+pub mod impl_helpers;
 
 use crate::{
-    spanned_error::{SpannedError, WithSpan},
+    spanned_error::SpannedError,
     spans::{Point, Span},
 };
 use std::{fmt::Display, str::Utf8Error};
@@ -37,15 +38,6 @@ pub struct PartialAst {
     pub errors: Vec<SpannedError<FromNodeError>>,
 }
 
-impl Ast {
-    /// Find the command corresponding to a given point
-    pub fn find_point(&self, point: &Point) -> Option<&CommandNode> {
-        self.commands
-            .iter()
-            .find(|cmd| cmd.range.start <= *point && cmd.range.end >= *point)
-    }
-}
-
 /// TODO: return both the partial AST and the Errors
 pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, PartialAst> {
     let mut cursor = tree.walk();
@@ -55,23 +47,21 @@ pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, PartialAst>
     let mut errors = vec![];
     cursor.goto_first_child();
 
-    loop {
-        // Advance cursor and skip if a comment
-        if cursor.goto_first_child() && cursor.node().kind() != "comment" {
-            let result = CommandNode::from_node(&cursor.node(), text)
-                .with_span(cursor.node().range().into());
+    for node in tree.root_node().named_children(&mut cursor) {
+        // TODO: This if-statement may be removeable
+        if node.kind() != "comment" {
+            let result = CommandNode::from_node(&node, text); //.with_span(node.range().into());
 
             match result {
-                Ok(cmd) => commands.push(cmd),
-                Err(err) => errors.push(err),
+                Ok(cmd) => {
+                    commands.push(cmd);
+                }
+                Err((cmd, error)) => {
+                    // Add ERROR nodes.
+                    commands.push(cmd);
+                    errors.push(SpannedError::new(error, node.range()));
+                }
             }
-
-            cursor.goto_parent();
-        }
-
-        // If no more commands, break!
-        if !cursor.goto_next_sibling() {
-            break;
         }
     }
 
@@ -99,36 +89,84 @@ impl CommandNode {
 }
 
 impl FromNode for CommandNode {
-    type Error = FromNodeError;
+    type Error = (Self, FromNodeError);
     fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
         let range = node.range().into();
 
-        let command_type = CommandType::from_node(node, text)?;
-
-        Ok(CommandNode {
-            command_type,
-            range,
-        })
+        match CommandType::from_node(node, text) {
+            Ok(command_type) => Ok(CommandNode {
+                command_type,
+                range,
+            }),
+            Err((command_type, err)) => Err((
+                CommandNode {
+                    command_type,
+                    range,
+                },
+                err,
+            )),
+        }
     }
 }
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum CommandType {
     GenericCommand(GenericCommand),
-    NamedCommand(NamedCommand),
+    /// A Fix defintion
+    Fix(FixDef),
+    /// A compute definition
+    Compute(ComputeDef),
+    /// A variable definition
+    VariableDef(VariableDef),
+    Shell,
+    Error,
 }
 
 impl FromNode for CommandType {
-    type Error = FromNodeError;
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
-        let cmd = if NamedCommand::try_from(node.kind()).is_ok() {
-            // TODO: add arguments
-            CommandType::NamedCommand(NamedCommand::from_node(node, text)?)
-        } else {
-            CommandType::GenericCommand(GenericCommand::from_node(node, text)?)
+    // NOTE: This is chosen as the error type so an error node can be returned instead
+    type Error = (Self, FromNodeError);
+    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, (Self, FromNodeError)> {
+        let mut result = match node.kind() {
+            "fix" => Ok(Self::Fix(
+                FixDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+            )),
+            "compute" => Ok(Self::Compute(
+                ComputeDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+            )),
+            "variable_def" => Ok(Self::VariableDef(
+                VariableDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+            )),
+            "shell" => Ok(Self::Shell),
+            // Fall back to the generic command type
+            "command" => Ok(Self::GenericCommand(
+                GenericCommand::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+            )),
+            _ => Ok(Self::Error),
         };
 
-        Ok(cmd)
+        if let Ok(Self::Error) = result {
+            // NOTE: Check the child node and infer what type of node it was supposed to be
+            // and pass to that parser.
+
+            result = match node.child(0).map(|node| node.kind()) {
+                // Try and pass this as a compute
+                Some("compute") => Ok(Self::Compute(
+                    ComputeDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                )),
+                Some("fix_id") => Ok(Self::Fix(
+                    FixDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                )),
+                Some("variable") => Ok(Self::VariableDef(
+                    VariableDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                )),
+                // Cannot further process
+                // NOTE: This is `Ok` rather than `Error` because syntax errors are also
+                // found within `ErrorFinder`
+                _ => Ok(Self::Error),
+            };
+        }
+
+        result
     }
 }
 
@@ -144,6 +182,13 @@ impl Display for Word {
 }
 
 impl Word {
+    pub fn new(contents: String, span: impl Into<Span>) -> Self {
+        let contents = contents.to_owned();
+        let span = span.into();
+
+        Self { contents, span }
+    }
+
     pub fn as_str(&self) -> &str {
         self.contents.as_str()
     }
@@ -188,9 +233,13 @@ impl FromNode for GenericCommand {
 
         debug_assert!(cursor.node() == *node);
 
-        cursor.goto_first_child();
+        if !cursor.goto_first_child() {
+            return Err(FromNodeError::PartialNode(
+                "missing command name".to_owned(),
+            ));
+        }
 
-        // TODO: use a field in the TS grammar
+        // TODO: use a field in the TS grammar instead?
         let name = Word::from_node(&cursor.node(), text)?;
 
         while cursor.goto_next_sibling() {
@@ -199,7 +248,6 @@ impl FromNode for GenericCommand {
             }
         }
 
-        cursor.goto_parent();
         Ok(GenericCommand {
             name,
             args,
@@ -249,6 +297,7 @@ pub enum ArgumentKind {
     Group,
     /// A variable/fix/compute name prefixed by v_/f_/c_
     UnderscoreIdent(Ident),
+    // TODO: Make the contents of this a [`Word`]
     /// A white-space delimited word
     Word(String),
     /// Indicates an invalid node in the tree-sitter grammar
@@ -372,56 +421,6 @@ impl Display for ArgumentKind {
     }
 }
 
-/// Commands that have a special form in the tree sitter grammar
-/// TODO: add arguments
-/// TODO: Add command location
-/// TODO: Reduce the number of these, both here and in the grammar.
-#[derive(Debug, PartialEq, Clone)]
-pub enum NamedCommand {
-    /// A Fix defintion
-    Fix(FixDef),
-    /// A compute definition
-    Compute(ComputeDef),
-    Style,
-    Modify,
-    AtomStyle,
-    Boundary,
-    /// A variable definition
-    // TODO: readd
-    VariableDef(VariableDef),
-    ThermoStyle,
-    Thermo,
-    Units,
-    Run,
-    Shell,
-}
-
-impl FromNode for NamedCommand {
-    type Error = FromNodeError;
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<NamedCommand, Self::Error> {
-        match node.kind() {
-            "fix" => Ok(NamedCommand::Fix(FixDef::from_node(node, text)?)),
-            "compute" => Ok(NamedCommand::Compute(ComputeDef::from_node(node, text)?)),
-            "style" => Ok(NamedCommand::Style),
-            "modify" => Ok(NamedCommand::Modify),
-            "atom_style" => Ok(NamedCommand::AtomStyle),
-            "boundary" => Ok(NamedCommand::Boundary),
-            "variable" => Ok(NamedCommand::VariableDef(VariableDef::from_node(
-                node, text,
-            )?)),
-            "thermo_style" => Ok(NamedCommand::ThermoStyle),
-            "thermo" => Ok(NamedCommand::Thermo),
-            "units" => Ok(NamedCommand::Units),
-            "run" => Ok(NamedCommand::Run),
-            "shell" => Ok(NamedCommand::Shell),
-            _ => Err(FromNodeError::UnknownCommand {
-                name: node.kind(),
-                start: node.start_position(),
-            }),
-        }
-    }
-}
-
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct FixDef {
     pub fix_id: Ident,  // Or just keep as a string?
@@ -507,11 +506,27 @@ impl FromNode for ComputeDef {
         let mut children = node.children(&mut cursor);
         let text = text.as_ref();
 
-        // skip the fix keyword
+        // skip the compute keyword
         children.next();
-        let compute_id = Ident::new(&children.next().into_err()?, text)?;
-        let group_id = Word::from_node(&children.next().into_err()?, text)?;
-        let compute_style = children.next().into_err()?.utf8_text(text)?.into();
+        let compute_id = children
+            .next()
+            .ok_or(Self::Error::PartialNode("missing compute ID".to_string()))?;
+
+        let compute_id = Ident::new(&compute_id, text)?;
+
+        let group_id = Word::from_node(
+            &children
+                .next()
+                .ok_or(Self::Error::PartialNode("missing group ID".to_string()))?,
+            text,
+        )?;
+        let compute_style = children
+            .next()
+            .ok_or(Self::Error::PartialNode(
+                "missing compute style".to_string(),
+            ))?
+            .utf8_text(text)?
+            .into();
 
         let args = if let Some(args) = children.next() {
             // No longer needed beyond args. Lets us use cursor again
@@ -569,7 +584,7 @@ impl FromNode for VariableDef {
                 "missing variable identifier".to_string(),
             ))?;
 
-        let variable_ident = dbg!(Ident::new(&variable_ident, text)?);
+        let variable_ident = Ident::new(&variable_ident, text)?;
 
         // TODO: Make this missing thing nicer.
         let variable_kind = Word::from_node(
@@ -579,8 +594,16 @@ impl FromNode for VariableDef {
             text,
         )?;
 
+        // TODO: Check if is missing node here?
         let args: Result<Vec<Argument>, _> = children
-            .map(|arg| Argument::from_node(&arg, text))
+            .map(|arg| {
+                if arg.is_missing() {
+                    return Err(FromNodeError::PartialNode(
+                        "missing variable expression".to_string(),
+                    ));
+                }
+                Argument::from_node(&arg, text)
+            })
             .collect();
 
         let args = args?;
@@ -622,27 +645,6 @@ impl FromNode for VariableDef {
     }
 }
 
-/// This doesn't work for the new case that the fix has data
-impl TryFrom<&str> for NamedCommand {
-    type Error = String;
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        match value {
-            "fix" => Ok(Self::Fix(FixDef::default())),
-            "compute" => Ok(Self::Compute(ComputeDef::default())),
-            "style" => Ok(Self::Style),
-            "modify" => Ok(Self::Modify),
-            "atom_style" => Ok(Self::AtomStyle),
-            "boundary" => Ok(Self::Boundary),
-            "variable" => Ok(Self::VariableDef(VariableDef::default())),
-            "thermo_style" => Ok(Self::ThermoStyle),
-            "thermo" => Ok(Self::Thermo),
-            "units" => Ok(Self::Units),
-            "run" => Ok(Self::Run),
-            s => Err(format!("Unknown named command: {s}")),
-        }
-    }
-}
-
 #[cfg(test)]
 // Allow unwraps in the tests module, but not in the parent module.
 #[allow(clippy::unwrap_used)]
@@ -650,34 +652,24 @@ impl TryFrom<&str> for NamedCommand {
 mod tests {
 
     use pretty_assertions::assert_eq;
-    use tree_sitter::Parser;
 
     use crate::ast::expressions::{BinaryOp, Expression};
-    use crate::ast::from_node::FromNode;
+    use crate::ast::from_node::{FromNode, FromNodeError};
     use crate::ast::{Argument, ComputeDef, FixDef, VariableDef};
     use crate::ast::{ArgumentKind, Word};
     use crate::compute_styles::ComputeStyle;
     use crate::fix_styles::FixStyle;
     use crate::identifinder::{Ident, IdentType};
+    use crate::utils::testing::parse;
 
     use super::ts_to_ast;
-
-    fn setup_parser() -> Parser {
-        let mut parser = Parser::new();
-
-        parser
-            .set_language(tree_sitter_lammps::language())
-            .expect("Could not load language");
-        parser
-    }
 
     #[test]
     #[ignore = "Not yet fully implemented"]
     fn test_ast() {
-        let mut parser = setup_parser();
         // let source_bytes = include_bytes!("../../fix.lmp");
         let source_bytes = include_bytes!("../../example_input_scripts/in.nemd");
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parse(source_bytes);
 
         let _ast = ts_to_ast(&tree, source_bytes);
         // dbg!(ast.unwrap());
@@ -687,17 +679,15 @@ mod tests {
 
     #[test]
     fn parse_fix_no_args() {
-        let mut parser = setup_parser();
         let source_bytes = b"fix NVE all nve";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parse(source_bytes);
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
         // Lots of tedium to parsing this...
-        let fix_node = dbg!(command_node.child(0)).unwrap();
+        let fix_node = dbg!(root_node.child(0)).unwrap();
 
         dbg!(fix_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -722,38 +712,62 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "Not yet fully implemented"]
-    // TODO: Finish this test
     fn parse_index_variable() {
-        let mut parser = setup_parser();
-        let text = b"variable index step4.1.aatm";
+        // let text = "variable file_name index step4.1.atm";
+        let text = include_str!("../../example_input_scripts/in.variable_index");
 
-        let tree = parser.parse(text, None).unwrap();
+        let tree = parse(text);
+
+        dbg!(tree.root_node().to_sexp());
+        let root_node = tree.root_node();
+        let var_def_node = root_node.child(0).unwrap(); // variable node
+
+        let expected = VariableDef {
+            variable_id: Ident {
+                name: "file_name".to_string(),
+                ident_type: IdentType::Variable,
+                span: ((0, 9)..(0, 18)).into(),
+            },
+            variable_style: Word::new("index".to_string(), (0, 19)..(0, 24)),
+            args: vec![Argument {
+                kind: ArgumentKind::Word("step4.1.atm".to_string()),
+                span: ((0, 25)..(0, 36)).into(),
+            }],
+            span: ((0, 0)..(0, 36)).into(),
+        };
+
+        assert_eq!(
+            VariableDef::from_node(&var_def_node, text).as_ref(),
+            Ok(&expected)
+        );
 
         let ast = ts_to_ast(&tree, text);
+        assert!(ast.is_ok());
 
-        if ast.is_err() {
-            dbg!(ast.unwrap_err());
-        } else {
-            dbg!(ast.unwrap());
+        if let Ok(ast) = ast {
+            dbg!(&ast);
+            assert_eq!(ast.commands.len(), 1);
+            match &ast.commands[0].command_type {
+                crate::ast::CommandType::VariableDef(var) => {
+                    assert_eq!(*var, expected)
+                }
+                cmd => panic!("Unexpected command {cmd:?}"),
+            }
         }
-
-        unimplemented!()
     }
 
     #[test]
     fn parse_fix_with_args() {
-        let mut parser = setup_parser();
         let source_bytes = b"fix NVT all nvt temp 1 1.5 $(100.0*dt)";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parse(source_bytes);
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let fix_node = dbg!(command_node.child(0)).unwrap();
+        let fix_node = dbg!(root_node.child(0)).unwrap();
 
         dbg!(fix_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -796,17 +810,16 @@ mod tests {
 
     #[test]
     fn parse_compute_with_args() {
-        let mut parser = setup_parser();
         let source_bytes = b"compute T_hot water temp/region hot_region";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parse(source_bytes);
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let compute_node = dbg!(command_node.child(0)).unwrap();
+        let compute_node = dbg!(root_node.child(0)).unwrap();
 
         dbg!(compute_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -836,25 +849,22 @@ mod tests {
 
     #[test]
     fn parse_variable_def() {
-        let mut parser = setup_parser();
         let source_bytes = b"variable a equal 1.0*dt";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parse(source_bytes);
 
-        // let ast = ts_to_ast(&tree, source_bytes);
-
-        let command_node = tree.root_node().child(0).unwrap();
+        let root_node = tree.root_node();
 
         let expected = VariableDef {
             variable_id: Ident {
                 name: "a".into(),
                 ident_type: IdentType::Variable,
                 // TODO: Check this is the type expected.
-                span: ((0, 9), (0, 10)).into(),
+                span: ((0, 9)..(0, 10)).into(),
             },
             variable_style: Word {
                 contents: "equal".into(),
-                span: ((0, 11), (0, 16)).into(),
+                span: ((0, 11)..(0, 16)).into(),
             },
 
             args: vec![Argument {
@@ -863,16 +873,58 @@ mod tests {
                     BinaryOp::Multiply,
                     Box::new(Expression::ThermoKeyword(Word {
                         contents: "dt".to_owned(),
-                        span: ((0, 21), (0, 23)).into(),
+                        span: ((0, 21)..(0, 23)).into(),
                     })),
                 )),
-                span: ((0, 17), (0, 23)).into(),
+                span: ((0, 17)..(0, 23)).into(),
             }],
-            span: ((0, 0), (0, 23)).into(),
+            span: ((0, 0)..(0, 23)).into(),
         };
 
-        let variable_node = command_node.child(0).expect("Should find child node.");
+        let variable_node = root_node.child(0).expect("Should find child node.");
         let parsed = VariableDef::from_node(&variable_node, source_bytes);
         assert_eq!(parsed, Ok(expected));
+    }
+
+    #[test]
+    fn parse_incomplete_variable_def() {
+        let source_bytes = b"variable a equal";
+
+        let tree = parse(source_bytes);
+
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
+        assert!(!root_node.is_missing());
+
+        let expected =
+            FromNodeError::PartialNode("missing arguments in variable command".to_string());
+
+        let variable_node = root_node.child(0).expect("Should find child node.");
+        let parsed = VariableDef::from_node(&variable_node, source_bytes);
+        assert_eq!(parsed, Err(expected));
+    }
+
+    #[test]
+    fn parse_incomplete_compute_def() {
+        let source_bytes = b"compute a ";
+
+        let tree = parse(source_bytes);
+
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
+        assert!(!root_node.is_missing());
+
+        let ast = ts_to_ast(&tree, &source_bytes);
+
+        // TODO: double check more about the syntax tree.
+        assert!(ast.is_err());
+
+        let compute_node = root_node.child(0).expect("Should find child node.");
+        let parsed = ComputeDef::from_node(&compute_node, source_bytes);
+        use crate::ast::from_node::FromNodeError;
+        assert_eq!(
+            parsed,
+            Err(FromNodeError::PartialNode("missing group ID".to_string()))
+        );
     }
 }

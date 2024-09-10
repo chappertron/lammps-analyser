@@ -10,13 +10,16 @@ use crate::{identifinder::Ident, utils::into_error::IntoError};
 use std::convert::TryFrom;
 use thiserror::Error;
 
-use super::{from_node::MissingNode, Word};
+use super::{
+    from_node::{FromNodeError, MissingNode},
+    Word,
+};
 
 #[derive(Debug, Default, PartialEq, Clone)]
 /// An mathematical expression in LAMMPS
 pub enum Expression {
     #[default]
-    None,
+    Missing,
     /// LAMMPS Identifier for a fix/compute/variable that is
     /// proceeded by f_/c_/v_ to indicate the type.
     UnderscoreIdent(Ident),
@@ -45,7 +48,7 @@ pub enum Expression {
 impl Display for Expression {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::None => write!(f, ""),
+            Self::Missing => write!(f, ""),
             Self::UnderscoreIdent(ident) => write!(f, "{}", ident.underscore_ident()),
             Self::Int(i) => write!(f, "{i}"),
             Self::Float(fl) => write!(f, "{fl}"),
@@ -85,12 +88,12 @@ pub enum ParseExprError {
     InvalidUnaryOperator(String), // TODO: make &'a str
     #[error("Invalid binary operator: {0}")]
     InvalidBinaryOperator(String), // TODO: Make &'a str
-    #[error("Incomplete Node")]
-    IncompleteNode,
     #[error("Tree-sitter Error Node Found")]
     ErrorNode,
     #[error("Unknown Expression type: {0}")]
     UnknownExpressionType(String),
+    #[error("Syntax Error: expected expression")]
+    MissingToken,
 }
 
 impl From<std::num::ParseFloatError> for ParseExprError {
@@ -113,14 +116,23 @@ impl From<std::str::Utf8Error> for ParseExprError {
 impl From<MissingNode> for ParseExprError {
     fn from(_: MissingNode) -> Self {
         // TODO: Add more context here. What went wrong?
-        Self::IncompleteNode
+        Self::MissingToken
     }
 }
 
 impl Expression {
     /// TODO: Handle Errors
-    pub(crate) fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Self, ParseExprError> {
-        // dbg!(node);
+    pub(crate) fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Self, FromNodeError> {
+        // TODO: Handle missing node
+        if node.is_missing() {
+            return Err(ParseExprError::MissingToken.into());
+        }
+
+        if let Some(child) = node.child(0) {
+            if child.is_missing() {
+                return Err(ParseExprError::MissingToken.into());
+            }
+        }
 
         match node.kind() {
             // Child 0 is the identifier
@@ -152,7 +164,7 @@ impl Expression {
                 // child 0 = function name
                 // child 1 = opening bracket
                 for node in node.children(&mut cursor).skip(2) {
-                    dbg!(node.utf8_text(text)?);
+                    node.utf8_text(text)?;
                     if node.kind() == ")" {
                         break;
                     }
@@ -181,8 +193,8 @@ impl Expression {
             },
             "thermo_kwarg" => Ok(Self::ThermoKeyword(Word::parse_word(node, text)?)),
             "word" => Ok(Self::Word(Word::parse_word(node, text)?)),
-            "ERROR" => Err(ParseExprError::ErrorNode),
-            x => Err(ParseExprError::UnknownExpressionType(x.to_owned())),
+            "ERROR" => Err(ParseExprError::ErrorNode.into()),
+            x => Err(ParseExprError::UnknownExpressionType(x.to_owned()).into()),
         }
         // todo!()
     }
@@ -291,7 +303,7 @@ mod tests {
     use crate::identifinder::IdentType;
 
     use super::*;
-    
+
     use tree_sitter::Parser;
     fn setup_parser() -> Parser {
         let mut parser = Parser::new();
@@ -310,10 +322,10 @@ mod tests {
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -337,10 +349,10 @@ mod tests {
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -365,10 +377,10 @@ mod tests {
         dbg!(tree.root_node().to_sexp());
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -397,10 +409,10 @@ mod tests {
         dbg!(tree.root_node().to_sexp());
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -435,10 +447,10 @@ mod tests {
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -468,10 +480,10 @@ mod tests {
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
@@ -504,10 +516,10 @@ mod tests {
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
-        let command_node = tree.root_node().child(0).unwrap();
-        dbg!(command_node.to_sexp());
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
         // Lots of tedium to parsing this...
-        let expr_node = dbg!(command_node.child(0)).unwrap().child(3).unwrap();
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
