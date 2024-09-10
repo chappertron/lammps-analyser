@@ -27,6 +27,7 @@ atom_style      full
 
 # Forcefield
 pair_style      lj/long/tip4p/long long long  1 2 1 1 0.1546 10 10
+pair_style      goop
 pair_modify     mix arithmetic
 kspace_style    pppm/disp/tip4p 1.0e-5
 kspace_modify   force/disp/real 0.0001
@@ -63,7 +64,7 @@ neigh_modify    delay 5 every 1
 
 # Thermostats
 # Regions
-#set up the "hot region" at the left end of the box
+#set up the  at the left end of the box
 variable lx equal lx
 variable ly equal ly
 variable lz equal lz
@@ -71,15 +72,15 @@ variable lz equal lz
 
 variable  cbl equal $(-v_lz)/2.0+${dz}
 variable  cbh equal ${lz}/2.0-${dz}
-region hot1 block INF INF INF INF INF  ${cbl} units box
-region hot2 block INF INF INF INF ${cbh} INF   units box
+region cold1 block INF INF INF INF INF  ${cbl} units box
+region cold2 block INF INF INF INF ${cbh} INF   units box
 
 #set up the "cold region" in the middle of the box
 #region hot_region block INF INF INF INF ${cbl} ${cbh} units box
 region hot_region block INF INF INF INF -${dz} ${dz} units box
 
-#Hot regions  unification
-region cold_region union 2 hot1 hot2 units box
+#cold regions  unification
+region cold_region union 2 cold1 cold2 units box
 
 #Apply thermostats
 compute T_hot water temp/region hot_region
@@ -134,8 +135,11 @@ write_data      ${outputname}.data pair ij
 compute  1 all rdf
 
 # Invalid fix styles
-compute  1 all hellop
+compute  1 all temp
+
 fix  12 all what
+
+fix nvt all nvt water temp "hello"
 
 invalid_command
 
