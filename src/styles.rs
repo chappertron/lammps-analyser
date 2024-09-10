@@ -7,7 +7,7 @@ macro_rules! derive_styles {
         #[non_exhaustive]
         pub enum $EnumName {
             $($variant,)+
-            InvalidStyle(String),
+            InvalidStyle,
         }
 
 
@@ -15,7 +15,7 @@ macro_rules! derive_styles {
             fn from(value: &str) -> Self {
                 match value {
                     $($lit => $EnumName::$variant,)+
-                    s => $EnumName::InvalidStyle(s.to_owned()),
+                    _ => $EnumName::InvalidStyle,
                 }
             }
         }
@@ -23,14 +23,14 @@ macro_rules! derive_styles {
             fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 match self {
                     $($EnumName::$variant => write!(f, $lit),)+
-                    $EnumName::InvalidStyle(s) => write!(f, "Invalid: {s}"),
+                    $EnumName::InvalidStyle => write!(f, "InvalidStyle"),
                 }
             }
         }
 
         impl Default for $EnumName {
             fn default() -> Self {
-                $EnumName::InvalidStyle("".to_owned())
+                $EnumName::InvalidStyle
             }
         }
     };

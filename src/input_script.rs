@@ -99,7 +99,7 @@ impl<'src> InputScript<'src> {
 
         let syntax_errors = error_finder.syntax_errors();
 
-        let invalid_styles = check_styles(&tree, source_code)?;
+        let invalid_styles = check_styles(&ast, &tree, source_code)?;
 
         // These first because they are likely least severe.
         diagnostics.extend(fix_errors);

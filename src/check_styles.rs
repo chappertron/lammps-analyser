@@ -1,7 +1,9 @@
+use crate::ast::{self, Ast, Word};
 use crate::compute_styles::ComputeStyle;
 use crate::diagnostics::{self, Issue};
 use crate::fix_styles::FixStyle;
 use crate::spans::{Point, Span};
+use crate::styles::pair_styles::{self, PairStyle};
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::fmt::Display;
@@ -9,7 +11,7 @@ use thiserror::Error;
 use tree_sitter::{Query, QueryCursor, Tree};
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
-#[error("{}:{}: {} {} `{}`",start.row+1,start.column+1,"Invalid",style_type,name)]
+#[error("invalid {} `{}`", style_type, name)]
 pub struct InvalidStyle {
     pub start: Point,
     pub end: Point,
@@ -74,14 +76,14 @@ static STYLE_QUERY: Lazy<Query> = Lazy::new(|| {
 // TODO: Check these by using the AST
 // TODO: Also check other types of style.
 /// Checks the tree for different fix and compute styles and checks if they exist or not!!!
-pub fn check_styles(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Vec<InvalidStyle>> {
+pub fn check_styles(ast: &Ast, tree: &Tree, text: impl AsRef<[u8]>) -> Result<Vec<InvalidStyle>> {
     let text = text.as_ref();
 
     let mut query_cursor = QueryCursor::new();
 
     let matches = query_cursor.matches(&STYLE_QUERY, tree.root_node(), text);
 
-    Ok(matches
+    let mut computes_and_fixes: Vec<_> = matches
         .into_iter()
         .filter_map(|mat| {
             let style = mat.captures[0].node.utf8_text(text).ok()?;
@@ -113,5 +115,41 @@ pub fn check_styles(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Vec<InvalidSt
                 None
             }
         })
-        .collect())
+        .collect();
+
+    // Check pair styles
+    for command in &ast.commands {
+        if let ast::CommandType::GenericCommand(cmd) = &command.command_type {
+            if cmd.name.contents != "pair_style" {
+                continue;
+            }
+
+            if cmd.args.is_empty() {
+                // TODO: Come up with a better way of showing that the type is missing than just an
+                // empty string
+                // Perhaps this code is better served in the `check` code.
+                computes_and_fixes.push(InvalidStyle {
+                    start: cmd.end,
+                    end: cmd.end,
+                    name: "".to_owned(),
+                    style_type: StyleType::Pair,
+                });
+                continue;
+            }
+
+            if let ast::ArgumentKind::Word(style) = &cmd.args[0].kind {
+                if PairStyle::from(style.as_str()) == PairStyle::InvalidStyle {
+                    let span = cmd.args[0].span;
+                    computes_and_fixes.push(InvalidStyle {
+                        start: span.start,
+                        end: span.end,
+                        name: style.clone(),
+                        style_type: StyleType::Pair,
+                    })
+                }
+            }
+        }
+    }
+
+    Ok(computes_and_fixes)
 }
