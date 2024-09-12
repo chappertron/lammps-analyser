@@ -15,6 +15,7 @@ use crate::{
 };
 use std::{fmt::Display, str::Utf8Error};
 
+use expressions::Expression;
 use tree_sitter::{Node, Tree};
 
 use crate::{
@@ -291,6 +292,7 @@ pub enum ArgumentKind {
     Concatenation(Vec<Argument>),
     /// Expression.
     /// TODO: Not really valid as a bare argument except for with variable commands
+    /// TODO: Make a quoted expression a seperate thing?
     Expression(expressions::Expression),
     // TODO: Remove? Can't know if a group name until further on in the process???
     // Perhaps make it an identifier that then is decided to be either
@@ -345,16 +347,19 @@ impl FromNode for ArgumentKind {
             "expression" => Ok(Self::Expression(expressions::Expression::parse_expression(
                 node, text,
             )?)),
+            "quoted_expression" => quoted_expression(node, text).map(Self::Expression),
             "string" => Ok(Self::String(node.utf8_text(text)?.to_owned())),
             "group" => Ok(Self::Group),
             "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
                 &node.child(0).into_err()?,
                 text,
             )?)),
+            // TODO: check surrounding brackets
             "var_curly" => Ok(Self::VarCurly(Ident::new(
                 &node.child(1).into_err()?,
                 text,
             )?)),
+            // TODO: check surrounding brackets
             "var_round" => Ok(Self::VarRound(expressions::Expression::parse_expression(
                 &node.child(1).into_err()?,
                 text,
@@ -384,6 +389,40 @@ impl FromNode for ArgumentKind {
             }),
         }
     }
+}
+
+// TODO: Move this to a more sensible module
+pub(crate) fn quoted_expression(node: &Node, text: &[u8]) -> Result<Expression, FromNodeError> {
+    let mut cursor = node.walk();
+    let mut children = node.children(&mut cursor);
+
+    let is_left_missing = match children.next() {
+        Some(left_quote) if left_quote.kind() != "\"" => true,
+        None => true,
+        Some(_) => false,
+    };
+
+    if is_left_missing {
+        return Err(FromNodeError::PartialNode("expected '\"'".into()));
+    }
+
+    let expr = children
+        .next()
+        .ok_or(FromNodeError::PartialNode("expected expression".into()))?;
+
+    let expr = Expression::parse_expression(&expr, text)?;
+
+    let is_right_missing = match children.next() {
+        Some(right_quote) if right_quote.kind() != "\"" => true,
+        None => true,
+        Some(_) => false,
+    };
+
+    if is_right_missing {
+        return Err(FromNodeError::PartialNode("expected '\"'".into()));
+    }
+
+    Ok(expr)
 }
 
 impl Display for Argument {
