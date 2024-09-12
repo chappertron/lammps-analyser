@@ -43,6 +43,16 @@ pub enum Expression {
     ThermoKeyword(Word),
     /// TODO: Word might not actually be implemented for expr
     Word(Word),
+
+    /// An expression expansion `$(expr)`
+    /// This expression is invalid in most cases, except in variable commands.
+    /// This is because they cannot be nested
+    VarRound(Box<Expression>),
+
+    /// An variable expansion `${v}`
+    /// This expression is invalid in most cases, except in variable commands.
+    /// This is because they cannot be nested
+    VarCurly(Ident),
 }
 
 impl Display for Expression {
@@ -69,6 +79,8 @@ impl Display for Expression {
             Self::Parens(expr) => write!(f, "({expr})"),
             Self::ThermoKeyword(kw) => write!(f, "{kw}"),
             Self::Word(word) => write!(f, "{word}"),
+            Self::VarRound(expr) => write!(f, "$({expr})"),
+            Self::VarCurly(var) => write!(f, "${{{var}}}"), // triple { to ensure escaping
         }
     }
 }
@@ -193,11 +205,79 @@ impl Expression {
             },
             "thermo_kwarg" => Ok(Self::ThermoKeyword(Word::parse_word(node, text)?)),
             "word" => Ok(Self::Word(Word::parse_word(node, text)?)),
+            "var_round" => Ok(Self::VarRound(Box::new(var_round(node, text)?))),
+            "var_curly" => var_curly(node, text).map(|x| Self::VarCurly(x)),
             "ERROR" => Err(ParseExprError::ErrorNode.into()),
             x => Err(ParseExprError::UnknownExpressionType(x.to_owned()).into()),
         }
         // todo!()
     }
+}
+
+pub(crate) fn var_round(node: &Node, text: &[u8]) -> Result<Expression, FromNodeError> {
+    let mut cursor = node.walk();
+    let mut children = node.children(&mut cursor);
+
+    let is_left_missing = match children.next() {
+        Some(left_parens) if left_parens.kind() != "$(" => true,
+        None => true,
+        Some(_) => false,
+    };
+
+    if is_left_missing {
+        return Err(FromNodeError::PartialNode("expected '$('".into()));
+    }
+
+    let expr = children
+        .next()
+        .ok_or(FromNodeError::PartialNode("expected expression".into()))?;
+
+    let expr = Expression::parse_expression(&expr, text)?;
+
+    let is_right_missing = match children.next() {
+        Some(left_parens) if left_parens.kind() != ")" => true,
+        None => true,
+        Some(_) => false,
+    };
+
+    if is_right_missing {
+        return Err(FromNodeError::PartialNode("expected ')'".into()));
+    }
+
+    Ok(expr)
+}
+
+pub(crate) fn var_curly(node: &Node, text: &[u8]) -> Result<Ident, FromNodeError> {
+    let mut cursor = node.walk();
+    let mut children = node.children(&mut cursor);
+
+    let is_left_missing = match children.next() {
+        Some(left_brace) if left_brace.kind() != "${" => true,
+        None => true,
+        Some(_) => false,
+    };
+
+    if is_left_missing {
+        return Err(FromNodeError::PartialNode("expected '${'".into()));
+    }
+
+    let var = children
+        .next()
+        .ok_or(FromNodeError::PartialNode("expected variable name".into()))?;
+
+    let var = Ident::new(&var, text)?;
+
+    let is_right_missing = match children.next() {
+        Some(right_brace) if right_brace.kind() != "}" => true,
+        None => true,
+        Some(_) => false,
+    };
+
+    if is_right_missing {
+        return Err(FromNodeError::PartialNode("expected '}'".into()));
+    }
+
+    Ok(var)
 }
 
 #[derive(Debug, Default, PartialEq, Eq, Clone, Copy)]
