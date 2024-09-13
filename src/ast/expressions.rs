@@ -175,6 +175,7 @@ impl Expression {
 
                 // child 0 = function name
                 // child 1 = opening bracket
+                // TODO: Handle no closing bracket!!!!
                 for node in node.children(&mut cursor).skip(2) {
                     node.utf8_text(text)?;
                     if node.kind() == ")" {
@@ -205,6 +206,10 @@ impl Expression {
             },
             "thermo_kwarg" => Ok(Self::ThermoKeyword(Word::parse_word(node, text)?)),
             "word" => Ok(Self::Word(Word::parse_word(node, text)?)),
+            // TODO: merge this with word in the grammar
+            "group_id" => Ok(Self::Word(Word::parse_word(node, text)?)),
+            // TODO: fix for region_id. should this be word instead?
+            "identifier" => Ok(Self::Word(Word::parse_word(node, text)?)),
             "var_round" => Ok(Self::VarRound(Box::new(var_round(node, text)?))),
             "var_curly" => var_curly(node, text).map(|x| Self::VarCurly(x)),
             "ERROR" => Err(ParseExprError::ErrorNode.into()),
