@@ -9,7 +9,9 @@ use crate::ast::{Argument, ArgumentKind, FixDef};
 
 use super::invalid_arguments;
 
-/// Parse n keywords that match in the provided slice
+/// Check that the provided arguments are one of several provided options.
+///
+/// Takes the `n_args` arguments from the iterator and checks each one is in `options`
 pub(crate) fn kwarg_expected_enum<'a>(
     iter: &mut impl Iterator<Item = &'a Argument>,
     kwarg: &str,
@@ -19,7 +21,7 @@ pub(crate) fn kwarg_expected_enum<'a>(
     for i in 0..n_args {
         if let Some(x) = iter.next() {
             match &x.kind {
-                ArgumentKind::ArgName(x) => {
+                ArgumentKind::ArgName(x) | ArgumentKind::Word(x) => {
                     if !options.contains(&x.as_ref()) {
                         Err(invalid_arguments::InvalidArgumentsType::InvalidOption {
                             kwarg: kwarg.into(),
@@ -113,7 +115,7 @@ pub(crate) fn kwarg_expected_str<'a>(
     for i in 0..n_expected {
         if let Some(x) = iter.next() {
             match x.kind {
-                ArgumentKind::ArgName(_) => (),
+                ArgumentKind::ArgName(_) | ArgumentKind::Word(_) => (),
                 _ => Err(invalid_arguments::InvalidArgumentsType::IncorrectType {
                     expected: "string".into(),
                     provided: x.to_string(),
