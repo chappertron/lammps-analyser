@@ -752,8 +752,8 @@ mod tests {
 
     #[test]
     fn parse_index_variable() {
-        // let text = "variable file_name index step4.1.atm";
-        let text = include_str!("../../example_input_scripts/in.variable_index");
+        let text = "variable file_name index step4.1.atm";
+        // let text = include_str!("../../example_input_scripts/in.variable_index");
 
         let tree = parse(text);
 
