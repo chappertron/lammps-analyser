@@ -1262,6 +1262,7 @@ dependencies = [
 [[package]]
 name = "tree-sitter-lammps"
 version = "0.0.2"
+source = "git+ssh://git@github.com/chappertron/tree-sitter-lammps?tag=0.0.2#4cb771b5f0d41ca4d1c28fee395555576f168600"
 dependencies = [
  "cc",
  "tree-sitter",
