@@ -39,10 +39,6 @@ criterion = "0.3"
 pretty_assertions = "1.4.0"
 
 [[bench]]
-name = "on_change_bench"
-harness = false
-
-[[bench]]
 name = "cli_bench"
 harness = false
 
