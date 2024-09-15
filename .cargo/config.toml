@@ -1,0 +1,2 @@
+[net]
+git-fetch-with-cli = true # For using private git repo as dep in CI
