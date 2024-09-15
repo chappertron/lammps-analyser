@@ -17,6 +17,7 @@ prepare_docs.py
 # Rust format backups
 .*.rs.rustfmt
 
+# not sure why this is here.
 test.*
 
 # Output from running --output-tree flag
@@ -24,8 +25,12 @@ tree.dot
 *tree.svg
 
 
-# Flamegraph outputs
+# Profiling outputs
 flamegraph.svg
+profile.json
+
+# language-tool speel checking
+.ltex/
 
 
 # sed backups
