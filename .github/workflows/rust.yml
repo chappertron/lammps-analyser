@@ -15,7 +15,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - run: git config --global url."https://${{ secrets.GIT_CREDENTIALS }}@github.com".insteadOf ssh://git@github.com
+    - run: eval `ssh-agent -s`
+           ssh-add - <<< '${{ secrets.ACTIONS_TOKEN }}'
     - uses: actions/checkout@v4
     - name: Build
       run: cargo build --verbose
