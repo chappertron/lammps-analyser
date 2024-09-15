@@ -1,0 +1,78 @@
+#
+# Runs LAMMPS simulation electrolyte solutions
+# echo            screen
+variable        dcdfreq index 10000 
+variable        thermofreq index 100
+variable        rand equal 990416
+variable        nlayers equal 100
+variable        nsteps index 10000000
+variable        temp index 250
+variable        deltat equal 20
+variable        Thot equal (v_temp+v_deltat)
+variable        Tcold equal (v_temp-v_deltat)
+variable        dofh  equal 1.5925
+variable        dofo  equal 2.8151
+variable        seedH equal 35543
+variable        seedC equal 3356
+variable        unused equal 69420
+variable        dz equal 4.0
+variable        inputname  index startnemd
+variable        outputname string nemd1.TH${Thot}.TC${Tcold}
+# variable        outputname index run3-113
+
+# Define simulation conditios
+units           real
+boundary        p p p
+atom_style      full
+
+
+region box block 0 20 0 20 0  20 units box
+create_box 1 box
+create_atoms 1 single 0 0 0 
+mass 1 1.0
+
+#set up the  at the left end of the box
+variable lx equal lx
+variable ly equal ly
+variable lz equal lz
+
+
+
+# Can use ${} in a variable expression, but NOT in others
+# May have double quotes surrounding them
+
+# these are constants and don't change
+variable  round equal $(v_lz)/2.0
+variable  curly equal ${lz}/2.0
+
+# these *do* change
+variable  v_under equal v_lz/2.0
+variable  thermo_var equal lz/2.0
+
+change_box all z delta 0 2
+
+
+# this just seems like the wrong way around!!!
+
+#10
+print round=$( v_round )
+#10
+print curly=$(v_curly)
+#11
+print under=${v_under }
+#11
+print thermo_var=$(v_thermo_var)
+
+run 1
+
+#10
+print round=$( v_round )
+#10
+print curly=$(v_curly)
+#11
+print under=$(v_under)
+#11
+print thermo_var=$(v_thermo_var)
+
+quit
+
