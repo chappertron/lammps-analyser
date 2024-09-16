@@ -42,14 +42,14 @@ pub fn check_fix(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArguments
         FixStyle::InvalidStyle => Ok(()),
 
         FixStyle::Nve => parse_no_args(fix).map_err(|x| invalid_arguments::InvalidArguments {
-            err_type: x,
+            err_type: Box::new(x),
             range: fix.range(),
             style: CommandAndStyle::FixStyle(style),
         }),
         // TODO: See if other fix styles share the same arguments
         FixStyle::Nvt | FixStyle::Npt | FixStyle::Nph => {
             nose_hoover::parse_nh_fixes(fix).map_err(|x| invalid_arguments::InvalidArguments {
-                err_type: x,
+                err_type: Box::new(x),
                 range: fix.range(),
                 style: CommandAndStyle::FixStyle(style),
             })
@@ -57,7 +57,7 @@ pub fn check_fix(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArguments
         // Fallback to checking only positional arguments
         style => check_n_positional(fix, style.n_positional_args()).map_err(|x| {
             invalid_arguments::InvalidArguments {
-                err_type: x,
+                err_type: Box::new(x),
                 range: fix.range(),
                 style: CommandAndStyle::FixStyle(style),
             }

@@ -36,8 +36,8 @@ impl<V> SpannedError<V> {
     }
 }
 
-/// Add a span to the error type.
-pub(crate) trait WithSpan {
+/// Add a span to a result type.
+pub trait WithSpan {
     type Output;
     type Error;
     fn with_span(self, span: Span) -> Result<Self::Output, SpannedError<Self::Error>>;

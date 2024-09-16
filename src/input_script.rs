@@ -40,6 +40,7 @@ pub struct InputScript<'src> {
 }
 
 /// Implemented so `Debug` can be derived for `InputScript`
+#[allow(dead_code)]
 struct LmpParser(Parser);
 
 impl Debug for LmpParser {
@@ -113,7 +114,7 @@ impl<'src> InputScript<'src> {
         );
 
         // TODO: return owned syntax errors to remove cloning
-        diagnostics.extend(syntax_errors.iter().cloned().map(|x| x.diagnostic()));
+        diagnostics.extend(syntax_errors.iter().map(|x| x.diagnostic()));
 
         // TODO: convert to diagnostics
         diagnostics.extend(
@@ -153,8 +154,7 @@ impl<'src> InputScript<'src> {
 
     pub fn run_lints(&mut self) {
         self.diagnostics.extend(
-            redefined_identifiers(&self.ast, &self.identifinder.symbols())
-                .map(|id| id.diagnostic()),
+            redefined_identifiers(&self.ast, self.identifinder.symbols()).map(|id| id.diagnostic()),
         )
     }
 }

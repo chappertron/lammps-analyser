@@ -211,7 +211,7 @@ impl Expression {
             // TODO: fix for region_id. should this be word instead?
             "identifier" => Ok(Self::Word(Word::parse_word(node, text)?)),
             "var_round" => Ok(Self::VarRound(Box::new(var_round(node, text)?))),
-            "var_curly" => var_curly(node, text).map(|x| Self::VarCurly(x)),
+            "var_curly" => var_curly(node, text).map(Self::VarCurly),
             "ERROR" => Err(ParseExprError::ErrorNode.into()),
             x => Err(ParseExprError::UnknownExpressionType(x.to_owned()).into()),
         }

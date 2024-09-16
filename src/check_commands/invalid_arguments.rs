@@ -10,7 +10,7 @@ use super::fixes::CommandAndStyle;
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[error("{err_type} for {style}")]
 pub struct InvalidArguments {
-    pub(crate) err_type: InvalidArgumentsType,
+    pub(crate) err_type: Box<InvalidArgumentsType>,
     pub(crate) range: Span,
     pub(crate) style: CommandAndStyle,
 }
@@ -18,7 +18,7 @@ pub struct InvalidArguments {
 impl InvalidArguments {
     pub fn new(err_type: InvalidArgumentsType, range: Span, style: CommandAndStyle) -> Self {
         InvalidArguments {
-            err_type,
+            err_type: Box::new(err_type),
             range,
             style,
         }
@@ -81,9 +81,9 @@ pub enum InvalidArgumentsType {
     InvalidKeyword { kwarg: String, fix_style: FixStyle },
     #[error("Invalid option `{}` for keyword `{}`. Valid options: [{}].", kwarg, provided,options.join(","))]
     InvalidOption {
-        kwarg: String,
+        kwarg: &'static str,
         provided: String,
-        options: Vec<String>,
+        options: Vec<&'static str>,
     },
     #[error("Invalid style for fix: {0}")]
     InvalidStyle(String),

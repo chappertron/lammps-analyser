@@ -24,7 +24,7 @@ pub fn redefined_identifiers<'a>(
         .into_iter()
         // Don't show the warning on the first ident.
         // TODO: show an Information for it though
-        .flat_map(|x| x.defs.into_iter().skip(1).map(|ident| RedfinedIdent(ident)))
+        .flat_map(|x| x.defs.into_iter().skip(1).map(RedfinedIdent))
 }
 
 /// Lint against fixes being redefined or deleted before they are run
@@ -36,7 +36,7 @@ fn fix_redef_before_run<'a>(
     // All the commands that have multiple definitions.
     let multiply_defined = indents.values().filter(|v| v.defs().defs.len() > 1);
 
-    let run_blocks: Vec<_> = (&ast).find_run_blocks().collect();
+    let run_blocks: Vec<_> = ast.find_run_blocks().collect();
 
     // Count the number of times a fix is defined before the next run command
     let mut redefined = vec![];

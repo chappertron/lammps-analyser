@@ -57,10 +57,11 @@ mod test {
 
     use super::*;
     #[test]
+    #[allow(clippy::unwrap_used)]
     fn test_find_run_commands() {
         let file = include_str!("../../example_input_scripts/in.nemd");
 
-        let input_script = InputScript::new(&file).unwrap();
+        let input_script = InputScript::new(file).unwrap();
 
         let run_commands: Vec<_> = input_script.ast.find_run_commands().cloned().collect();
 

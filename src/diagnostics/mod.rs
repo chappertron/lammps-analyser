@@ -128,7 +128,7 @@ impl From<Diagnostic> for lsp_types::Diagnostic {
             range: span.into_lsp_types(),
             severity: Some(severity.into()),
             source: Some("lammps-analyser".into()),
-            message: message,
+            message,
             ..Default::default()
         }
     }

@@ -6,6 +6,7 @@ macro_rules! compute_styles {
         pub enum ComputeStyle {
             $($variant,)+
             #[default] // Because no other varitant can be default with macro def
+            #[allow(clippy::enum_variant_names)]
             InvalidComputeStyle,
         }
 

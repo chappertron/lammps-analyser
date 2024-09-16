@@ -94,12 +94,10 @@ impl IdentiFinder {
     ///
     /// Fails if the Query used internally is invalid.
     pub fn new_no_parse() -> Self {
-        let i = IdentiFinder {
+        IdentiFinder {
             cursor: QueryCursor::new(),
             symbols: HashMap::new(),
-        };
-
-        i
+        }
     }
 
     /// Create a new `Identifinder` and search for symbols.

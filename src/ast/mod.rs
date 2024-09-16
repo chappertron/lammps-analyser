@@ -184,7 +184,6 @@ impl Display for Word {
 
 impl Word {
     pub fn new(contents: String, span: impl Into<Span>) -> Self {
-        let contents = contents.to_owned();
         let span = span.into();
 
         Self { contents, span }
@@ -953,7 +952,7 @@ mod tests {
         dbg!(root_node.to_sexp());
         assert!(!root_node.is_missing());
 
-        let ast = ts_to_ast(&tree, &source_bytes);
+        let ast = ts_to_ast(&tree, source_bytes);
 
         // TODO: double check more about the syntax tree.
         assert!(ast.is_err());

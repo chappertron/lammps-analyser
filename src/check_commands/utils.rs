@@ -14,9 +14,9 @@ use super::invalid_arguments;
 /// Takes the `n_args` arguments from the iterator and checks each one is in `options`
 pub(crate) fn kwarg_expected_enum<'a>(
     iter: &mut impl Iterator<Item = &'a Argument>,
-    kwarg: &str,
+    kwarg: &'static str,
     n_args: usize,
-    options: &[&str],
+    options: &[&'static str],
 ) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     for i in 0..n_args {
         if let Some(x) = iter.next() {
@@ -24,9 +24,9 @@ pub(crate) fn kwarg_expected_enum<'a>(
                 ArgumentKind::ArgName(x) | ArgumentKind::Word(x) => {
                     if !options.contains(&x.as_ref()) {
                         Err(invalid_arguments::InvalidArgumentsType::InvalidOption {
-                            kwarg: kwarg.into(),
+                            kwarg,
                             provided: x.to_string(),
-                            options: options.iter().map(|&x| x.to_string()).collect(),
+                            options: options.to_vec(),
                         })?
                     }
                 }

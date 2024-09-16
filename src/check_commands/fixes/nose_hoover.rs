@@ -63,7 +63,7 @@ pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::Inva
                 barostat_only(kwarg)?;
                 utils::kwarg_expected_enum(
                     &mut iter,
-                    kwarg,
+                    "couple",
                     1,
                     &["none", "xyz", "xy", "xz", "yz"],
                 )?;
@@ -127,7 +127,7 @@ pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::Inva
                 utils::kwarg_expected_floats(&mut iter, kwarg, 1, "<x> <y> <z>")?;
             }
             ArgumentKind::Word(kwarg) if kwarg == "update" => {
-                utils::kwarg_expected_enum(&mut iter, kwarg, 1, &["dipole", "dipole/dlm"])?
+                utils::kwarg_expected_enum(&mut iter, "update", 1, &["dipole", "dipole/dlm"])?
             }
 
             ArgumentKind::Word(kwarg) => Err(invalid_arguments::InvalidArgumentsType::Custom(
