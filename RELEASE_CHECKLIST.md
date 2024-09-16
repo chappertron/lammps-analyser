@@ -8,9 +8,10 @@
 - [ ] Add README.md
 - [ ] Add licence
 - [ ] Publish to crates.io
-- [ ] Add CI for testing
-- [ ] Add CI for release binaries (`cargo-dist`)
+- [x] Add CI for testing
+- [x] Add CI for release binaries (`cargo-dist`)
 - [ ] Create a release tag `gh release`
+- [ ] Test release CI with a pre-release
 - [ ] Fix warnings in compiling
 - [ ] Run clippy
 - [ ] Run typos
