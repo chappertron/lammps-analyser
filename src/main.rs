@@ -55,8 +55,10 @@ fn main() -> Result<()> {
             n_errors.bright_red(),
             if n_errors == 1 { "" } else { "s" },
         );
+
+        std::process::exit(72);
     } else {
         println!("All Good 😊");
+        std::process::exit(0);
     }
-    Ok(())
 }
