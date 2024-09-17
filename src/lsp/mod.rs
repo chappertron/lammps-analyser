@@ -275,6 +275,7 @@ impl LanguageServer for Backend {
             // Read the actual docs
             let hover_text = DOCS_CONTENTS
                 .get(format!("{doc_name}.md").as_str())
+                // Should be ok, the name is already found in the map.
                 .expect("No docs for this command")
                 .to_string();
 
