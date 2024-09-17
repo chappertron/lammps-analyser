@@ -12,8 +12,9 @@ pub mod impl_helpers;
 use crate::{
     spanned_error::SpannedError,
     spans::{Point, Span},
+    utils::tree_sitter_helpers::NodeExt,
 };
-use std::{fmt::Display, str::Utf8Error};
+use std::fmt::Display;
 
 use expressions::Expression;
 use tree_sitter::{Node, Tree};
@@ -40,9 +41,8 @@ pub struct PartialAst {
 }
 
 /// TODO: return both the partial AST and the Errors
-pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, PartialAst> {
+pub fn ts_to_ast(tree: &Tree, text: &str) -> Result<Ast, PartialAst> {
     let mut cursor = tree.walk();
-    let text = text.as_ref();
 
     let mut commands = vec![];
     let mut errors = vec![];
@@ -91,7 +91,7 @@ impl CommandNode {
 
 impl FromNode for CommandNode {
     type Error = (Self, FromNodeError);
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
+    fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
         let range = node.range().into();
 
         match CommandType::from_node(node, text) {
@@ -126,7 +126,7 @@ pub enum CommandType {
 impl FromNode for CommandType {
     // NOTE: This is chosen as the error type so an error node can be returned instead
     type Error = (Self, FromNodeError);
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, (Self, FromNodeError)> {
+    fn from_node(node: &Node, text: &str) -> Result<Self, (Self, FromNodeError)> {
         let mut result = match node.kind() {
             "fix" => Ok(Self::Fix(
                 FixDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
@@ -193,18 +193,18 @@ impl Word {
         self.contents.as_str()
     }
 
-    pub(crate) fn parse_word(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Utf8Error> {
-        let contents = node.utf8_text(text.as_ref())?.to_owned();
+    pub(crate) fn parse_word(node: &Node, text: &str) -> Self {
+        let contents = node.str_text(text.as_ref()).to_owned();
         let span = node.range().into();
 
-        Ok(Word { contents, span })
+        Word { contents, span }
     }
 }
 
 impl FromNode for Word {
     type Error = FromNodeError;
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
-        Ok(Word::parse_word(node, text)?)
+    fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
+        Ok(Word::parse_word(node, text))
     }
 }
 
@@ -220,7 +220,7 @@ pub struct GenericCommand {
 
 impl FromNode for GenericCommand {
     type Error = FromNodeError;
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
+    fn from_node(node: &Node, text: &str) -> Result<Self, FromNodeError> {
         let mut cursor = node.walk();
         let start = node.start_position();
         let end = node.end_position();
@@ -308,7 +308,7 @@ pub enum ArgumentKind {
 impl FromNode for Argument {
     type Error = FromNodeError;
 
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
+    fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
         let text = text.as_ref();
         let kind = ArgumentKind::from_node(node, text)?;
 
@@ -324,16 +324,16 @@ impl FromNode for ArgumentKind {
     fn from_node(
         node: &Node,
         // _cursor: &mut tree_sitter::TreeCursor,
-        text: impl AsRef<[u8]>,
+        text: &str,
     ) -> Result<Self, <Argument as FromNode>::Error> {
         // TODO: make these variants more complete.
         //.child(0).unwrap()
         // Did removing above from match fix things???
         let text = text.as_ref();
         match node.kind() {
-            "int" => Ok(Self::Int(node.utf8_text(text)?.parse::<isize>()?)),
-            "float" => Ok(Self::Float(node.utf8_text(text)?.parse::<f64>()?)),
-            "bool" => Ok(Self::Bool(match node.utf8_text(text)? {
+            "int" => Ok(Self::Int(node.str_text(text).parse::<isize>()?)),
+            "float" => Ok(Self::Float(node.str_text(text).parse::<f64>()?)),
+            "bool" => Ok(Self::Bool(match node.str_text(text) {
                 "on" | "yes" | "true" => true,
                 "off" | "no" | "false" => false,
                 invalid_name => Err(FromNodeError::UnknownCustom {
@@ -347,7 +347,7 @@ impl FromNode for ArgumentKind {
                 node, text,
             )?)),
             "quoted_expression" => quoted_expression(node, text).map(Self::Expression),
-            "string" => Ok(Self::String(node.utf8_text(text)?.to_owned())),
+            "string" => Ok(Self::String(node.str_text(text).to_owned())),
             "group" => Ok(Self::Group),
             "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
                 &node.child(0).into_err()?,
@@ -365,11 +365,11 @@ impl FromNode for ArgumentKind {
             )?)),
             "argname" => Ok(Self::ArgName(
                 //.child(0).into_err()?
-                node.utf8_text(text)?.to_string(),
+                node.str_text(text).to_string(),
             )),
             "word" => Ok(Self::Word(
                 //.child(0).into_err()?
-                node.utf8_text(text)?.to_string(),
+                node.str_text(text).to_string(),
             )),
             "concatenation" => {
                 let mut cursor = node.walk();
@@ -391,7 +391,7 @@ impl FromNode for ArgumentKind {
 }
 
 // TODO: Move this to a more sensible module
-pub(crate) fn quoted_expression(node: &Node, text: &[u8]) -> Result<Expression, FromNodeError> {
+pub(crate) fn quoted_expression(node: &Node, text: &str) -> Result<Expression, FromNodeError> {
     let mut cursor = node.walk();
     let mut children = node.children(&mut cursor);
 
@@ -479,7 +479,7 @@ impl FromNode for FixDef {
     type Error = FromNodeError;
 
     /// TODO: Hand a cursor instead???
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
+    fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
         let span = node.range().into();
         let mut cursor = node.walk();
         let text = text.as_ref();
@@ -496,7 +496,7 @@ impl FromNode for FixDef {
         )?;
 
         let group_id = Word::from_node(&children.next().into_err()?, text)?;
-        let fix_style = children.next().into_err()?.utf8_text(text)?.into();
+        let fix_style = children.next().into_err()?.str_text(text).into();
 
         let args = if let Some(args) = children.next() {
             // No longer needed beyond args. Lets us use cursor again
@@ -536,7 +536,7 @@ impl ComputeDef {
 
 impl FromNode for ComputeDef {
     type Error = FromNodeError;
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
+    fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
         // Note: Might be more efficient to hand a cursor instead.
         let span = node.range().into();
         let mut cursor = node.walk();
@@ -563,7 +563,7 @@ impl FromNode for ComputeDef {
             .ok_or(Self::Error::PartialNode(
                 "missing compute style".to_string(),
             ))?
-            .utf8_text(text)?
+            .str_text(text)
             .into();
 
         let args = if let Some(args) = children.next() {
@@ -599,8 +599,7 @@ pub struct VariableDef {
 impl FromNode for VariableDef {
     type Error = FromNodeError;
 
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error> {
-        let text = text.as_ref();
+    fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
         let span: Span = node.range().into();
         let mut cursor = node.walk();
 
@@ -613,7 +612,7 @@ impl FromNode for VariableDef {
                 "missing variable keyword".to_string(),
             ))?;
 
-        debug_assert_eq!(variable_keyword.utf8_text(text)?, "variable");
+        debug_assert_eq!(variable_keyword.str_text(text), "variable");
 
         let variable_ident = children
             .next()
@@ -706,10 +705,10 @@ mod tests {
     #[ignore = "Not yet fully implemented"]
     fn test_ast() {
         // let source_bytes = include_bytes!("../../fix.lmp");
-        let source_bytes = include_bytes!("../../example_input_scripts/in.nemd");
-        let tree = parse(source_bytes);
+        let source = include_str!("../../example_input_scripts/in.nemd");
+        let tree = parse(source);
 
-        let _ast = ts_to_ast(&tree, source_bytes);
+        let _ast = ts_to_ast(&tree, source);
         // dbg!(ast.unwrap());
 
         unimplemented!()
@@ -717,9 +716,9 @@ mod tests {
 
     #[test]
     fn parse_fix_no_args() {
-        let source_bytes = b"fix NVE all nve";
+        let source = "fix NVE all nve";
 
-        let tree = parse(source_bytes);
+        let tree = parse(source);
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
@@ -731,7 +730,7 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            FixDef::from_node(&fix_node, source_bytes.as_slice()).unwrap(),
+            FixDef::from_node(&fix_node, source).unwrap(),
             FixDef {
                 fix_id: Ident {
                     name: "NVE".into(),
@@ -796,9 +795,9 @@ mod tests {
 
     #[test]
     fn parse_fix_with_args() {
-        let source_bytes = b"fix NVT all nvt temp 1 1.5 $(100.0*dt)";
+        let source = "fix NVT all nvt temp 1 1.5 $(100.0*dt)";
 
-        let tree = parse(source_bytes);
+        let tree = parse(source);
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
@@ -812,7 +811,7 @@ mod tests {
         use ArgumentKind as AK;
         assert_eq!(
             // ast.commands[0],
-            FixDef::from_node(&fix_node, source_bytes.as_slice()).unwrap(),
+            FixDef::from_node(&fix_node, source).unwrap(),
             FixDef {
                 fix_id: Ident {
                     name: "NVT".into(),
@@ -848,9 +847,9 @@ mod tests {
 
     #[test]
     fn parse_compute_with_args() {
-        let source_bytes = b"compute T_hot water temp/region hot_region";
+        let source = "compute T_hot water temp/region hot_region";
 
-        let tree = parse(source_bytes);
+        let tree = parse(source);
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
@@ -863,7 +862,7 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            ComputeDef::from_node(&compute_node, source_bytes.as_slice()).unwrap(),
+            ComputeDef::from_node(&compute_node, source).unwrap(),
             ComputeDef {
                 compute_id: Ident {
                     name: "T_hot".into(),
@@ -887,9 +886,9 @@ mod tests {
 
     #[test]
     fn parse_variable_def() {
-        let source_bytes = b"variable a equal 1.0*dt";
+        let source = "variable a equal 1.0*dt";
 
-        let tree = parse(source_bytes);
+        let tree = parse(source);
 
         let root_node = tree.root_node();
 
@@ -920,15 +919,15 @@ mod tests {
         };
 
         let variable_node = root_node.child(0).expect("Should find child node.");
-        let parsed = VariableDef::from_node(&variable_node, source_bytes);
+        let parsed = VariableDef::from_node(&variable_node, source);
         assert_eq!(parsed, Ok(expected));
     }
 
     #[test]
     fn parse_incomplete_variable_def() {
-        let source_bytes = b"variable a equal";
+        let source = "variable a equal";
 
-        let tree = parse(source_bytes);
+        let tree = parse(source);
 
         let root_node = tree.root_node();
         dbg!(root_node.to_sexp());
@@ -938,27 +937,27 @@ mod tests {
             FromNodeError::PartialNode("missing arguments in variable command".to_string());
 
         let variable_node = root_node.child(0).expect("Should find child node.");
-        let parsed = VariableDef::from_node(&variable_node, source_bytes);
+        let parsed = VariableDef::from_node(&variable_node, source);
         assert_eq!(parsed, Err(expected));
     }
 
     #[test]
     fn parse_incomplete_compute_def() {
-        let source_bytes = b"compute a ";
+        let source = "compute a ";
 
-        let tree = parse(source_bytes);
+        let tree = parse(source);
 
         let root_node = tree.root_node();
         dbg!(root_node.to_sexp());
         assert!(!root_node.is_missing());
 
-        let ast = ts_to_ast(&tree, source_bytes);
+        let ast = ts_to_ast(&tree, source);
 
         // TODO: double check more about the syntax tree.
         assert!(ast.is_err());
 
         let compute_node = root_node.child(0).expect("Should find child node.");
-        let parsed = ComputeDef::from_node(&compute_node, source_bytes);
+        let parsed = ComputeDef::from_node(&compute_node, source);
         use crate::ast::from_node::FromNodeError;
         assert_eq!(
             parsed,

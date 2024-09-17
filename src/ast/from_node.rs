@@ -10,7 +10,7 @@ use super::expressions::ParseExprError;
 /// Requires providing the text source, which is needed for extracting names and identifiers.
 pub trait FromNode: Sized {
     type Error;
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> Result<Self, Self::Error>;
+    fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error>;
 }
 
 // #[derive(Debug, Error, Clone)]
@@ -25,8 +25,6 @@ pub trait FromNode: Sized {
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 /// An error associated with converting a tree-sitter `Node`.
 pub enum FromNodeError {
-    #[error("Could not parse text as UTF-8 {0}")]
-    Utf8Error(std::str::Utf8Error),
     #[error("Could not parse text as int {0}")]
     ParseIntError(std::num::ParseIntError),
     #[error("Could not parse text as float {0}")]
@@ -69,7 +67,6 @@ impl<'a> IntoError<Node<'a>> for Option<Node<'a>> {
 impl diagnostics::Issue for SpannedError<FromNodeError> {
     fn diagnostic(&self) -> diagnostics::Diagnostic {
         let name = match self.error {
-            FromNodeError::Utf8Error(_) => "UTF-8 error",
             FromNodeError::ParseIntError(_) => "parsing int failed",
             FromNodeError::ParseFloatError(_) => "parsing float failed",
             FromNodeError::UnknownCommand { .. } => "unknown command",
@@ -103,12 +100,6 @@ impl From<std::num::ParseFloatError> for FromNodeError {
 impl From<std::num::ParseIntError> for FromNodeError {
     fn from(v: std::num::ParseIntError) -> Self {
         Self::ParseIntError(v)
-    }
-}
-
-impl From<std::str::Utf8Error> for FromNodeError {
-    fn from(v: std::str::Utf8Error) -> Self {
-        Self::Utf8Error(v)
     }
 }
 

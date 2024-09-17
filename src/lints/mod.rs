@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn test_multiple_fix_defs() {
-        let text = b"fix NVT all nvt temp 1 1.5 $(100.0*dt)
+        let text = "fix NVT all nvt temp 1 1.5 $(100.0*dt)
                              fix NVT all nvt temp 1 1.5 $(100.0*dt)
                              run 10000
                              fix NVT all nvt temp 1 1.5 $(100.0*dt)";
@@ -110,7 +110,7 @@ mod tests {
 
     #[test]
     fn redefined_fix_after_run() {
-        let text = b"fix NVT all nvt temp 1 1.5 $(100.0*dt)
+        let text = "fix NVT all nvt temp 1 1.5 $(100.0*dt)
                              run 10000
                              fix NVT all nvt temp 1 1.5 $(100.0*dt)";
 
@@ -130,7 +130,7 @@ mod tests {
     // #[ignore = "Lint being tested is incomplete"]
     // TODO: Finish the lint so the test passes
     fn redefined_twice_after_first_run() {
-        let text = b"fix NVT all nvt temp 1 1.5 $(100.0*dt)
+        let text = "fix NVT all nvt temp 1 1.5 $(100.0*dt)
                              run 10000
                              fix NVT all nvt temp 1 1.5 $(100.0*dt)
                              fix NVT all nvt temp 1 1.5 $(100.0*dt)
