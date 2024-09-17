@@ -167,7 +167,7 @@ mod tests {
         let text = "fix NVE all nve";
         let tree = parse(text);
         let node = tree.root_node().child(0).unwrap();
-        let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
+        let fix = FixDef::from_node(&node, text).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVE");
         assert_eq!(fix.group_id.contents, "all");
@@ -182,7 +182,7 @@ mod tests {
         let text = "fix NVE all nve asdfas";
         let tree = parse(text);
         let node = tree.root_node().child(0).unwrap();
-        let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
+        let fix = FixDef::from_node(&node, text).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVE");
         assert_eq!(fix.group_id.contents, "all");

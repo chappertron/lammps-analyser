@@ -2,6 +2,7 @@ use crate::{
     ast::from_node::{FromNode, FromNodeError},
     diagnostics::Issue,
     spans::{Point, Span},
+    utils::tree_sitter_helpers::NodeExt,
 };
 use std::{
     collections::HashMap,
@@ -101,7 +102,7 @@ impl IdentiFinder {
     }
 
     /// Create a new `Identifinder` and search for symbols.
-    pub fn new(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Self, FromNodeError> {
+    pub fn new(tree: &Tree, text: &str) -> Result<Self, FromNodeError> {
         let text = text.as_ref();
         let mut i = Self::new_no_parse();
         i.find_symbols(tree, text)?;
@@ -111,9 +112,11 @@ impl IdentiFinder {
     pub fn find_symbols(
         &mut self,
         tree: &Tree,
-        text: &[u8],
+        text: &str,
     ) -> Result<&HashMap<NameAndType, SymbolDefsAndRefs>, FromNodeError> {
-        let captures = self.cursor.captures(&QUERY_DEF, tree.root_node(), text);
+        let captures = self
+            .cursor
+            .captures(&QUERY_DEF, tree.root_node(), text.as_bytes());
 
         // TODO: Clear the symbols in a smarter way, perhaps only removing old ones
         // Do this for an incremental method
@@ -134,7 +137,9 @@ impl IdentiFinder {
             entry.defs.defs.push(ident);
         }
         // references
-        let captures = self.cursor.captures(&QUERY_REF, tree.root_node(), text);
+        let captures = self
+            .cursor
+            .captures(&QUERY_REF, tree.root_node(), text.as_bytes());
 
         for (mtch, _cap_id) in captures {
             let node = mtch.captures[0].node;
@@ -242,8 +247,7 @@ pub struct Ident {
 impl FromNode for Ident {
     type Error = FromNodeError;
 
-    fn from_node(node: &Node, text: impl AsRef<[u8]>) -> std::result::Result<Self, Self::Error> {
-        let text = text.as_ref();
+    fn from_node(node: &Node, text: &str) -> std::result::Result<Self, Self::Error> {
         let ident_type = match node.kind() {
             "fix_id" => IdentType::Fix,
             "compute_id" => IdentType::Compute,
@@ -258,7 +262,7 @@ impl FromNode for Ident {
             }
         };
 
-        let name = node.utf8_text(text)?.to_string();
+        let name = node.str_text(text).to_string();
 
         Ok(Ident {
             name,
@@ -275,7 +279,7 @@ impl Ident {
     ///
     /// # Panics
     /// Panics if the node matches an invalid identifier type.
-    pub fn new(node: &Node, text: &[u8]) -> Result<Self, FromNodeError> {
+    pub fn new(node: &Node, text: &str) -> Result<Self, FromNodeError> {
         Self::from_node(node, text)
     }
 

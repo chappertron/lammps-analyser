@@ -153,7 +153,7 @@ mod tests {
         let text = "fix NVT all nvt temp 1 $(v_T*1.5) $(100*dt)";
         let tree = parse(text);
         let node = tree.root_node().child(0).unwrap();
-        let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
+        let fix = FixDef::from_node(&node, text).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVT");
         assert_eq!(fix.group_id.contents, "all");
@@ -168,7 +168,7 @@ mod tests {
         let text = "fix NPT all npt temp 1 $(v_T*1.5) $(100*dt) iso 1 $(v_p*1.5) ${pdamp}";
         let tree = parse(text);
         let node = tree.root_node().child(0).unwrap();
-        let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
+        let fix = FixDef::from_node(&node, text).unwrap();
 
         assert_eq!(fix.fix_id.name, "NPT");
         assert_eq!(fix.group_id.contents, "all");
@@ -183,7 +183,7 @@ mod tests {
         let text = "fix 2 ice nph x 1.0 1.0 0.5 y 2.0 2.0 0.5 z 3.0 3.0 0.5 yz 0.1 0.1 0.5 xz 0.2 0.2 0.5 xy 0.3 0.3 0.5 nreset 1000";
         let tree = parse(text);
         let node = tree.root_node().child(0).unwrap();
-        let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
+        let fix = FixDef::from_node(&node, text).unwrap();
 
         assert_eq!(fix.fix_id.name, "2");
         assert_eq!(fix.group_id.contents, "ice");
@@ -198,7 +198,7 @@ mod tests {
         let text = "fix NVT all nvt temp 1.0 $(v_T*1.5) TEMP";
         let tree = parse(text);
         let node = tree.root_node().child(0).unwrap();
-        let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
+        let fix = FixDef::from_node(&node, text).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVT");
         assert_eq!(fix.group_id.contents, "all");
