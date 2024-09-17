@@ -7,7 +7,6 @@ pub mod diagnostic_report;
 pub mod diagnostics;
 pub mod error_finder;
 pub mod fix_styles;
-pub mod hover;
 pub mod identifinder;
 
 pub mod input_script;
