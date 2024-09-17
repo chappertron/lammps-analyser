@@ -1,5 +1,4 @@
-use std::fs::read_to_string;
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 
 use once_cell::sync::Lazy;
 
@@ -20,21 +19,6 @@ pub struct DocsMap {
 }
 
 impl DocsMap {
-    /// Read an 'index file' that maps commands to their
-    ///
-    /// # Panics
-    ///
-    /// Panics if IO operations fail
-    ///
-    /// Also panics if the 'map' file does not have comma separated pairs of
-    /// index names and file prefixes.
-    pub fn new_from_file(map_file: impl AsRef<Path>) -> Self {
-        // TODO: Remove panics
-        let file = read_to_string(map_file).expect("Failed to open documentation map file");
-
-        DocsMap::new_from_str(&file)
-    }
-
     /// Read an 'index file' that maps commands to their
     ///
     /// # Panics
@@ -102,9 +86,9 @@ mod tests {
 
     #[test]
     fn index_map() {
-        let file = "./docs_extract/index_map.txt";
+        let file = include_str!("../../docs_extract/index_map.txt");
 
-        let map = DocsMap::new_from_file(file);
+        let map = DocsMap::new_from_str(file);
 
         // Obvious example
         assert_eq!(map.fixes()[&FixStyle::Nve], "fix_nve".to_owned());

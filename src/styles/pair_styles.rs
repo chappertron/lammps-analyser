@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+use super::macros::derive_styles;
+
 include!(concat!(env!("OUT_DIR"), "/styles/pair_styles.rs"));
 
 /// Containing information about the PairStyle
