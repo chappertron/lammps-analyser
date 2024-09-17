@@ -46,7 +46,7 @@ impl PairStyle {
                 min_args: 1,
                 max_args: Some(2),
                 min_coeffs: 2,
-                // Optional extra cutoffs. Can't specify coul cutoff seperately for these
+                // Optional extra cutoffs. Can't specify coul cutoff separately for these
                 // styles
                 max_coeffs: Some(3),
                 arg_context: "cutoff (cutoff2)",

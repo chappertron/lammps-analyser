@@ -27,13 +27,13 @@ impl ast::Ast {
     // TODO: Is this lifetime bound correct?
     /// Find the spans of commands before a each run command.
     ///
-    /// These spans start at the end of the previous run command and end at the start of teh
+    /// These spans start at the end of the previous run command and end at the start of the
     /// current run command
     ///
     /// The first span starts at line zero column zero
     pub fn find_run_blocks(&self) -> impl Iterator<Item = Span> + '_ {
         let run_definitions = self.find_run_commands();
-        // spans of the run command themsevles
+        // spans of the run command themselves
         let run_spans = run_definitions.map(|cmd| cmd.span());
 
         // The spans of the blocks of commands defined before run commands.

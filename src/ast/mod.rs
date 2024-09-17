@@ -49,7 +49,7 @@ pub fn ts_to_ast(tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ast, PartialAst>
     cursor.goto_first_child();
 
     for node in tree.root_node().named_children(&mut cursor) {
-        // TODO: This if-statement may be removeable
+        // TODO: This if-statement may be removable
         if node.kind() != "comment" {
             let result = CommandNode::from_node(&node, text); //.with_span(node.range().into());
 
@@ -113,7 +113,7 @@ impl FromNode for CommandNode {
 #[derive(Debug, PartialEq, Clone)]
 pub enum CommandType {
     GenericCommand(GenericCommand),
-    /// A Fix defintion
+    /// A Fix definition
     Fix(FixDef),
     /// A compute definition
     Compute(ComputeDef),
@@ -291,7 +291,7 @@ pub enum ArgumentKind {
     Concatenation(Vec<Argument>),
     /// Expression.
     /// TODO: Not really valid as a bare argument except for with variable commands
-    /// TODO: Make a quoted expression a seperate thing?
+    /// TODO: Make a quoted expression a separate thing?
     Expression(expressions::Expression),
     // TODO: Remove? Can't know if a group name until further on in the process???
     // Perhaps make it an identifier that then is decided to be either
