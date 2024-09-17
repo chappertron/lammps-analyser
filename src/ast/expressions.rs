@@ -6,7 +6,10 @@ use std::fmt::Display;
 
 use tree_sitter::Node;
 
-use crate::{identifinder::Ident, utils::into_error::IntoError};
+use crate::{
+    identifinder::Ident,
+    utils::{into_error::IntoError, tree_sitter_helpers::NodeExt},
+};
 use std::convert::TryFrom;
 use thiserror::Error;
 
@@ -134,7 +137,7 @@ impl From<MissingNode> for ParseExprError {
 
 impl Expression {
     /// TODO: Handle Errors
-    pub(crate) fn parse_expression(node: &Node<'_>, text: &[u8]) -> Result<Self, FromNodeError> {
+    pub(crate) fn parse_expression(node: &Node<'_>, text: &str) -> Result<Self, FromNodeError> {
         // TODO: Handle missing node
         if node.is_missing() {
             return Err(ParseExprError::MissingToken.into());
@@ -156,13 +159,13 @@ impl Expression {
             "binary_op" => Ok(Self::BinaryOp(
                 Box::new(Self::parse_expression(&node.child(0).into_err()?, text)?),
                 // TODO: Find a way to get the operator from the TS symbol
-                BinaryOp::try_from(node.child(1).into_err()?.utf8_text(text)?)?,
+                BinaryOp::try_from(node.child(1).into_err()?.str_text(text))?,
                 Box::new(Self::parse_expression(&node.child(2).into_err()?, text)?),
             )),
 
             "unary_op" => Ok(Self::UnaryOp(
                 // TODO: Can the operator be parsed with the kind??
-                UnaryOp::try_from(node.child(0).into_err()?.utf8_text(text)?)?,
+                UnaryOp::try_from(node.child(0).into_err()?.str_text(text))?,
                 Self::parse_expression(&node.child(1).into_err()?, text)?.into(),
             )),
             "binary_func" | "unary_func" | "ternary_func" | "hexnary_func" | "other_func"
@@ -171,13 +174,13 @@ impl Expression {
 
                 let mut args = Vec::new();
                 let name_node = &node.child(0).into_err()?;
-                let name = Word::parse_word(name_node, text)?;
+                let name = Word::parse_word(name_node, text);
 
                 // child 0 = function name
                 // child 1 = opening bracket
                 // TODO: Handle no closing bracket!!!!
                 for node in node.children(&mut cursor).skip(2) {
-                    node.utf8_text(text)?;
+                    node.str_text(text);
                     if node.kind() == ")" {
                         break;
                     }
@@ -189,9 +192,9 @@ impl Expression {
                 Ok(Self::Function(name, args))
             }
 
-            "int" => Ok(Self::Int(node.utf8_text(text)?.parse()?)),
+            "int" => Ok(Self::Int(node.str_text(text).parse()?)),
 
-            "float" => Ok(Self::Float(node.utf8_text(text)?.parse()?)),
+            "float" => Ok(Self::Float(node.str_text(text).parse()?)),
 
             // Just go into next level down
             "expression" => Ok(Self::parse_expression(&node.child(0).into_err()?, text)?),
@@ -199,17 +202,17 @@ impl Expression {
                 &node.child(1).into_err()?,
                 text,
             )?))),
-            "bool" => match node.utf8_text(text)? {
+            "bool" => match node.str_text(text) {
                 "true" | "on" | "yes" => Ok(Self::Bool(true)),
                 "false" | "off" | "no" => Ok(Self::Bool(false)),
                 _ => unreachable!(), // TODO: Verify this is the case?
             },
-            "thermo_kwarg" => Ok(Self::ThermoKeyword(Word::parse_word(node, text)?)),
-            "word" => Ok(Self::Word(Word::parse_word(node, text)?)),
+            "thermo_kwarg" => Ok(Self::ThermoKeyword(Word::parse_word(node, text))),
+            "word" => Ok(Self::Word(Word::parse_word(node, text))),
             // TODO: merge this with word in the grammar
-            "group_id" => Ok(Self::Word(Word::parse_word(node, text)?)),
+            "group_id" => Ok(Self::Word(Word::parse_word(node, text))),
             // TODO: fix for region_id. should this be word instead?
-            "identifier" => Ok(Self::Word(Word::parse_word(node, text)?)),
+            "identifier" => Ok(Self::Word(Word::parse_word(node, text))),
             "var_round" => Ok(Self::VarRound(Box::new(var_round(node, text)?))),
             "var_curly" => var_curly(node, text).map(Self::VarCurly),
             "ERROR" => Err(ParseExprError::ErrorNode.into()),
@@ -219,7 +222,7 @@ impl Expression {
     }
 }
 
-pub(crate) fn var_round(node: &Node, text: &[u8]) -> Result<Expression, FromNodeError> {
+pub(crate) fn var_round(node: &Node, text: &str) -> Result<Expression, FromNodeError> {
     let mut cursor = node.walk();
     let mut children = node.children(&mut cursor);
 
@@ -252,7 +255,7 @@ pub(crate) fn var_round(node: &Node, text: &[u8]) -> Result<Expression, FromNode
     Ok(expr)
 }
 
-pub(crate) fn var_curly(node: &Node, text: &[u8]) -> Result<Ident, FromNodeError> {
+pub(crate) fn var_curly(node: &Node, text: &str) -> Result<Ident, FromNodeError> {
     let mut cursor = node.walk();
     let mut children = node.children(&mut cursor);
 
@@ -401,9 +404,9 @@ mod tests {
     #[test]
     fn parse_expr() {
         let mut parser = setup_parser();
-        let source_bytes = b"variable a equal 1+2";
+        let source = "variable a equal 1+2";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parser.parse(source, None).unwrap();
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
@@ -416,7 +419,7 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::parse_expression(&expr_node, source).unwrap(),
             Expression::BinaryOp(
                 Box::new(Expression::Int(1)),
                 BinaryOp::Add,
@@ -428,9 +431,9 @@ mod tests {
     #[test]
     fn parse_expr_floats() {
         let mut parser = setup_parser();
-        let source_bytes = b"variable a equal 1.0+2.0";
+        let source = "variable a equal 1.0+2.0";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parser.parse(source, None).unwrap();
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
@@ -443,7 +446,7 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::parse_expression(&expr_node, source).unwrap(),
             Expression::BinaryOp(
                 Box::new(Expression::Float(1.0)),
                 BinaryOp::Add,
@@ -455,9 +458,9 @@ mod tests {
     #[test]
     fn parse_nested_expr() {
         let mut parser = setup_parser();
-        let source_bytes = b"variable a equal 0.5*(1.0+2.0)";
+        let source = "variable a equal 0.5*(1.0+2.0)";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parser.parse(source, None).unwrap();
 
         dbg!(tree.root_node().to_sexp());
         // let ast = ts_to_ast(&tree, source_bytes);
@@ -471,7 +474,7 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::parse_expression(&expr_node, source).unwrap(),
             Expression::BinaryOp(
                 Box::new(Expression::Float(0.5)),
                 BinaryOp::Multiply,
@@ -487,9 +490,9 @@ mod tests {
     #[test]
     fn parse_expr_vars() {
         let mut parser = setup_parser();
-        let source_bytes = b"variable a equal 0.5*(v_example+temp)";
+        let source = "variable a equal 0.5*(v_example+temp)";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parser.parse(source, None).unwrap();
 
         dbg!(tree.root_node().to_sexp());
         // let ast = ts_to_ast(&tree, source_bytes);
@@ -503,7 +506,7 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::parse_expression(&expr_node, source).unwrap(),
             Expression::BinaryOp(
                 Box::new(Expression::Float(0.5)),
                 BinaryOp::Multiply,
@@ -526,9 +529,9 @@ mod tests {
     #[test]
     fn parse_unary_func() {
         let mut parser = setup_parser();
-        let source_bytes = b"variable a equal abs(v_example)";
+        let source = "variable a equal abs(v_example)";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parser.parse(source, None).unwrap();
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
@@ -541,7 +544,7 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            Expression::parse_expression(&expr_node, source_bytes.as_slice()),
+            Expression::parse_expression(&expr_node, source),
             Ok(Expression::Function(
                 Word {
                     contents: "abs".into(),
@@ -559,9 +562,9 @@ mod tests {
     #[test]
     fn parse_binary_func() {
         let mut parser = setup_parser();
-        let source_bytes = b"variable a equal ramp(v_example, 3.0)";
+        let source = "variable a equal ramp(v_example, 3.0)";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parser.parse(source, None).unwrap();
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
@@ -574,7 +577,7 @@ mod tests {
         // assert_eq!(ast.commands.len(), 1);
         assert_eq!(
             // ast.commands[0],
-            Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap(),
+            Expression::parse_expression(&expr_node, source).unwrap(),
             Expression::Function(
                 Word {
                     contents: "ramp".into(),
@@ -595,9 +598,9 @@ mod tests {
     #[test]
     fn func_display() {
         let mut parser = setup_parser();
-        let source_bytes = b"variable a equal ramp(v_example, 3.0)";
+        let source = "variable a equal ramp(v_example, 3.0)";
 
-        let tree = parser.parse(source_bytes, None).unwrap();
+        let tree = parser.parse(source, None).unwrap();
 
         // let ast = ts_to_ast(&tree, source_bytes);
 
@@ -608,7 +611,7 @@ mod tests {
 
         dbg!(expr_node.to_sexp());
         // assert_eq!(ast.commands.len(), 1);
-        let func = Expression::parse_expression(&expr_node, source_bytes.as_slice()).unwrap();
+        let func = Expression::parse_expression(&expr_node, source).unwrap();
         assert_eq!(
             // ast.commands[0],
             func,

@@ -97,7 +97,7 @@ mod tests {
         let text = "fix profw water  ave/chunk 1 $(v_nsteps) $(v_nsteps) lwater  density/number density/mass  temp file ${outputname}water.profiles adof 2";
         let tree = parse(text);
         let node = tree.root_node().child(0).unwrap();
-        let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
+        let fix = FixDef::from_node(&node, text).unwrap();
 
         dbg!(&fix);
 
@@ -109,7 +109,7 @@ mod tests {
         let text = "fix profw water  ave/chunk 1 $(v_nsteps) $(v_nsteps)";
         let tree = parse(text);
         let node = tree.root_node().child(0).unwrap();
-        let fix = FixDef::from_node(&node, text.as_bytes()).unwrap();
+        let fix = FixDef::from_node(&node, text).unwrap();
 
         assert!(dbg!(fixes::check_fix(&fix)).is_err())
     }

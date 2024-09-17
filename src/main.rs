@@ -28,7 +28,7 @@ struct Cli {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let source_code = std::fs::read_to_string(&cli.source)?;
+    let source_code = std::fs::read_to_string(&cli.source).context("file must be UTF-8 encoded")?;
     let mut parser = Parser::new();
 
     parser

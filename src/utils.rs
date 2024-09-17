@@ -2,6 +2,8 @@ use crate::spans::Point;
 
 use crate::identifinder::{IdentiFinder, NameAndType};
 
+pub(crate) mod tree_sitter_helpers;
+
 /// Find the symbol under the given point in the file
 pub(crate) fn get_symbol_at_point<'a>(
     identifinder: &'a IdentiFinder,

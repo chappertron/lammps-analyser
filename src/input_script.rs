@@ -50,8 +50,7 @@ impl Debug for LmpParser {
 }
 
 impl<'src> InputScript<'src> {
-    /// Monolithic method that reads the lammps source code.
-    /// Parser is taken as input rather than stored because it does not implement debug.
+    /// Monolithic method that reads the lammps source code and reports errors.
     pub fn new(source_code: &'src str) -> Result<Self> {
         let mut parser = utils::parsing::setup_parser();
         let tree = parser
