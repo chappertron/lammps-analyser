@@ -36,6 +36,8 @@ You can also clone this repo and build directly from source, of course.
 lammps-analyser in.input_script
 ```
 
+This outputs a nice list of errors
+
 ## Using with a text editor
 
 LAMMPS analyser is just the server side of the Language Server (LS) Protocol.
@@ -57,7 +59,7 @@ Navigate to the section appropriate for your editor.
 
 There isn't currently a dedicated client for lammps-analyser.
 Instead, you need to install a generic LSP client, such as [glspc](https://marketplace.visualstudio.com/items?itemName=torokati44.glspc).
-Ideally glspc won't be required and a custom LSP client will be avaliable.
+Ideally glspc won't be required and a custom LSP client will be available.
 
 It is recommended you also install the [lammps-vscode](https://marketplace.visualstudio.com/items?itemName=ThFriedrich.lammps) 
 plugin if you want syntax highlighting and file type detection.
@@ -68,18 +70,19 @@ plugin if you want syntax highlighting and file type detection.
 2. Install [glspc](https://marketplace.visualstudio.com/items?itemName=torokati44.glspc)
     and [lammps-vscode](https://marketplace.visualstudio.com/items?itemName=ThFriedrich.lammps) plugins in VS Code.
 3. Configure glspc to start the `lmp-lsp` executable for the file type 'lmps' (provided by vscode_lammps).
-   ![Screenshot of the GLSPC Settigns]()
+   This is done by going to Settings > Extensions > Generic LSP Client.
+   Then set `Glspc: Language ID` to `lmps` and `Glspc: Server Path` to `lmp-lsp` 
+   (or wherever you installed it if not in your path).
 4. Reload VS Code and open a LAMMPS script to check your work.
    By default, lammps_vscode detects the following patterns in file names as LAMMPS input scripts:
    "*.lmp", ".lmps" and ".lammps" and "in.*"
 
-<!-- TODO: screen shot of the configuration -->
-
-### NeoVim
+### Neovim
 
 1. Install lammps-analyser as above
-2. If you don't already have a Neovim configuration, create one using [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim) 
-or use a pre-configured version of Neovim.
+2. If you don't already have a Neovim configuration, 
+   create one using [kickstart.nvim](https://github.com/nvim-lua/kickstart.nvim) 
+   or use a pre-configured version of Neovim.
 3. Set up a LAMMPS file type somewhere in your config (such as in `init.lua`)
 
    ```lua
@@ -138,11 +141,13 @@ or use a pre-configured version of Neovim.
 
 ### Others Editors
 
-For other editors look into whether it natively supports the Language Server Protocol or if there is an plugin for it.
-The same for tree-sitter text highlighting.
+For other editors look into whether it natively supports the Language Server Protocol or if there is a plugin for it.
+The same for tree-sitter syntax highlighting.
 
 For example, Emacs has an [LSP plugin](https://github.com/emacs-lsp/lsp-mode) and also 
 options for tree-sitter, including being built in to newer versions.
+
+There should also be plugins for these with regular Vim
 
 ## Minimum Supported Version of Rust
 
