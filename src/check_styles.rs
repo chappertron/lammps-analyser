@@ -1,9 +1,7 @@
 use crate::ast::{self, Ast};
-use crate::compute_styles::ComputeStyle;
 use crate::diagnostics::{self, Issue};
-use crate::fix_styles::FixStyle;
 use crate::spans::{Point, Span};
-use crate::styles::pair_styles::PairStyle;
+use crate::styles::{ComputeStyle, FixStyle, PairStyle};
 use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::fmt::Display;

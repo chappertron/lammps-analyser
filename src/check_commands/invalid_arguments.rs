@@ -3,7 +3,7 @@ use crate::spans::{Point, Span};
 use lsp_types::DiagnosticSeverity;
 use thiserror::Error;
 
-use crate::fix_styles::FixStyle;
+use crate::styles::FixStyle;
 
 use super::fixes::CommandAndStyle;
 

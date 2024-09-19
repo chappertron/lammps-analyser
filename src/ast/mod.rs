@@ -20,7 +20,8 @@ use expressions::Expression;
 use tree_sitter::{Node, Tree};
 
 use crate::{
-    compute_styles::ComputeStyle, fix_styles::FixStyle, identifinder::Ident,
+    identifinder::Ident,
+    styles::{ComputeStyle, FixStyle},
     utils::into_error::IntoError,
 };
 
@@ -694,9 +695,8 @@ mod tests {
     use crate::ast::from_node::{FromNode, FromNodeError};
     use crate::ast::{Argument, ComputeDef, FixDef, VariableDef};
     use crate::ast::{ArgumentKind, Word};
-    use crate::compute_styles::ComputeStyle;
-    use crate::fix_styles::FixStyle;
     use crate::identifinder::{Ident, IdentType};
+    use crate::styles::{ComputeStyle, FixStyle};
     use crate::utils::testing::parse;
 
     use super::ts_to_ast;

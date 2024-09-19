@@ -30,7 +30,7 @@ mod tests {
 
     use crate::{
         ast::{CommandType, FixDef},
-        fix_styles::FixStyle,
+        styles::FixStyle,
     };
 
     use super::*;

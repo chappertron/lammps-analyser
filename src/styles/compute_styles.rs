@@ -224,7 +224,7 @@ impl ComputeStyle {
 
 #[cfg(test)]
 mod tests {
-    use crate::compute_styles::ComputeStyle;
+    use crate::styles::ComputeStyle;
 
     #[test]
     fn all_computes_defined() {

@@ -1,7 +1,7 @@
 use crate::{
     ast::{ArgumentKind, FixDef},
     check_commands::{invalid_arguments, utils},
-    fix_styles::FixStyle,
+    styles::FixStyle,
 };
 
 /// Generic Parsing of the Nose-Hoover Fixes

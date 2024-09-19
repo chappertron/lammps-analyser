@@ -1,11 +1,9 @@
 use crate::ast::FixDef;
 use crate::commands::CommandName;
-use crate::compute_styles::ComputeStyle;
+use crate::styles::{ComputeStyle, FixStyle};
 
 use super::invalid_arguments;
 use super::utils::parse_no_args;
-
-use crate::fix_styles::FixStyle;
 
 /// enumerate between styles and commands.
 

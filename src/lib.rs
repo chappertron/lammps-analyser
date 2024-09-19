@@ -27,6 +27,4 @@ pub(crate) mod docs;
 
 // Command Styles
 pub(crate) mod commands;
-pub(crate) mod compute_styles;
-pub(crate) mod fix_styles;
 pub(crate) mod styles;

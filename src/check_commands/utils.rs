@@ -158,7 +158,7 @@ pub fn parse_no_args(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArgum
 mod tests {
     use super::*;
     use crate::{
-        ast::from_node::FromNode, check_commands::utils::parse_no_args, fix_styles::FixStyle,
+        ast::from_node::FromNode, check_commands::utils::parse_no_args, styles::FixStyle,
         utils::testing::parse,
     };
 
