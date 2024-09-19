@@ -41,6 +41,7 @@ pub(crate) mod into_error {
 pub(crate) mod parsing {
     use tree_sitter::Parser;
 
+    /// Create an instance of the tree-sitter-lammps parser
     pub fn setup_parser() -> Parser {
         let mut parser = Parser::new();
         parser.set_language(tree_sitter_lammps::language()).unwrap();

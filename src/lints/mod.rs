@@ -14,9 +14,10 @@ struct MultiplyDefinedBeforeRun<'a> {
 }
 
 #[derive(Debug)]
-pub struct RedfinedIdent<'a>(&'a Ident);
+/// An identifier that has been defined multiple times within a single run.
+pub(crate) struct RedfinedIdent<'a>(&'a Ident);
 
-pub fn redefined_identifiers<'a>(
+pub(crate) fn redefined_identifiers<'a>(
     ast: &'a Ast,
     idents: &'a IdentMap,
 ) -> impl Iterator<Item = RedfinedIdent<'a>> {
