@@ -1,5 +1,5 @@
 //! Implementation for the lsp using the `tower-lsp` crate.
-use crate::ast::{Ast, CommandType, ComputeDef, FixDef, GenericCommand};
+use crate::ast::{Ast, Command, ComputeDef, FixDef, GenericCommand};
 use crate::commands::CommandName;
 use crate::docs::docs_map::DOCS_MAP;
 use crate::docs::DOCS_CONTENTS;
@@ -254,13 +254,13 @@ impl LanguageServer for Backend {
 
         // FIXME: For unknown fix/compute styles does some weird stuff.
         if let Some(command) = command {
-            let doc_name = match &command.command_type {
-                CommandType::Fix(FixDef { fix_style, .. }) => DOCS_MAP.fixes().get(fix_style),
-                CommandType::Compute(ComputeDef { compute_style, .. }) => {
+            let doc_name = match &command {
+                Command::Fix(FixDef { fix_style, .. }) => DOCS_MAP.fixes().get(fix_style),
+                Command::Compute(ComputeDef { compute_style, .. }) => {
                     DOCS_MAP.computes().get(compute_style)
                 }
 
-                CommandType::GenericCommand(GenericCommand { name, .. }) => {
+                Command::GenericCommand(GenericCommand { name, .. }) => {
                     let name = CommandName::from(name.as_str());
                     DOCS_MAP.commands().get(&name)
                 }

@@ -31,7 +31,7 @@ use self::from_node::{FromNode, FromNodeError};
 /// A list of commands
 /// Perhaps not truly an AST
 pub struct Ast {
-    pub commands: Vec<CommandNode>,
+    pub commands: Vec<Command>,
 }
 
 /// An AST that could not be fully parsed. Also contains errors.
@@ -52,7 +52,7 @@ pub fn ts_to_ast(tree: &Tree, text: &str) -> Result<Ast, PartialAst> {
     for node in tree.root_node().named_children(&mut cursor) {
         // TODO: This if-statement may be removable
         if node.kind() != "comment" {
-            let result = CommandNode::from_node(&node, text); //.with_span(node.range().into());
+            let result = Command::from_node(&node, text); //.with_span(node.range().into());
 
             match result {
                 Ok(cmd) => {
@@ -77,42 +77,8 @@ pub fn ts_to_ast(tree: &Tree, text: &str) -> Result<Ast, PartialAst> {
     }
 }
 
-/// A command in the LAMMPS Input Script
 #[derive(Debug, PartialEq, Clone)]
-pub struct CommandNode {
-    pub command_type: CommandType,
-    range: Span,
-}
-
-impl CommandNode {
-    pub fn span(&self) -> Span {
-        self.range
-    }
-}
-
-impl FromNode for CommandNode {
-    type Error = (Self, FromNodeError);
-    fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
-        let range = node.range().into();
-
-        match CommandType::from_node(node, text) {
-            Ok(command_type) => Ok(CommandNode {
-                command_type,
-                range,
-            }),
-            Err((command_type, err)) => Err((
-                CommandNode {
-                    command_type,
-                    range,
-                },
-                err,
-            )),
-        }
-    }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub enum CommandType {
+pub enum Command {
     GenericCommand(GenericCommand),
     /// A Fix definition
     Fix(FixDef),
@@ -120,51 +86,65 @@ pub enum CommandType {
     Compute(ComputeDef),
     /// A variable definition
     VariableDef(VariableDef),
-    Shell,
-    Error,
+    Shell(Span),
+    Error(Span),
 }
 
-impl FromNode for CommandType {
+impl Command {
+    pub fn span(&self) -> Span {
+        match self {
+            Command::GenericCommand(cmd) => cmd.span(),
+            Command::Fix(cmd) => cmd.span,
+            Command::Compute(cmd) => cmd.span,
+            Command::VariableDef(cmd) => cmd.span,
+            Command::Shell(span) => *span,
+            Command::Error(span) => *span,
+        }
+    }
+}
+
+impl FromNode for Command {
     // NOTE: This is chosen as the error type so an error node can be returned instead
     type Error = (Self, FromNodeError);
     fn from_node(node: &Node, text: &str) -> Result<Self, (Self, FromNodeError)> {
+        let error_span = |e| (Self::Error(node.range().into()), e);
         let mut result = match node.kind() {
             "fix" => Ok(Self::Fix(
-                FixDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                FixDef::from_node(node, &text).map_err(error_span)?,
             )),
             "compute" => Ok(Self::Compute(
-                ComputeDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                ComputeDef::from_node(node, &text).map_err(error_span)?,
             )),
             "variable_def" => Ok(Self::VariableDef(
-                VariableDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                VariableDef::from_node(node, &text).map_err(error_span)?,
             )),
-            "shell" => Ok(Self::Shell),
+            "shell" => Ok(Self::Shell(node.range().into())),
             // Fall back to the generic command type
             "command" => Ok(Self::GenericCommand(
-                GenericCommand::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                GenericCommand::from_node(node, &text).map_err(error_span)?,
             )),
-            _ => Ok(Self::Error),
+            _ => Ok(Self::Error(node.range().into())),
         };
 
-        if let Ok(Self::Error) = result {
+        if let Ok(Self::Error(span)) = result {
             // NOTE: Check the child node and infer what type of node it was supposed to be
             // and pass to that parser.
 
             result = match node.child(0).map(|node| node.kind()) {
                 // Try and pass this as a compute
                 Some("compute") => Ok(Self::Compute(
-                    ComputeDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                    ComputeDef::from_node(node, &text).map_err(error_span)?,
                 )),
                 Some("fix_id") => Ok(Self::Fix(
-                    FixDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                    FixDef::from_node(node, &text).map_err(error_span)?,
                 )),
                 Some("variable") => Ok(Self::VariableDef(
-                    VariableDef::from_node(node, &text).map_err(|e| (Self::Error, e))?,
+                    VariableDef::from_node(node, &text).map_err(error_span)?,
                 )),
                 // Cannot further process
                 // NOTE: This is `Ok` rather than `Error` because syntax errors are also
                 // found within `ErrorFinder`
-                _ => Ok(Self::Error),
+                _ => Ok(Self::Error(span)),
             };
         }
 
@@ -217,6 +197,15 @@ pub struct GenericCommand {
     pub end: Point,
     pub start_byte: usize,
     pub end_byte: usize,
+}
+
+impl GenericCommand {
+    pub fn span(&self) -> Span {
+        Span {
+            start: self.start,
+            end: self.end,
+        }
+    }
 }
 
 impl FromNode for GenericCommand {
@@ -784,8 +773,8 @@ mod tests {
         if let Ok(ast) = ast {
             dbg!(&ast);
             assert_eq!(ast.commands.len(), 1);
-            match &ast.commands[0].command_type {
-                crate::ast::CommandType::VariableDef(var) => {
+            match &ast.commands[0] {
+                crate::ast::Command::VariableDef(var) => {
                     assert_eq!(*var, expected)
                 }
                 cmd => panic!("Unexpected command {cmd:?}"),

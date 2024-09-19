@@ -11,7 +11,7 @@ use crate::identifinder::unused_variables;
 
 use crate::lammps_errors::LammpsError;
 
-use crate::ast::{CommandType, PartialAst};
+use crate::ast::{Command, PartialAst};
 
 use crate::ast::ts_to_ast;
 
@@ -73,9 +73,9 @@ impl<'src> InputScript<'src> {
             .iter()
             .filter_map(|command| {
                 // TODO: Use a check command function that checks all command types.
-                if let CommandType::Fix(fix) = &command.command_type {
+                if let Command::Fix(fix) = &command {
                     Some(check_commands::fixes::check_fix(fix))
-                } else if let CommandType::Compute(compute) = &command.command_type {
+                } else if let Command::Compute(compute) = &command {
                     Some(check_commands::computes::check_compute(compute))
                 } else {
                     None

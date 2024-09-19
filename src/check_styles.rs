@@ -117,7 +117,7 @@ pub fn check_styles(ast: &Ast, tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ve
 
     // Check pair styles
     for command in &ast.commands {
-        if let ast::CommandType::GenericCommand(cmd) = &command.command_type {
+        if let ast::Command::GenericCommand(cmd) = &command {
             if cmd.name.contents != "pair_style" {
                 continue;
             }
