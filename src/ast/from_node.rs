@@ -13,14 +13,6 @@ pub trait FromNode: Sized {
     fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error>;
 }
 
-// #[derive(Debug, Error, Clone)]
-// #[error("Could not parse node from {start} to {end}: {kind}")]
-// pub struct FromNodeError {
-//     pub start: Point,
-//     pub end: Point,
-//     pub kind: FromNodeErrorType,
-// }
-
 // TODO: Just wrap expression parse error??
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 /// An error associated with converting a tree-sitter `Node`.

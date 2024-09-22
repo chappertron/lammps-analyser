@@ -20,10 +20,7 @@ fn main() -> BResult<()> {
 
     generate_docs_map(all_the_docs, crate_root)?;
 
-    {
-        let style_kind = StyleKind::PairStyle;
-        generate_styles(style_kind)?;
-    }
+    generate_styles(StyleKind::PairStyle)?;
 
     // Tell cargo to only rebuild if the docs files have changed.
     println!("cargo::rerun-if-changed={SOURCE_DIR}");

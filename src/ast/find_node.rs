@@ -5,7 +5,7 @@ use super::{Ast, Command};
 impl Ast {
     /// Find the Command node located at a given text location.
     ///
-    /// Uses binary search over the nodes, which should be in order.
+    /// Uses binary search over the nodes as these should be in order of span.
     #[allow(clippy::missing_panics_doc)] // expect shouldn't panic here.
     pub fn find_node(&self, point: Point) -> Option<&Command> {
         self.commands
