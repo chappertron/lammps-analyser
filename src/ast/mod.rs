@@ -14,6 +14,7 @@ mod commands;
 mod compute_def;
 mod expressions;
 mod fix_def;
+mod ident;
 mod variable_def;
 mod word;
 
@@ -26,7 +27,7 @@ pub use fix_def::FixDef;
 pub use variable_def::VariableDef;
 pub use word::Word;
 
-pub use crate::identifinder::{Ident, IdentType};
+pub use ident::{Ident, IdentType};
 
 use crate::spanned_error::SpannedError;
 

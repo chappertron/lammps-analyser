@@ -3,7 +3,7 @@ use std::fmt::Display;
 use tree_sitter::Node;
 
 use crate::{
-    identifinder::Ident,
+    ast::Ident,
     spans::Span,
     utils::{into_error::IntoError, tree_sitter_helpers::NodeExt},
 };

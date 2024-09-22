@@ -1,8 +1,6 @@
 use tree_sitter::Node;
 
-use crate::{
-    identifinder::Ident, spans::Span, styles::ComputeStyle, utils::tree_sitter_helpers::NodeExt,
-};
+use crate::{ast::Ident, spans::Span, styles::ComputeStyle, utils::tree_sitter_helpers::NodeExt};
 
 use super::{
     from_node::{FromNode, FromNodeError},

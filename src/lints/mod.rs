@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use crate::diagnostics::Issue;
 use crate::spans::Span;
 use crate::{
-    ast::Ast,
-    identifinder::{Ident, IdentMap},
+    ast::{Ast, Ident},
+    identifinder::IdentMap,
 };
 
 /// If a fix is redefined before it is run, the first definition is useless.

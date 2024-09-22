@@ -1,7 +1,7 @@
 use tree_sitter::Node;
 
 use crate::{
-    identifinder::Ident,
+    ast::Ident,
     spans::Span,
     styles::FixStyle,
     utils::{into_error::IntoError, tree_sitter_helpers::NodeExt},

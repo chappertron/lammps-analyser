@@ -7,7 +7,7 @@ use std::fmt::Display;
 use tree_sitter::Node;
 
 use crate::{
-    identifinder::Ident,
+    ast::Ident,
     utils::{into_error::IntoError, tree_sitter_helpers::NodeExt},
 };
 use std::convert::TryFrom;
@@ -388,7 +388,7 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
-    use crate::identifinder::IdentType;
+    use crate::ast::IdentType;
 
     use super::*;
 
