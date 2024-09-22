@@ -2,7 +2,6 @@ use crate::ast::{self, Ast};
 use crate::diagnostics::{self, Issue};
 use crate::spans::{Point, Span};
 use crate::styles::{ComputeStyle, FixStyle, PairStyle};
-use anyhow::Result;
 use once_cell::sync::Lazy;
 use std::fmt::Display;
 use thiserror::Error;
@@ -74,7 +73,7 @@ static STYLE_QUERY: Lazy<Query> = Lazy::new(|| {
 // TODO: Check these by using the AST
 // TODO: Also check other types of style.
 /// Checks the tree for different fix and compute styles and checks if they exist or not!!!
-pub fn check_styles(ast: &Ast, tree: &Tree, text: impl AsRef<[u8]>) -> Result<Vec<InvalidStyle>> {
+pub fn check_styles(ast: &Ast, tree: &Tree, text: &str) -> Vec<InvalidStyle> {
     let text = text.as_ref();
 
     let mut query_cursor = QueryCursor::new();
@@ -84,7 +83,10 @@ pub fn check_styles(ast: &Ast, tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ve
     let mut computes_and_fixes: Vec<_> = matches
         .into_iter()
         .filter_map(|mat| {
-            let style = mat.captures[0].node.utf8_text(text).ok()?;
+            let style = mat.captures[0]
+                .node
+                .utf8_text(text)
+                .expect("Should be valid UTF-8");
 
             let style_type = match mat.captures[0].node.kind() {
                 "fix_style" => StyleType::Fix,
@@ -149,5 +151,5 @@ pub fn check_styles(ast: &Ast, tree: &Tree, text: impl AsRef<[u8]>) -> Result<Ve
         }
     }
 
-    Ok(computes_and_fixes)
+    computes_and_fixes
 }

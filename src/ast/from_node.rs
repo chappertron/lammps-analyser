@@ -95,6 +95,13 @@ impl From<std::num::ParseIntError> for FromNodeError {
     }
 }
 
+impl From<SpannedError<FromNodeError>> for FromNodeError {
+    /// HACK: Allows ? on Spanned error for function that returns non-spanned.
+    fn from(value: SpannedError<FromNodeError>) -> Self {
+        value.error
+    }
+}
+
 // Traits that might make using `tree-sitter` more ergonomic. However, not sure.
 // TODO: Remove these if they never get used.
 

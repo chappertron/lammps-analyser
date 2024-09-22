@@ -1,4 +1,7 @@
+//! Definies the `Identifinder` type which finds and validates definitions and references.
+
 use crate::ast::{Ident, IdentType};
+use crate::spanned_error::SpannedError;
 use crate::{ast::from_node::FromNodeError, diagnostics::Issue};
 use std::{collections::HashMap, fmt::Debug};
 use thiserror::Error;
@@ -8,7 +11,7 @@ use once_cell::sync::Lazy;
 
 pub type IdentMap = HashMap<NameAndType, SymbolDefsAndRefs>;
 
-/// Find and store Identifiers in the `tree-sitter` Tree. Stores a `QueryCursor` for re-use
+/// Find and store Identifiers in the `tree-sitter` Tree. Stores a `tree_sitter::QueryCursor` for re-use
 /// Symbols can be accessed through the `symbols` method.
 pub struct IdentiFinder {
     cursor: QueryCursor,
@@ -50,9 +53,7 @@ pub struct SymbolDef {
 }
 
 impl SymbolDef {
-    /// Returns `true` if the defs is [`None`].
-    ///
-    /// [`None`]: Defs::None
+    /// Returns the `false` if the list of identifiers are empty
     #[must_use]
     fn is_none(&self) -> bool {
         self.defs.is_empty()
@@ -63,6 +64,7 @@ impl SymbolDef {
     }
 }
 
+/// Query for identifier definitions
 static QUERY_DEF: Lazy<Query> = Lazy::new(|| {
     Query::new(
         tree_sitter_lammps::language(),
@@ -73,6 +75,7 @@ static QUERY_DEF: Lazy<Query> = Lazy::new(|| {
     .expect("Invalid query for LAMMPS TS Grammar")
 });
 
+/// Query for identifier references
 static QUERY_REF: Lazy<Query> = Lazy::new(|| {
     Query::new(
         tree_sitter_lammps::language(),
@@ -105,7 +108,7 @@ impl IdentiFinder {
         &mut self,
         tree: &Tree,
         text: &str,
-    ) -> Result<&HashMap<NameAndType, SymbolDefsAndRefs>, FromNodeError> {
+    ) -> Result<&HashMap<NameAndType, SymbolDefsAndRefs>, SpannedError<FromNodeError>> {
         let captures = self
             .cursor
             .captures(&QUERY_DEF, tree.root_node(), text.as_bytes());
@@ -151,9 +154,11 @@ impl IdentiFinder {
     }
 
     /// Check for symbols that have been used without being defined
-    /// TODO: Does not currently verify order or if the fix has been deleted at point of definition
-    /// TODO: Return the Vec or an option, not an error
+    ///
+    /// If invalid references are found, an error is returned.
     pub fn check_symbols(&self) -> Result<(), Vec<UndefinedIdent>> {
+        // TODO: Does not currently verify order or if the fix has been deleted at point of definition
+
         let undefined_fixes: Vec<_> = self
             .symbols
             .iter()
@@ -181,7 +186,9 @@ impl IdentiFinder {
     }
 }
 /// Finds all the unused variables in the input file.
-/// TODO: Convert to a warning type
+///
+/// Note: there is no equivalent for fixes and computes as these generally have sideffects
+/// TODO: add an equivalent for computes.
 pub fn unused_variables(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<UnusedIdent> {
     map.iter()
         .filter_map(|(k, v)| {

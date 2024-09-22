@@ -1,3 +1,4 @@
+//! This module defines the top-level error type `LammpsError`
 use crate::check_commands::invalid_arguments::InvalidArguments;
 use crate::check_styles::InvalidStyle;
 use crate::diagnostics::Issue;

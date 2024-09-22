@@ -5,7 +5,7 @@ use super::{fixes::CommandAndStyle, invalid_arguments::InvalidArguments};
 /// Checks whether the provided compute definition has valid arguments.
 ///
 /// All computes are checked for a minimum number of arguments they are expected to have, as
-/// defined in [`crate::compute_styles::ComputeStyle`]
+/// defined in [`crate::styles::ComputeStyle`]
 ///
 /// Returns `Ok(())` if there are no issues, otherwise returns the appropriate error.
 pub fn check_compute(compute: &ComputeDef) -> Result<(), InvalidArguments> {

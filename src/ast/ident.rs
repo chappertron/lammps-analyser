@@ -3,6 +3,7 @@ use std::fmt::Display;
 use tree_sitter::Node;
 
 use crate::{
+    spanned_error::SpannedError,
     spans::{Point, Span},
     utils::tree_sitter_helpers::NodeExt,
 };
@@ -61,8 +62,11 @@ impl Ident {
     ///
     /// # Panics
     /// Panics if the node matches an invalid identifier type.
-    pub fn new(node: &Node, text: &str) -> Result<Self, FromNodeError> {
-        Self::from_node(node, text)
+    pub fn new(node: &Node, text: &str) -> Result<Self, SpannedError<FromNodeError>> {
+        Self::from_node(node, text).map_err(|error| SpannedError {
+            error,
+            span: node.range().into(),
+        })
     }
 
     pub fn range(&self) -> Span {

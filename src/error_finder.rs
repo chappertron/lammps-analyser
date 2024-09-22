@@ -15,6 +15,7 @@ pub struct ErrorFinder {
     cursor: QueryCursor,
     pub syntax_errors: Vec<SyntaxError>,
 }
+
 static ERROR_QUERY: Lazy<Query> = Lazy::new(|| {
     Query::new(
         tree_sitter_lammps::language(),
@@ -41,14 +42,29 @@ impl ErrorFinder {
         self.syntax_errors.as_ref()
     }
 
+    /// Find all syntax errors and missing nodes reported by the tree-sitter Parser.
+    ///
+    /// # Panics
+    /// Panics if invalid UTF-8 is found
+    pub fn find_errors(&mut self, tree: &Tree, source_code: impl AsRef<[u8]>) -> &[SyntaxError] {
+        self.syntax_errors.clear();
+
+        self.find_syntax_errors(tree, source_code)
+            .expect("Found invalid UTF-8");
+        self.find_missing_nodes(tree).expect("Found invalid UTF-8");
+
+        self.syntax_errors()
+    }
+
     /// Find any syntax errors in the provided tree-sitter syntax tree.
     /// TODO: return these in the error path, not the Ok path.
-    pub fn find_syntax_errors(
+    fn find_syntax_errors(
         &mut self,
         tree: &Tree,
         source_code: impl AsRef<[u8]>,
     ) -> Result<&[SyntaxError]> {
         let source_code = source_code.as_ref();
+
         let matches = self
             .cursor
             .matches(&ERROR_QUERY, tree.root_node(), source_code);
@@ -71,7 +87,7 @@ impl ErrorFinder {
     /// Tree-sitter can't currently query for missing nodes, so recursively walking the tree instead
     /// Missing nodes are also not reported as errors, so this is needed.
     /// TODO: Walk back from missing nodes to work out the expected node?
-    pub fn find_missing_nodes(&mut self, tree: &Tree) -> Result<&Vec<SyntaxError>> {
+    fn find_missing_nodes(&mut self, tree: &Tree) -> Result<&Vec<SyntaxError>> {
         fn recur_missing<'tree>(
             cursor: &mut TreeCursor<'tree>,
             missing_nodes: &mut Vec<tree_sitter::Node<'tree>>,
