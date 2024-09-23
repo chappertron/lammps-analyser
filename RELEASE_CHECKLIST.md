@@ -2,11 +2,12 @@
 
 ## lammps-analyser
 
-- [ ] Bump version (to 0.1.3-beta if possible)
-- [x] Change dependency on treesitter-lammps to be via git.
-- [ ] Change dependency on treesitter-lammps to be via crates.
-- [ ] Add README.md
-- [ ] Add licence
+- [ ] Bump version (to 0.1.3-beta)
+- [x] Change dependency on `tree-sitter-lammps` to be via git.
+- [ ] Change dependency on `tree-sitter-lammps` to be via crates.
+- [x] Add `README.md`.
+- [ ] Add pictures to finish the read-me
+- [x] Add licence
 - [ ] Publish to crates.io
 - [x] Add CI for testing
 - [x] Add CI for release binaries (`cargo-dist`)
