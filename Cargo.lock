@@ -1152,7 +1152,8 @@ dependencies = [
 [[package]]
 name = "tree-sitter-lammps"
 version = "0.0.3"
-source = "git+ssh://git@github.com/chappertron/tree-sitter-lammps?tag=0.0.3#d649e29e068e9eb86344e0c9aa1f86ce16f68b99"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0cfde4fa8102e02452318c87ce3ccd458ecfaa755f268919cd995c7d53b7ecf1"
 dependencies = [
  "cc",
  "tree-sitter-language",
