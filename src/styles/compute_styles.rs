@@ -23,7 +23,6 @@ macro_rules! compute_styles {
             }
         }
 
-        // TODO: Decide if try from or From is more appropriate
         impl From<&str> for ComputeStyle {
             fn from(value: &str) -> Self {
                 match value {
@@ -224,7 +223,7 @@ impl ComputeStyle {
 
 #[cfg(test)]
 mod tests {
-    use crate::compute_styles::ComputeStyle;
+    use crate::styles::ComputeStyle;
 
     #[test]
     fn all_computes_defined() {

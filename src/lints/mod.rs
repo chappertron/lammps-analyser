@@ -3,8 +3,8 @@ use std::collections::HashMap;
 use crate::diagnostics::Issue;
 use crate::spans::Span;
 use crate::{
-    ast::Ast,
-    identifinder::{Ident, IdentMap},
+    ast::{Ast, Ident},
+    identifinder::IdentMap,
 };
 
 /// If a fix is redefined before it is run, the first definition is useless.
@@ -14,9 +14,10 @@ struct MultiplyDefinedBeforeRun<'a> {
 }
 
 #[derive(Debug)]
-pub struct RedfinedIdent<'a>(&'a Ident);
+/// An identifier that has been defined multiple times within a single run.
+pub(crate) struct RedfinedIdent<'a>(&'a Ident);
 
-pub fn redefined_identifiers<'a>(
+pub(crate) fn redefined_identifiers<'a>(
     ast: &'a Ast,
     idents: &'a IdentMap,
 ) -> impl Iterator<Item = RedfinedIdent<'a>> {
@@ -68,7 +69,7 @@ impl Issue for RedfinedIdent<'_> {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         let ident = self.0;
         crate::diagnostics::Diagnostic {
-            name: "redefined before `run` command".to_string(),
+            name: "redefined before `run` command",
             severity: crate::diagnostics::Severity::Warning,
             span: ident.span,
             message: format![
@@ -127,8 +128,6 @@ mod tests {
     }
 
     #[test]
-    // #[ignore = "Lint being tested is incomplete"]
-    // TODO: Finish the lint so the test passes
     fn redefined_twice_after_first_run() {
         let text = "fix NVT all nvt temp 1 1.5 $(100.0*dt)
                              run 10000

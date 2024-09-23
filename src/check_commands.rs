@@ -3,7 +3,7 @@
 use thiserror::Error;
 
 use crate::{
-    ast::{Ast, CommandType},
+    ast::{Ast, Command},
     commands::CommandName,
     diagnostics::{self, Diagnostic, Issue},
     spans::Span,
@@ -39,7 +39,7 @@ impl Issue for InvalidCommand {
             Self::InvalidArguments(invalid_args) => invalid_args.range,
         };
         Diagnostic {
-            name: "Invalid Command".to_owned(),
+            name: "invalid command",
             message: self.to_string(),
             span,
             severity: diagnostics::Severity::Error,
@@ -49,33 +49,29 @@ impl Issue for InvalidCommand {
 
 impl Ast {
     pub fn check_commands(&self) -> impl Iterator<Item = InvalidCommand> + '_ {
-        self.commands
-            .iter()
-            .filter_map(|command| match &command.command_type {
-                CommandType::Fix(fix_def) => {
-                    // Check if the fixes are ok.
-                    check_fix(fix_def).err().map(InvalidCommand::from)
-                }
-                // Not sure about other named commands yet...
-                CommandType::Compute(compute) => {
-                    check_compute(compute).err().map(InvalidCommand::from)
-                }
-                CommandType::GenericCommand(command) => {
-                    let command_name = CommandName::from(command.name.as_str());
+        self.commands.iter().filter_map(|command| match &command {
+            Command::Fix(fix_def) => {
+                // Check if the fixes are ok.
+                check_fix(fix_def).err().map(InvalidCommand::from)
+            }
+            // Not sure about other named commands yet...
+            Command::Compute(compute) => check_compute(compute).err().map(InvalidCommand::from),
+            Command::GenericCommand(command) => {
+                let command_name = CommandName::from(command.name.as_str());
 
-                    if let CommandName::InvalidCommand(name) = command_name {
-                        Some(InvalidCommand::UnknownCommand(
-                            name,
-                            Span {
-                                start: command.start,
-                                end: command.end,
-                            },
-                        ))
-                    } else {
-                        None
-                    }
+                if let CommandName::InvalidCommand(name) = command_name {
+                    Some(InvalidCommand::UnknownCommand(
+                        name,
+                        Span {
+                            start: command.start,
+                            end: command.end,
+                        },
+                    ))
+                } else {
+                    None
                 }
-                _ => None,
-            })
+            }
+            _ => None,
+        })
     }
 }

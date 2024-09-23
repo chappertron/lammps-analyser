@@ -37,7 +37,9 @@ impl<V> SpannedError<V> {
 }
 
 /// Add a span to a result type.
-pub trait WithSpan {
+// TODO: remove or re-enable
+#[allow(dead_code)]
+trait WithSpan {
     type Output;
     type Error;
     fn with_span(self, span: Span) -> Result<Self::Output, SpannedError<Self::Error>>;

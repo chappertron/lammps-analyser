@@ -7,7 +7,7 @@ use std::fmt::Display;
 use tree_sitter::Node;
 
 use crate::{
-    identifinder::Ident,
+    ast::Ident,
     utils::{into_error::IntoError, tree_sitter_helpers::NodeExt},
 };
 use std::convert::TryFrom;
@@ -37,14 +37,13 @@ pub enum Expression {
     /// A binary expression between two other expressions.
     BinaryOp(Box<Expression>, BinaryOp, Box<Expression>),
     /// A built-in function. Slightly deviates from grammar, by only having one function type.
-    // TODO: Make a cow for name?
     Function(Word, Vec<Expression>),
     /// An expression wrapped in brackets.
     Parens(Box<Expression>),
     /// Thermo keyword
     /// TODO: Use an enum instead
     ThermoKeyword(Word),
-    /// TODO: Word might not actually be implemented for expr
+    /// TODO: Word might not actually valid in an expr in the TS Grammar
     Word(Word),
 
     /// An expression expansion `$(expr)`
@@ -100,9 +99,9 @@ pub enum ParseExprError {
     #[error("Could not parse text as float {0}")]
     ParseFloatError(std::num::ParseFloatError),
     #[error("Invalid unary operator: {0}")]
-    InvalidUnaryOperator(String), // TODO: make &'a str
+    InvalidUnaryOperator(String),
     #[error("Invalid binary operator: {0}")]
-    InvalidBinaryOperator(String), // TODO: Make &'a str
+    InvalidBinaryOperator(String),
     #[error("Tree-sitter Error Node Found")]
     ErrorNode,
     #[error("Unknown Expression type: {0}")]
@@ -136,9 +135,7 @@ impl From<MissingNode> for ParseExprError {
 }
 
 impl Expression {
-    /// TODO: Handle Errors
     pub(crate) fn parse_expression(node: &Node<'_>, text: &str) -> Result<Self, FromNodeError> {
-        // TODO: Handle missing node
         if node.is_missing() {
             return Err(ParseExprError::MissingToken.into());
         }
@@ -158,13 +155,11 @@ impl Expression {
             )?)),
             "binary_op" => Ok(Self::BinaryOp(
                 Box::new(Self::parse_expression(&node.child(0).into_err()?, text)?),
-                // TODO: Find a way to get the operator from the TS symbol
                 BinaryOp::try_from(node.child(1).into_err()?.str_text(text))?,
                 Box::new(Self::parse_expression(&node.child(2).into_err()?, text)?),
             )),
 
             "unary_op" => Ok(Self::UnaryOp(
-                // TODO: Can the operator be parsed with the kind??
                 UnaryOp::try_from(node.child(0).into_err()?.str_text(text))?,
                 Self::parse_expression(&node.child(1).into_err()?, text)?.into(),
             )),
@@ -388,7 +383,7 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
-    use crate::identifinder::IdentType;
+    use crate::ast::IdentType;
 
     use super::*;
 

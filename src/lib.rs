@@ -1,26 +1,28 @@
-pub mod ast;
-pub mod check_commands;
-pub mod check_styles;
-pub mod commands;
-pub mod compute_styles;
+// Public Interface
 pub mod diagnostic_report;
-pub mod diagnostics;
-pub mod error_finder;
-pub mod fix_styles;
-pub mod identifinder;
-
 pub mod input_script;
-
-pub mod issues;
-pub mod lammps_errors;
 pub mod lsp;
-pub mod utils;
 
-pub mod spanned_error;
-pub mod spans;
+// Syntax Tree
+pub(crate) mod ast;
+pub(crate) mod spans;
 
-pub mod lints;
+pub(crate) mod utils;
 
-pub mod docs;
+// Error handling
+pub(crate) mod diagnostics;
+pub(crate) mod spanned_error;
 
+// Input script validation
+pub(crate) mod check_commands;
+pub(crate) mod check_styles;
+pub(crate) mod error_finder;
+pub(crate) mod identifinder;
+pub(crate) mod lints;
+
+// Hover documentation
+pub(crate) mod docs;
+
+// Command Styles
+pub(crate) mod commands;
 pub(crate) mod styles;

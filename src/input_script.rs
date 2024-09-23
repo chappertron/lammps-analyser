@@ -1,17 +1,12 @@
 use std::fmt::Debug;
 
-use crate::check_commands::{self};
-use crate::error_finder::SyntaxError;
-use crate::lammps_errors::Warnings;
 use crate::lints::redefined_identifiers;
 use crate::utils;
 use crate::{check_styles::check_styles, diagnostics::Issue, error_finder::ErrorFinder};
 
-use crate::identifinder::unused_variables;
+use crate::identifinder::unused_references;
 
-use crate::lammps_errors::LammpsError;
-
-use crate::ast::{CommandType, PartialAst};
+use crate::ast::PartialAst;
 
 use crate::ast::ts_to_ast;
 
@@ -25,7 +20,7 @@ use crate::diagnostics::Diagnostic;
 use anyhow::Context;
 use tree_sitter::{Parser, Tree};
 
-#[derive(Debug)] // TODO: Allow for implementing clone. Can't yet because of Query in Identifinder.
+#[derive(Debug)] // TODO: Allow for implementing clone. Can't yet because of QueryCursor in Identifinder.
 pub struct InputScript<'src> {
     // TODO: add a file name.
     pub source_code: &'src str,
@@ -36,7 +31,7 @@ pub struct InputScript<'src> {
     pub ast: Ast,
     pub identifinder: IdentiFinder,
     pub error_finder: ErrorFinder,
-    _parser: LmpParser,
+    parser: LmpParser,
 }
 
 /// Implemented so `Debug` can be derived for `InputScript`
@@ -50,110 +45,140 @@ impl Debug for LmpParser {
 }
 
 impl<'src> InputScript<'src> {
-    /// Monolithic method that reads the lammps source code and reports errors.
+    /// Method that reads the LAMMPS source code and reports and stores errors.
     pub fn new(source_code: &'src str) -> Result<Self> {
+        let mut input_script = Self::new_minimal(source_code)?;
+
+        input_script.check();
+
+        Ok(input_script)
+    }
+
+    /// Creates a new input script and simply parses. Does not run any checks.
+    fn new_minimal(source_code: &'src str) -> Result<Self> {
         let mut parser = utils::parsing::setup_parser();
+
         let tree = parser
             .parse(source_code, None)
             .context("Failed to load the TS grammar.")?;
 
-        let mut diagnostics: Vec<Diagnostic> = Vec::new();
+        let diagnostics: Vec<Diagnostic> = Vec::new();
 
-        let ast = ts_to_ast(&tree, source_code);
-        // Somewhat gracefully exit
-
-        let (ast, ast_errors) = match ast {
-            Ok(ast) => (ast, vec![]),
-            Err(PartialAst { ast, errors }) => (ast, errors),
-        };
-
-        // Checking fix arguments
-        let fix_errors = ast
-            .commands
-            .iter()
-            .filter_map(|command| {
-                // TODO: Use a check command function that checks all command types.
-                if let CommandType::Fix(fix) = &command.command_type {
-                    Some(check_commands::fixes::check_fix(fix))
-                } else if let CommandType::Compute(compute) = &command.command_type {
-                    Some(check_commands::computes::check_compute(compute))
-                } else {
-                    None
-                }
-            })
-            .filter_map(|x| x.err())
-            .map(|issue| issue.diagnostic())
-            .collect::<Vec<_>>();
-
-        let identifinder = IdentiFinder::new(&tree, source_code)?;
-
-        let undefined_fixes = match identifinder.check_symbols() {
-            Ok(()) => vec![],
-            Err(v) => v,
-        };
-
-        let mut error_finder = ErrorFinder::new()?;
-
-        error_finder.find_syntax_errors(&tree, source_code)?;
-        error_finder.find_missing_nodes(&tree)?;
-
-        let syntax_errors = error_finder.syntax_errors();
-
-        let invalid_styles = check_styles(&ast, &tree, source_code)?;
-
-        // These first because they are likely least severe.
-        diagnostics.extend(fix_errors);
-
-        diagnostics.extend(ast.check_commands().map(|e| e.diagnostic()));
-
-        diagnostics.extend(
-            unused_variables(identifinder.symbols())
-                .into_iter()
-                .map(|x| Warnings::from(x).diagnostic()),
-        );
-
-        // TODO: return owned syntax errors to remove cloning
-        diagnostics.extend(syntax_errors.iter().map(|x| x.diagnostic()));
-
-        // TODO: convert to diagnostics
-        diagnostics.extend(
-            undefined_fixes
-                .into_iter()
-                .map(|x| LammpsError::from(x).diagnostic()),
-        );
-
-        diagnostics.extend(
-            invalid_styles
-                .into_iter()
-                .map(|x| LammpsError::from(x).diagnostic()),
-        );
-
-        diagnostics.extend(
-            ast_errors
-                .into_iter()
-                .map(|x| LammpsError::from(SyntaxError::from(x)).diagnostic()),
-        );
-
-        let mut script = Self {
-            _parser: LmpParser(parser),
+        Ok(Self {
             source_code,
-            tree,
-            ast,
             diagnostics,
-            identifinder,
-            error_finder,
-        };
-        script.run_lints();
-        Ok(script)
+            tree,
+            ast: Ast::default(),
+            identifinder: IdentiFinder::new_no_parse(),
+            error_finder: ErrorFinder::new(),
+            parser: LmpParser(parser),
+        })
     }
 
+    pub fn reparse_and_check(&mut self, src: &str) {
+        self.reparse(src).expect("failed to parse");
+        self.check();
+    }
+
+    /// Re-obtain the tree-sitter tree
+    fn reparse(&mut self, src: &str) -> Result<()> {
+        let new_tree = self
+            .parser
+            .0
+            .parse(src, Some(&self.tree))
+            .context("failed to re-parse text")?;
+        self.tree = new_tree;
+
+        Ok(())
+    }
+
+    /// Reparse the AST and re-run the checks on the script
+    fn check(&mut self) {
+        self.diagnostics.clear();
+
+        let (ast, ast_errors) = get_ast(&self.tree, self.source_code);
+
+        self.ast = ast;
+        self.diagnostics.extend(ast_errors);
+
+        self.check_symbols();
+
+        self.check_commands();
+
+        self.check_styles();
+
+        self.unused_references();
+
+        self.find_syntax_errors();
+        self.run_lints();
+    }
+
+    /// Iterator over all diagnostics that have been found in the file.
     pub fn diagnostics(&self) -> impl Iterator<Item = &Diagnostic> {
         self.diagnostics.iter()
     }
 
-    pub fn run_lints(&mut self) {
+    fn run_lints(&mut self) {
         self.diagnostics.extend(
             redefined_identifiers(&self.ast, self.identifinder.symbols()).map(|id| id.diagnostic()),
         )
     }
+
+    /// Helper method to extend the diagnostics
+    fn extend(&mut self, iter: impl IntoIterator<Item = impl Issue>) {
+        self.diagnostics
+            .extend(iter.into_iter().map(|e| e.diagnostic()))
+    }
+
+    fn find_syntax_errors(&mut self) {
+        let syntax_errors = self.error_finder.find_errors(&self.tree, &self.source_code);
+        self.diagnostics
+            .extend(syntax_errors.iter().map(|x| x.diagnostic()));
+    }
+
+    fn check_symbols(&mut self) {
+        match self.identifinder.find_symbols(&self.tree, self.source_code) {
+            Ok(_) => (),
+            Err(error) => {
+                self.diagnostics.push(error.diagnostic());
+                return;
+            }
+        }
+
+        let undefined_symbols = match self.identifinder.check_symbols() {
+            Ok(()) => vec![],
+            Err(v) => v,
+        };
+
+        self.extend(undefined_symbols);
+    }
+
+    fn check_commands(&mut self) {
+        // TODO: Can't use helper method due to lifetime issues
+        self.diagnostics
+            .extend(self.ast.check_commands().map(|e| e.diagnostic()));
+    }
+
+    fn unused_references(&mut self) {
+        let unused = unused_references(self.identifinder.symbols());
+        self.extend(unused);
+    }
+
+    fn check_styles(&mut self) {
+        self.diagnostics.extend(
+            check_styles(&self.ast, &self.tree, self.source_code)
+                .into_iter()
+                .map(|x| x.diagnostic()),
+        );
+    }
+}
+
+fn get_ast(tree: &Tree, source_code: &str) -> (Ast, impl Iterator<Item = Diagnostic>) {
+    let ast = ts_to_ast(&tree, source_code);
+
+    let (ast, ast_errors) = match ast {
+        Ok(ast) => (ast, vec![]),
+        Err(PartialAst { ast, errors }) => (ast, errors),
+    };
+    (ast, ast_errors.into_iter().map(|x| x.diagnostic()))
 }

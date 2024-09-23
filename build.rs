@@ -20,10 +20,7 @@ fn main() -> BResult<()> {
 
     generate_docs_map(all_the_docs, crate_root)?;
 
-    {
-        let style_kind = StyleKind::PairStyle;
-        generate_styles(style_kind)?;
-    }
+    generate_styles(StyleKind::PairStyle)?;
 
     // Tell cargo to only rebuild if the docs files have changed.
     println!("cargo::rerun-if-changed={SOURCE_DIR}");
@@ -130,12 +127,10 @@ fn generate_styles(style_kind: StyleKind) -> BResult<()> {
 ///
 /// Words that are snake case also get further split
 fn camelify_lammps(src: &str) -> String {
-    // TODO: Enforce that the string must be ascii??
     src.split('/').map(camelify_snake).collect()
 }
 
 fn camelify_snake(src: &str) -> String {
-    // TODO: Enforce that the string must be ascii??
     src.split('_').map(uppercase_first_letter).collect()
 }
 

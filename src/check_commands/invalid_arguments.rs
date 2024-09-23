@@ -3,7 +3,7 @@ use crate::spans::{Point, Span};
 use lsp_types::DiagnosticSeverity;
 use thiserror::Error;
 
-use crate::fix_styles::FixStyle;
+use crate::styles::FixStyle;
 
 use super::fixes::CommandAndStyle;
 
@@ -38,7 +38,7 @@ impl InvalidArguments {
 impl Issue for InvalidArguments {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         Diagnostic {
-            name: "Invalid Arguments".to_owned(),
+            name: "invalid arguments",
             severity: crate::diagnostics::Severity::Error,
             span: self.range,
             message: format!("for {} : {}", self.style, self.err_type),

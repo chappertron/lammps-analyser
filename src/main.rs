@@ -47,13 +47,12 @@ fn main() -> Result<()> {
         println!("{}", diagnostic.make_file_name_report(&cli.source));
     }
     if !state.diagnostics.is_empty() {
-        // TODO:   Count warnings separately!!!
-        let n_errors = state.diagnostics.len();
+        let n_issues = state.diagnostics.len();
         println!(
             "{}: {} issue{} found 😞",
             cli.source.bold(),
-            n_errors.bright_red(),
-            if n_errors == 1 { "" } else { "s" },
+            n_issues.bright_red(),
+            if n_issues == 1 { "" } else { "s" },
         );
 
         std::process::exit(72);

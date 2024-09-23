@@ -15,7 +15,6 @@ pub(crate) fn get_symbol_at_point<'a>(
     for (k, v) in symbols {
         for r in v.refs().iter() {
             if *point >= r.start() && *point <= r.end() {
-                // TODO: Return multiple if they exist here????
                 return Some(k);
             }
         }
@@ -29,7 +28,7 @@ pub(crate) mod into_error {
     /// A trait designed for allowing easier conversions from `Option<T>` to `Result<T, E>`.
     ///
     /// This needed for foreign types T to circumvent the orphan rules, that prevent using the `From` trait.
-    /// This can only be defined Once per type, but then From<Error> can be implemented for other
+    /// This can only be defined Once per type, but then `From<Error>` can be implemented for other
     /// error types with the question mark operator.
     pub(crate) trait IntoError<T> {
         type Error;
@@ -41,6 +40,7 @@ pub(crate) mod into_error {
 pub(crate) mod parsing {
     use tree_sitter::Parser;
 
+    /// Create an instance of the tree-sitter-lammps parser
     pub fn setup_parser() -> Parser {
         let mut parser = Parser::new();
         parser.set_language(tree_sitter_lammps::language()).unwrap();

@@ -1,5 +1,5 @@
 //! Implementation for the lsp using the `tower-lsp` crate.
-use crate::ast::{Ast, CommandType, ComputeDef, FixDef, GenericCommand};
+use crate::ast::{Ast, Command, ComputeDef, FixDef, GenericCommand};
 use crate::commands::CommandName;
 use crate::docs::docs_map::DOCS_MAP;
 use crate::docs::DOCS_CONTENTS;
@@ -23,7 +23,6 @@ pub struct Backend {
     document_map: DashMap<String, String>,
     /// Map of file URI to document tree
     tree_map: DashMap<String, Tree>,
-    // TODO: Symbols Map
     /// Finds Symbols maps.
     /// Wrapped in RwLock for Interior Mutability
     identifinder: std::sync::RwLock<IdentiFinder>,
@@ -42,11 +41,6 @@ impl Backend {
         }
     }
 }
-
-use SemanticTokenType as ST;
-// TODO: Update tokens to have all the needed ones
-// Match these to the highlight.scm in the tree-sitter package
-pub const TOKEN_TYPES: [SemanticTokenType; 3] = [ST::KEYWORD, ST::TYPE, ST::FUNCTION];
 
 #[tower_lsp::async_trait]
 impl LanguageServer for Backend {
@@ -68,17 +62,6 @@ impl LanguageServer for Backend {
                     }),
                     file_operations: None,
                 }),
-                semantic_tokens_provider: Some(
-                    SemanticTokensServerCapabilities::SemanticTokensOptions(
-                        SemanticTokensOptions {
-                            legend: SemanticTokensLegend {
-                                token_types: TOKEN_TYPES.into(),
-                                token_modifiers: vec![],
-                            },
-                            ..Default::default()
-                        },
-                    ),
-                ),
                 definition_provider: Some(OneOf::Left(true)),
                 document_symbol_provider: Some(OneOf::Left(true)),
                 workspace_symbol_provider: Some(OneOf::Left(true)),
@@ -133,8 +116,6 @@ impl LanguageServer for Backend {
         &self,
         params: WorkspaceSymbolParams,
     ) -> Result<Option<Vec<SymbolInformation>>> {
-        // TODO: This should use the query for the document_symbols to find the workspace symbols
-        // TODO: cache the symbols rather than refinding them all?
         let mut symbols = vec![];
         for r in &self.document_map {
             let uri = r.key();
@@ -173,7 +154,6 @@ impl LanguageServer for Backend {
             .await;
 
         // Assuming the identifier is properly updated
-        // TODO: need to flatten???
         #[allow(deprecated)] // Used for the `deprecated` field of the `SymbolInformation` struct
         let symbols = self
             .identifinder
@@ -181,8 +161,6 @@ impl LanguageServer for Backend {
             .unwrap()
             .symbols()
             .iter()
-            // TODO: properly match this field to the compute/var/fix type
-            // TODO: Set correct Positions for the Symbols
             .flat_map(|(x, v)| {
                 v.defs().iter().map(|s| SymbolInformation {
                     name: x.name.clone(),
@@ -254,13 +232,13 @@ impl LanguageServer for Backend {
 
         // FIXME: For unknown fix/compute styles does some weird stuff.
         if let Some(command) = command {
-            let doc_name = match &command.command_type {
-                CommandType::Fix(FixDef { fix_style, .. }) => DOCS_MAP.fixes().get(fix_style),
-                CommandType::Compute(ComputeDef { compute_style, .. }) => {
+            let doc_name = match &command {
+                Command::Fix(FixDef { fix_style, .. }) => DOCS_MAP.fixes().get(fix_style),
+                Command::Compute(ComputeDef { compute_style, .. }) => {
                     DOCS_MAP.computes().get(compute_style)
                 }
 
-                CommandType::GenericCommand(GenericCommand { name, .. }) => {
+                Command::GenericCommand(GenericCommand { name, .. }) => {
                     let name = CommandName::from(name.as_str());
                     DOCS_MAP.commands().get(&name)
                 }
@@ -323,6 +301,7 @@ impl Backend {
 
         // Assign with the new identifinder
         // TODO: Be able to remove this entirely.
+        // Do this by storing the InputScript in the server.
         *self.identifinder.write().unwrap() = identifinder;
 
         // Convert into LSP diagnostics

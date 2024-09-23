@@ -1,3 +1,7 @@
+//! Defines the `Issue` trait, the `Diagnostic` struct and the `Severity` Enum
+//!
+//! These are used for creating a consistent format for found errors to be reported with.
+
 use owo_colors::OwoColorize;
 use std::fmt::Display;
 
@@ -14,7 +18,7 @@ pub trait Issue: Sized {
 #[derive(Default, Clone, Eq, PartialEq, Debug)]
 pub struct Diagnostic {
     /// Name of the diagnostic.
-    pub name: String, // TODO: make a static str
+    pub name: &'static str,
     /// How bad is the diagnostic?
     pub severity: Severity,
     /// The span of the input script responsible for the diagnostic.
@@ -39,7 +43,6 @@ impl FileNameReport for Diagnostic {
         format!(
             "{}: {} in {}:{}:{}",
             self.severity.coloured_display().bold(),
-            // TODO: Colour this based on the severity of the Issue.
             self.message.bold(),
             filename,
             start.row + 1,

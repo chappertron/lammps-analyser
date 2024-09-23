@@ -25,7 +25,6 @@ macro_rules! commands {
             }
         }
 
-        // TODO: Decide if try from or From is more appropriate
         impl From<&str> for CommandName {
             fn from(value: &str) -> Self {
                 match value {

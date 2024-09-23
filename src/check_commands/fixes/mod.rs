@@ -1,11 +1,9 @@
 use crate::ast::FixDef;
 use crate::commands::CommandName;
-use crate::compute_styles::ComputeStyle;
+use crate::styles::{ComputeStyle, FixStyle};
 
 use super::invalid_arguments;
 use super::utils::parse_no_args;
-
-use crate::fix_styles::FixStyle;
 
 /// enumerate between styles and commands.
 
@@ -33,9 +31,6 @@ impl std::fmt::Display for CommandAndStyle {
 pub fn check_fix(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArguments> {
     let style = fix.fix_style;
 
-    // TODO: Check group of the fix. This would likely be a separate function or require more
-    // arguments in this function.
-
     match style {
         //  TODO: Report the invalid styles name here
         // `Ok`, so duplicates aren't raised. Also checked elsewhere...
@@ -46,6 +41,7 @@ pub fn check_fix(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArguments
             range: fix.range(),
             style: CommandAndStyle::FixStyle(style),
         }),
+
         // TODO: See if other fix styles share the same arguments
         FixStyle::Nvt | FixStyle::Npt | FixStyle::Nph => {
             nose_hoover::parse_nh_fixes(fix).map_err(|x| invalid_arguments::InvalidArguments {
@@ -64,8 +60,6 @@ pub fn check_fix(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArguments
         }),
     }
 }
-
-// NOTE: Tests are in the appropriate sub modules for the given fix.
 
 /// Parse Fix with at least n positional arguments
 pub(crate) fn check_n_positional(

@@ -1,22 +1,17 @@
-use crate::{
-    ast::from_node::{FromNode, FromNodeError},
-    diagnostics::Issue,
-    spans::{Point, Span},
-    utils::tree_sitter_helpers::NodeExt,
-};
-use std::{
-    collections::HashMap,
-    fmt::{Debug, Display},
-    hash::Hash,
-};
+//! Definies the `Identifinder` type which finds and validates definitions and references.
+
+use crate::ast::{Ident, IdentType};
+use crate::spanned_error::SpannedError;
+use crate::{ast::from_node::FromNodeError, diagnostics::Issue};
+use std::{collections::HashMap, fmt::Debug};
 use thiserror::Error;
-use tree_sitter::{Node, Query, QueryCursor, Tree};
+use tree_sitter::{Query, QueryCursor, Tree};
 
 use once_cell::sync::Lazy;
 
 pub type IdentMap = HashMap<NameAndType, SymbolDefsAndRefs>;
 
-/// Find and store Identifiers in the `tree-sitter` Tree. Stores a `QueryCursor` for re-use
+/// Find and store Identifiers in the `tree-sitter` Tree. Stores a `tree_sitter::QueryCursor` for re-use
 /// Symbols can be accessed through the `symbols` method.
 pub struct IdentiFinder {
     cursor: QueryCursor,
@@ -58,9 +53,7 @@ pub struct SymbolDef {
 }
 
 impl SymbolDef {
-    /// Returns `true` if the defs is [`None`].
-    ///
-    /// [`None`]: Defs::None
+    /// Returns the `false` if the list of identifiers are empty
     #[must_use]
     fn is_none(&self) -> bool {
         self.defs.is_empty()
@@ -71,6 +64,7 @@ impl SymbolDef {
     }
 }
 
+/// Query for identifier definitions
 static QUERY_DEF: Lazy<Query> = Lazy::new(|| {
     Query::new(
         tree_sitter_lammps::language(),
@@ -81,6 +75,7 @@ static QUERY_DEF: Lazy<Query> = Lazy::new(|| {
     .expect("Invalid query for LAMMPS TS Grammar")
 });
 
+/// Query for identifier references
 static QUERY_REF: Lazy<Query> = Lazy::new(|| {
     Query::new(
         tree_sitter_lammps::language(),
@@ -113,13 +108,11 @@ impl IdentiFinder {
         &mut self,
         tree: &Tree,
         text: &str,
-    ) -> Result<&HashMap<NameAndType, SymbolDefsAndRefs>, FromNodeError> {
+    ) -> Result<&HashMap<NameAndType, SymbolDefsAndRefs>, SpannedError<FromNodeError>> {
         let captures = self
             .cursor
             .captures(&QUERY_DEF, tree.root_node(), text.as_bytes());
 
-        // TODO: Clear the symbols in a smarter way, perhaps only removing old ones
-        // Do this for an incremental method
         self.symbols.clear();
 
         for (mtch, _cap_id) in captures {
@@ -159,14 +152,15 @@ impl IdentiFinder {
     }
 
     /// Check for symbols that have been used without being defined
-    /// TODO: Does not currently verify order or if the fix has been deleted at point of definition
-    /// TODO: Return the Vec or an option, not an error
+    ///
+    /// If invalid references are found, an error is returned.
     pub fn check_symbols(&self) -> Result<(), Vec<UndefinedIdent>> {
+        // TODO: Does not currently verify order or if the fix has been deleted at point of definition
+
         let undefined_fixes: Vec<_> = self
             .symbols
             .iter()
             .filter_map(|(_k, v)| {
-                // TODO: Double check this? Seems opposite to what
                 if v.defs.is_none() {
                     Some(v.refs.iter())
                 } else {
@@ -189,19 +183,22 @@ impl IdentiFinder {
     }
 }
 /// Finds all the unused variables in the input file.
-/// TODO: Convert to a warning type
-pub fn unused_variables(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<UnusedIdent> {
+///
+/// Note: there is no equivalent for fixes and computes as these generally have sideffects
+/// TODO: add an equivalent for computes. Current blocker is false negatives.
+pub fn unused_references(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<UnusedIdent> {
     map.iter()
         .filter_map(|(k, v)| {
-            // TODO: don't include definitions as references???
-            if v.refs().len() == v.defs().defs.len() && k.ident_type == IdentType::Variable {
+            // TODO: don't include definitions as references
+            if v.refs().len() == v.defs().defs.len() && matches!(k.ident_type, IdentType::Variable)
+            // | IdentType::Compute
+            {
                 Some(v.refs())
             } else {
                 None
             }
         })
         .flatten()
-        // TODO: BOO CLONE
         .map(|x| UnusedIdent { ident: x.clone() })
         .collect()
 }
@@ -235,165 +232,6 @@ pub struct NameAndType {
     pub ident_type: IdentType,
 }
 
-#[derive(Debug, Clone)]
-/// Identifiers for LAMMPS fixes, computes, and variables
-/// Hashing only uses the name and type, not locations
-pub struct Ident {
-    pub name: String,
-    pub ident_type: IdentType,
-    pub span: Span,
-}
-
-impl FromNode for Ident {
-    type Error = FromNodeError;
-
-    fn from_node(node: &Node, text: &str) -> std::result::Result<Self, Self::Error> {
-        let ident_type = match node.kind() {
-            "fix_id" => IdentType::Fix,
-            "compute_id" => IdentType::Compute,
-            "variable" => IdentType::Variable,
-            "f_" => IdentType::Fix,
-            "c_" => IdentType::Compute,
-            "v_" => IdentType::Variable,
-            k => {
-                return Err(FromNodeError::PartialNode(format!(
-                    "invalid identifier kind {k}"
-                )))
-            }
-        };
-
-        let name = node.str_text(text).to_string();
-
-        Ok(Ident {
-            name,
-            ident_type,
-            span: node.range().into(),
-        })
-    }
-}
-
-impl Ident {
-    /// Parses the node and text into an Ident
-    /// Uses the node kind to determine the identifinder type
-    /// Uses the text to extract the name of the identifier
-    ///
-    /// # Panics
-    /// Panics if the node matches an invalid identifier type.
-    pub fn new(node: &Node, text: &str) -> Result<Self, FromNodeError> {
-        Self::from_node(node, text)
-    }
-
-    pub fn range(&self) -> Span {
-        self.span
-    }
-
-    pub fn start(&self) -> Point {
-        self.span.start
-    }
-
-    pub fn end(&self) -> Point {
-        self.span.end
-    }
-
-    /// Display the identifier as in underscore form.
-    pub fn underscore_ident(&self) -> String {
-        let prefix = match self.ident_type {
-            IdentType::Fix => "f_",
-            IdentType::Compute => "c_",
-            IdentType::Variable => "v_",
-        };
-
-        format!("{}{}", prefix, self.name)
-    }
-}
-
-impl Default for Ident {
-    fn default() -> Self {
-        Ident {
-            name: String::default(),
-            ident_type: IdentType::default(),
-            span: Span {
-                start: Point::default(),
-                end: Point::default(),
-            },
-        }
-    }
-}
-
-impl Display for Ident {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self.ident_type {
-            IdentType::Fix => write!(f, "fix {}", self.name),
-            IdentType::Compute => write!(f, "compute {}", self.name),
-            IdentType::Variable => write!(f, "variable {}", self.name),
-        }
-    }
-}
-impl PartialEq for Ident {
-    fn eq(&self, other: &Self) -> bool {
-        self.name == other.name && self.ident_type == other.ident_type
-    }
-}
-
-impl Eq for Ident {}
-
-impl Hash for Ident {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.name.hash(state);
-        self.ident_type.hash(state);
-    }
-}
-
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, Default)]
-pub enum IdentType {
-    #[default]
-    Variable,
-    Fix,
-    Compute,
-}
-
-impl From<&str> for IdentType {
-    /// Converts from capture name to `IdentType`
-    ///
-    /// # Panics
-    /// Panics if the string does not end with "fix", "compute", or "variable"
-    fn from(value: &str) -> Self {
-        if value.to_lowercase().ends_with("compute") {
-            IdentType::Compute
-        } else if value.to_lowercase().ends_with("fix") {
-            IdentType::Fix
-        } else if value.to_lowercase().ends_with("variable") {
-            IdentType::Variable
-        } else {
-            panic!("Unknown identifier type")
-        }
-    }
-}
-
-impl Display for IdentType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                IdentType::Fix => "fix",
-                IdentType::Compute => "compute",
-                IdentType::Variable => "variable",
-            }
-        )
-    }
-}
-
-impl From<IdentType> for lsp_types::SymbolKind {
-    fn from(value: IdentType) -> Self {
-        match value {
-            IdentType::Fix => lsp_types::SymbolKind::FUNCTION,
-            IdentType::Compute => lsp_types::SymbolKind::FUNCTION,
-            IdentType::Variable => lsp_types::SymbolKind::VARIABLE,
-        }
-    }
-}
-
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[error("undefined {} `{}`", ident.ident_type,ident.name)]
 pub struct UndefinedIdent {
@@ -403,7 +241,7 @@ impl Issue for UnusedIdent {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         let name = "unused identifier";
         crate::diagnostics::Diagnostic {
-            name: name.to_string(),
+            name,
             severity: crate::diagnostics::Severity::Warning,
             span: self.ident.span,
             message: self.to_string(),
@@ -414,7 +252,7 @@ impl Issue for UndefinedIdent {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         let name = "undefined identifier";
         crate::diagnostics::Diagnostic {
-            name: name.to_string(),
+            name,
             severity: crate::diagnostics::Severity::Error,
             span: self.ident.span,
             message: self.to_string(),

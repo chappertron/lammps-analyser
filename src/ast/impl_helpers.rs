@@ -6,17 +6,17 @@ use crate::ast;
 
 impl ast::Ast {
     /// Find the command corresponding to a given point
-    pub fn find_point(&self, point: &Point) -> Option<&ast::CommandNode> {
+    pub fn find_point(&self, point: &Point) -> Option<&ast::Command> {
         self.commands
             .iter()
-            .find(|cmd| cmd.range.start <= *point && cmd.range.end >= *point)
+            .find(|cmd| cmd.span().start <= *point && cmd.span().end >= *point)
     }
 
     /// An iterator over references to run commands
-    pub fn find_run_commands(&self) -> impl Iterator<Item = &ast::CommandNode> {
+    pub fn find_run_commands(&self) -> impl Iterator<Item = &ast::Command> {
         // TODO: also include `minimize` and `rerun` commands
         self.commands.iter().filter(|cmd| {
-            if let ast::CommandType::GenericCommand(c) = &cmd.command_type {
+            if let ast::Command::GenericCommand(c) = &cmd {
                 c.name.contents == "run"
             } else {
                 false

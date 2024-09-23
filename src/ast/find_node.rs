@@ -1,18 +1,18 @@
 use crate::spans::Point;
 
-use super::{Ast, CommandNode};
+use super::{Ast, Command};
 
 impl Ast {
     /// Find the Command node located at a given text location.
     ///
-    /// Uses binary search over the nodes, which should be in order.
+    /// Uses binary search over the nodes as these should be in order of span.
     #[allow(clippy::missing_panics_doc)] // expect shouldn't panic here.
-    pub fn find_node(&self, point: Point) -> Option<&CommandNode> {
+    pub fn find_node(&self, point: Point) -> Option<&Command> {
         self.commands
             .binary_search_by(|node| {
                 // NOTE: This expect is OK. partial cmp between `Point` and `Span` never returns `None`
                 #[allow(clippy::expect_used)]
-                node.range
+                node.span()
                     .partial_cmp(&point)
                     // Invert. this comparison says whether the point is in the range or not.
                     .expect("This should always return `Some`")
@@ -29,8 +29,8 @@ impl Ast {
 mod tests {
 
     use crate::{
-        ast::{CommandType, FixDef},
-        fix_styles::FixStyle,
+        ast::{Command, FixDef},
+        styles::FixStyle,
     };
 
     use super::*;
@@ -57,14 +57,13 @@ compute mycompute2 all ke/atom
 
         // Don't care about exact definition, just the type
         let is_fix_def = match ast.find_node(Point { row: 3, column: 0 }) {
-            Some(CommandNode {
-                command_type:
-                    CommandType::Fix(FixDef {
-                        fix_style: FixStyle::Nve,
-                        ..
-                    }),
-                ..
-            }) => true,
+            Some(
+                Command::Fix(FixDef {
+                    fix_style: FixStyle::Nve,
+                    ..
+                }),
+                ..,
+            ) => true,
             node => {
                 dbg!(node);
                 false

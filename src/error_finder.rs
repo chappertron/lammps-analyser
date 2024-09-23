@@ -1,8 +1,8 @@
 use crate::ast::from_node::FromNodeError;
 use crate::spanned_error::SpannedError;
 use crate::spans::Point;
+use crate::utils::tree_sitter_helpers::NodeExt;
 use crate::{diagnostics::Issue, spans::Span};
-use anyhow::{Context, Result};
 use lsp_types::Diagnostic as LspDiagnostic;
 use lsp_types::DiagnosticSeverity;
 use once_cell::sync::Lazy;
@@ -15,6 +15,7 @@ pub struct ErrorFinder {
     cursor: QueryCursor,
     pub syntax_errors: Vec<SyntaxError>,
 }
+
 static ERROR_QUERY: Lazy<Query> = Lazy::new(|| {
     Query::new(
         tree_sitter_lammps::language(),
@@ -26,14 +27,14 @@ static ERROR_QUERY: Lazy<Query> = Lazy::new(|| {
 });
 
 impl ErrorFinder {
-    pub fn new() -> Result<Self> {
+    pub fn new() -> Self {
         let cursor = QueryCursor::new();
         let syntax_errors = vec![];
 
-        Ok(Self {
+        Self {
             cursor,
             syntax_errors,
-        })
+        }
     }
 
     // The slice of found syntax errors.
@@ -41,22 +42,26 @@ impl ErrorFinder {
         self.syntax_errors.as_ref()
     }
 
+    /// Find all syntax errors and missing nodes reported by the tree-sitter Parser.
+    ///
+    /// # Panics
+    /// Panics if invalid UTF-8 is found
+    pub fn find_errors(&mut self, tree: &Tree, source_code: &str) -> &[SyntaxError] {
+        self.syntax_errors.clear();
+
+        self.find_syntax_errors(tree, source_code);
+        self.find_missing_nodes(tree);
+
+        self.syntax_errors()
+    }
+
     /// Find any syntax errors in the provided tree-sitter syntax tree.
-    /// TODO: return these in the error path, not the Ok path.
-    pub fn find_syntax_errors(
-        &mut self,
-        tree: &Tree,
-        source_code: impl AsRef<[u8]>,
-    ) -> Result<&[SyntaxError]> {
-        let source_code = source_code.as_ref();
+    fn find_syntax_errors(&mut self, tree: &Tree, source_code: &str) -> &[SyntaxError] {
         let matches = self
             .cursor
-            .matches(&ERROR_QUERY, tree.root_node(), source_code);
+            .matches(&ERROR_QUERY, tree.root_node(), source_code.as_bytes());
         for mat in matches {
-            let text = mat.captures[0]
-                .node
-                .utf8_text(source_code)
-                .context("Failed to parse to valid utf-8")?;
+            let text = mat.captures[0].node.str_text(source_code);
             let start = mat.captures[0].node.start_position();
             let end = mat.captures[0].node.end_position();
             self.syntax_errors.push(SyntaxError::ParseError(ParseError {
@@ -65,13 +70,13 @@ impl ErrorFinder {
                 end: end.into(),
             }));
         }
-        Ok(self.syntax_errors())
+        self.syntax_errors()
     }
 
     /// Tree-sitter can't currently query for missing nodes, so recursively walking the tree instead
     /// Missing nodes are also not reported as errors, so this is needed.
     /// TODO: Walk back from missing nodes to work out the expected node?
-    pub fn find_missing_nodes(&mut self, tree: &Tree) -> Result<&Vec<SyntaxError>> {
+    fn find_missing_nodes(&mut self, tree: &Tree) -> &[SyntaxError] {
         fn recur_missing<'tree>(
             cursor: &mut TreeCursor<'tree>,
             missing_nodes: &mut Vec<tree_sitter::Node<'tree>>,
@@ -105,12 +110,15 @@ impl ErrorFinder {
                 node.start_position().into(),
                 // Go to parent, because missing token is
                 // "inserted"
-                // FIXME: Remove expect.
-                node.parent().expect("REMOVE ME").kind().to_owned(),
+                // FIXME: Remove expect. Should be OK
+                node.parent()
+                    .expect("missing should not be top-level node")
+                    .kind()
+                    .to_owned(),
             ))
         }));
 
-        Ok(&self.syntax_errors)
+        &self.syntax_errors
     }
 }
 
@@ -204,7 +212,7 @@ pub struct ParseError {
 impl Issue for ParseError {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         crate::diagnostics::Diagnostic {
-            name: "syntax error:".to_owned(),
+            name: "syntax error:",
             severity: crate::diagnostics::Severity::Error,
             span: Span {
                 start: self.start,
