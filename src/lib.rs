@@ -11,8 +11,6 @@ pub(crate) mod utils;
 
 // Error handling
 pub(crate) mod diagnostics;
-pub(crate) mod issue;
-pub(crate) mod lammps_errors;
 pub(crate) mod spanned_error;
 
 // Input script validation

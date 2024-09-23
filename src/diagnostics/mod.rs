@@ -1,3 +1,7 @@
+//! Defines the `Issue` trait, the `Diagnostic` struct and the `Severity` Enum
+//!
+//! These are used for creating a consistent format for found errors to be reported with.
+
 use owo_colors::OwoColorize;
 use std::fmt::Display;
 

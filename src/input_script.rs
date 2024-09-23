@@ -20,7 +20,7 @@ use crate::diagnostics::Diagnostic;
 use anyhow::Context;
 use tree_sitter::{Parser, Tree};
 
-#[derive(Debug)] // TODO: Allow for implementing clone. Can't yet because of Query in Identifinder.
+#[derive(Debug)] // TODO: Allow for implementing clone. Can't yet because of QueryCursor in Identifinder.
 pub struct InputScript<'src> {
     // TODO: add a file name.
     pub source_code: &'src str,
@@ -45,7 +45,7 @@ impl Debug for LmpParser {
 }
 
 impl<'src> InputScript<'src> {
-    /// Monolithic method that reads the lammps source code and reports errors.
+    /// Method that reads the LAMMPS source code and reports and stores errors.
     pub fn new(source_code: &'src str) -> Result<Self> {
         let mut input_script = Self::new_minimal(source_code)?;
 
