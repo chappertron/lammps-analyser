@@ -306,6 +306,7 @@ impl FixStyle {
         matches!(self, FixStyle::InvalidStyle)
     }
 
+    /// A method determining if a fix is an integrator or not
     pub fn is_integrator(&self) -> bool {
         use FixStyle as FS;
 

@@ -152,8 +152,10 @@ impl PartialOrd<Point> for Span {
             (_, Ordering::Less) => Some(Ordering::Less),
             // Start is greater than the poinbt, span must be greater than point
             (Ordering::Greater, _) => Some(Ordering::Greater),
-            // TODO: Explicitly enumerate
-            (_, _) => Some(Ordering::Equal),
+            // Means the point is inside the span.
+            (Ordering::Less, Ordering::Greater) => Some(Ordering::Equal),
+            (_, Ordering::Equal) => Some(Ordering::Equal),
+            (Ordering::Equal, _) => Some(Ordering::Equal),
         }
     }
 }
@@ -172,7 +174,9 @@ impl PartialOrd<Span> for Point {
             // Point is greater than the start, must be outside
             (_, Ordering::Greater) => Some(Ordering::Greater),
             // TODO: Explicitly enumerate
-            (_, _) => Some(Ordering::Equal),
+            (Ordering::Greater, Ordering::Less) => Some(Ordering::Equal),
+            (Ordering::Equal, _) => Some(Ordering::Equal),
+            (_, Ordering::Equal) => Some(Ordering::Equal),
         }
     }
 }

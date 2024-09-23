@@ -39,7 +39,7 @@ impl Issue for InvalidCommand {
             Self::InvalidArguments(invalid_args) => invalid_args.range,
         };
         Diagnostic {
-            name: "Invalid Command".to_owned(),
+            name: "invalid command",
             message: self.to_string(),
             span,
             severity: diagnostics::Severity::Error,

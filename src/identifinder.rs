@@ -113,8 +113,6 @@ impl IdentiFinder {
             .cursor
             .captures(&QUERY_DEF, tree.root_node(), text.as_bytes());
 
-        // TODO: Clear the symbols in a smarter way, perhaps only removing old ones
-        // Do this for an incremental method
         self.symbols.clear();
 
         for (mtch, _cap_id) in captures {
@@ -163,7 +161,6 @@ impl IdentiFinder {
             .symbols
             .iter()
             .filter_map(|(_k, v)| {
-                // TODO: Double check this? Seems opposite to what
                 if v.defs.is_none() {
                     Some(v.refs.iter())
                 } else {
@@ -188,19 +185,20 @@ impl IdentiFinder {
 /// Finds all the unused variables in the input file.
 ///
 /// Note: there is no equivalent for fixes and computes as these generally have sideffects
-/// TODO: add an equivalent for computes.
-pub fn unused_variables(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<UnusedIdent> {
+/// TODO: add an equivalent for computes. Current blocker is false negatives.
+pub fn unused_references(map: &HashMap<NameAndType, SymbolDefsAndRefs>) -> Vec<UnusedIdent> {
     map.iter()
         .filter_map(|(k, v)| {
-            // TODO: don't include definitions as references???
-            if v.refs().len() == v.defs().defs.len() && k.ident_type == IdentType::Variable {
+            // TODO: don't include definitions as references
+            if v.refs().len() == v.defs().defs.len() && matches!(k.ident_type, IdentType::Variable)
+            // | IdentType::Compute
+            {
                 Some(v.refs())
             } else {
                 None
             }
         })
         .flatten()
-        // TODO: BOO CLONE
         .map(|x| UnusedIdent { ident: x.clone() })
         .collect()
 }
@@ -243,7 +241,7 @@ impl Issue for UnusedIdent {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         let name = "unused identifier";
         crate::diagnostics::Diagnostic {
-            name: name.to_string(),
+            name,
             severity: crate::diagnostics::Severity::Warning,
             span: self.ident.span,
             message: self.to_string(),
@@ -254,7 +252,7 @@ impl Issue for UndefinedIdent {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         let name = "undefined identifier";
         crate::diagnostics::Diagnostic {
-            name: name.to_string(),
+            name,
             severity: crate::diagnostics::Severity::Error,
             span: self.ident.span,
             message: self.to_string(),

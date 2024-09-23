@@ -69,7 +69,7 @@ impl Issue for RedfinedIdent<'_> {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         let ident = self.0;
         crate::diagnostics::Diagnostic {
-            name: "redefined before `run` command".to_string(),
+            name: "redefined before `run` command",
             severity: crate::diagnostics::Severity::Warning,
             span: ident.span,
             message: format![
@@ -128,8 +128,6 @@ mod tests {
     }
 
     #[test]
-    // #[ignore = "Lint being tested is incomplete"]
-    // TODO: Finish the lint so the test passes
     fn redefined_twice_after_first_run() {
         let text = "fix NVT all nvt temp 1 1.5 $(100.0*dt)
                              run 10000

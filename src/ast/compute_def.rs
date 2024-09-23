@@ -109,7 +109,6 @@ mod test {
                     span: ((0, 14), (0, 19)).into()
                 },
                 compute_style: ComputeStyle::TempRegion,
-                // TODO: Change to a more generic word argument
                 args: vec![ast::Argument::new(
                     ast::ArgumentKind::Word("hot_region".into()),
                     ((0, 32), (0, 42))

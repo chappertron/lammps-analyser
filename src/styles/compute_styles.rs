@@ -23,7 +23,6 @@ macro_rules! compute_styles {
             }
         }
 
-        // TODO: Decide if try from or From is more appropriate
         impl From<&str> for ComputeStyle {
             fn from(value: &str) -> Self {
                 match value {

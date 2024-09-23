@@ -4,7 +4,7 @@ use crate::lints::redefined_identifiers;
 use crate::utils;
 use crate::{check_styles::check_styles, diagnostics::Issue, error_finder::ErrorFinder};
 
-use crate::identifinder::unused_variables;
+use crate::identifinder::unused_references;
 
 use crate::ast::PartialAst;
 
@@ -70,7 +70,7 @@ impl<'src> InputScript<'src> {
             tree,
             ast: Ast::default(),
             identifinder: IdentiFinder::new_no_parse(),
-            error_finder: ErrorFinder::new()?,
+            error_finder: ErrorFinder::new(),
             parser: LmpParser(parser),
         })
     }
@@ -160,7 +160,7 @@ impl<'src> InputScript<'src> {
     }
 
     fn unused_references(&mut self) {
-        let unused = unused_variables(self.identifinder.symbols());
+        let unused = unused_references(self.identifinder.symbols());
         self.extend(unused);
     }
 

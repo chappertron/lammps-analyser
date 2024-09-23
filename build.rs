@@ -127,12 +127,10 @@ fn generate_styles(style_kind: StyleKind) -> BResult<()> {
 ///
 /// Words that are snake case also get further split
 fn camelify_lammps(src: &str) -> String {
-    // TODO: Enforce that the string must be ascii??
     src.split('/').map(camelify_snake).collect()
 }
 
 fn camelify_snake(src: &str) -> String {
-    // TODO: Enforce that the string must be ascii??
     src.split('_').map(uppercase_first_letter).collect()
 }
 

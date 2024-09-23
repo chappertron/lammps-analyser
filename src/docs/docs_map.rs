@@ -10,8 +10,7 @@ use crate::{
 /// This maps between commands and the documentation files
 
 /// Static map between the commands and their files.
-/// TODO: Make pub(crate) again
-pub static DOCS_MAP: Lazy<DocsMap> =
+pub(crate) static DOCS_MAP: Lazy<DocsMap> =
     Lazy::new(|| DocsMap::new_from_str(include_str!["../../docs_extract/index_map.txt"]));
 
 /// A mapping between a command name and a doc path.
@@ -34,7 +33,7 @@ impl DocsMap {
         let mut others = HashMap::new();
 
         map_contents.lines().for_each(|line| {
-            // TODO: Remove this panic.
+            // TODO: Migrate the generationg of this to a build script, not to run-time
             let (name, doc_file) = line.split_once(',').expect("Expected key value pair");
 
             if let Some((command_type, style)) = name.split_once(' ') {

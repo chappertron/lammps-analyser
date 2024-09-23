@@ -31,7 +31,6 @@ impl FixDef {
 impl FromNode for FixDef {
     type Error = FromNodeError;
 
-    /// TODO: Hand a cursor instead???
     fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
         let span = node.range().into();
         let mut cursor = node.walk();

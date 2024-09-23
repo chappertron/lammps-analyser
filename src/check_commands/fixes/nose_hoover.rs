@@ -5,7 +5,6 @@ use crate::{
 };
 
 /// Generic Parsing of the Nose-Hoover Fixes
-/// TODO: Finish ME
 /// TODO: Error if a temp or barostat keyword is not being used
 pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::InvalidArgumentsType> {
     let args = &fix.args;
@@ -44,9 +43,7 @@ pub(crate) fn parse_nh_fixes(fix: &FixDef) -> Result<(), invalid_arguments::Inva
 
     while let Some(arg) = iter.next() {
         match &arg.kind {
-            // TODO: Change ArgName again if this changes again
             ArgumentKind::Word(kwarg) if kwarg == "temp" => {
-                // TODO: check if there are 3 more elements
                 thermostat_only(kwarg)?;
                 utils::kwarg_expected_floats(&mut iter, kwarg, 3, "<Tstart> <Tstop> <Tdamp>")?;
             }
@@ -205,7 +202,7 @@ mod tests {
         assert_eq!(fix.fix_style, FixStyle::Nvt);
         assert!(!fix.args.is_empty());
 
-        // TODO: Turn into an error...
+        // TODO: Match the error
         assert!(parse_nh_fixes(&fix).is_err());
     }
 }

@@ -15,7 +15,6 @@ pub(crate) fn get_symbol_at_point<'a>(
     for (k, v) in symbols {
         for r in v.refs().iter() {
             if *point >= r.start() && *point <= r.end() {
-                // TODO: Return multiple if they exist here????
                 return Some(k);
             }
         }

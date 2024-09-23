@@ -1,4 +1,4 @@
-use tree_sitter::{Node, Point, TreeCursor};
+use tree_sitter::{Node, Point};
 
 use crate::{diagnostics, spanned_error::SpannedError, utils::into_error::IntoError};
 use thiserror::Error;
@@ -13,7 +13,6 @@ pub trait FromNode: Sized {
     fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error>;
 }
 
-// TODO: Just wrap expression parse error??
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 /// An error associated with converting a tree-sitter `Node`.
 pub enum FromNodeError {
@@ -69,7 +68,7 @@ impl diagnostics::Issue for SpannedError<FromNodeError> {
         };
 
         diagnostics::Diagnostic {
-            name: name.to_string(),
+            name,
             severity: diagnostics::Severity::Error,
             span: self.span,
             message: self.to_string(),
@@ -99,49 +98,5 @@ impl From<SpannedError<FromNodeError>> for FromNodeError {
     /// HACK: Allows ? on Spanned error for function that returns non-spanned.
     fn from(value: SpannedError<FromNodeError>) -> Self {
         value.error
-    }
-}
-
-// Traits that might make using `tree-sitter` more ergonomic. However, not sure.
-// TODO: Remove these if they never get used.
-
-#[allow(dead_code)]
-trait GetChild {
-    fn get_child(&self, index: usize) -> Result<Node, MissingChild>;
-}
-
-#[allow(dead_code)]
-trait SeekChild {
-    /// Moves the cursor to the location of `index` child and returns it as a result.
-    fn seek_child(&mut self, index: usize) -> Result<Node, MissingChild>;
-}
-
-#[derive(Debug, Default, Error, Clone)]
-#[error("Could not find child at index {0}")]
-struct MissingChild(usize);
-
-impl GetChild for Node<'_> {
-    fn get_child(&self, index: usize) -> Result<Node, MissingChild> {
-        self.child(index).ok_or(MissingChild(index))
-    }
-}
-
-impl SeekChild for TreeCursor<'_> {
-    fn seek_child(&mut self, index: usize) -> Result<Node, MissingChild> {
-        if !self.goto_first_child() {
-            return Err(MissingChild(index));
-        }
-
-        if index == 0 {
-            return Ok(self.node());
-        }
-
-        for _ in 1..index {
-            if !self.goto_next_sibling() {
-                return Err(MissingChild(index));
-            }
-        }
-
-        Ok(self.node())
     }
 }

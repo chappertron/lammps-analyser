@@ -7,7 +7,6 @@ use super::{
     Argument, Word,
 };
 
-//TODO: finish me
 #[derive(Debug, Default, PartialEq, Clone)]
 pub struct VariableDef {
     pub variable_id: Ident, // Or just keep as a string?
@@ -44,7 +43,6 @@ impl FromNode for VariableDef {
 
         let variable_ident = Ident::new(&variable_ident, text)?;
 
-        // TODO: Make this missing thing nicer.
         let variable_kind = Word::from_node(
             &children.next().ok_or(Self::Error::PartialNode(
                 "missing variable style".to_string(),
@@ -52,7 +50,6 @@ impl FromNode for VariableDef {
             text,
         )?;
 
-        // TODO: Check if is missing node here?
         let args: Result<Vec<Argument>, _> = children
             .map(|arg| {
                 if arg.is_missing() {
@@ -76,14 +73,11 @@ impl FromNode for VariableDef {
 
         // These styles expect just a single expression.
         if matches!(variable_kind.contents.as_str(), "equal" | "vector" | "atom") {
-            match args[0].kind {
-                ArgumentKind::Expression(_) => (),
-                _ => {
-                    return Err(Self::Error::PartialNode(format!(
-                        "expected expression for variable style {}",
-                        variable_kind.contents
-                    )));
-                }
+            if !matches!(args[0].kind, ArgumentKind::Expression(_)) {
+                return Err(Self::Error::PartialNode(format!(
+                    "expected expression for variable style {}",
+                    variable_kind.contents
+                )));
             }
 
             if args.len() > 1 {
@@ -126,7 +120,6 @@ mod test {
             variable_id: Ident {
                 name: "a".into(),
                 ident_type: ast::IdentType::Variable,
-                // TODO: Check this is the type expected.
                 span: ((0, 9)..(0, 10)).into(),
             },
             variable_style: Word {

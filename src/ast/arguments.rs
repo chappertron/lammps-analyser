@@ -27,7 +27,7 @@ pub enum ArgumentKind {
     Int(isize),
     Float(f64),
     Bool(bool),
-    ArgName(String), // TODO: Rename to keyword arg?
+    ArgName(String), // TODO: Is this still in use in the tree-sitter grammar?
     /// Variables within curly braces
     VarCurly(Ident),
     VarRound(Expression),
@@ -36,7 +36,7 @@ pub enum ArgumentKind {
     Concatenation(Vec<Argument>),
     /// Expression.
     /// TODO: Not really valid as a bare argument except for with variable commands
-    /// TODO: Make a quoted expression a separate thing?
+    /// TODO: Make a quoted expression a separate thing for validation.
     Expression(Expression),
     // TODO: Remove? Can't know if a group name until further on in the process???
     // Perhaps make it an identifier that then is decided to be either
@@ -81,8 +81,6 @@ impl FromNode for ArgumentKind {
         text: &str,
     ) -> Result<Self, <Argument as FromNode>::Error> {
         // TODO: make these variants more complete.
-        //.child(0).unwrap()
-        // Did removing above from match fix things???
         let text = text.as_ref();
         match node.kind() {
             "int" => Ok(Self::Int(node.str_text(text).parse::<isize>()?)),
@@ -96,7 +94,7 @@ impl FromNode for ArgumentKind {
                     start: node.start_position(),
                 })?,
             })),
-            // TODO: Expressions not wrapped in varround are not valid???
+            // TODO: Expressions not wrapped in varround are not valid? Add a lint.
             "expression" => Ok(Self::Expression(Expression::parse_expression(node, text)?)),
             "quoted_expression" => quoted_expression(node, text).map(Self::Expression),
             "string" => Ok(Self::String(node.str_text(text).to_owned())),
@@ -193,14 +191,12 @@ impl Display for ArgumentKind {
             Self::VarCurly(x) => write!(f, "var_curly: ${{{0}}}", x.name),
             Self::VarRound(x) => write!(f, "var_round: $({x})"),
             Self::Concatenation(v) => {
-                // TODO: this will look really ugly
                 write!(f, "concatenation: ")?;
                 for a in v {
                     write!(f, "{a}")?;
                 }
                 Ok(())
             }
-            // TODO: properly implement string
             Self::String(s) => write!(f, "string: {s}"),
             Self::Expression(x) => write!(f, "expression: {x}"),
             Self::Group => write!(f, "group"),
