@@ -66,7 +66,7 @@ mod test {
         let run_commands: Vec<_> = input_script.ast.find_run_commands().cloned().collect();
 
         assert_eq!(run_commands.len(), 2);
-        assert_eq!(run_commands[0].span(), Span::from((131, 0)..(131, 17)));
-        assert_eq!(run_commands[1].span(), Span::from((145, 0)..(145, 6)));
+        assert_eq!(run_commands[0].span(), Span::from((132, 0)..(132, 17)));
+        assert_eq!(run_commands[1].span(), Span::from((146, 0)..(146, 6)));
     }
 }
