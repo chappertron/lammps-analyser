@@ -43,7 +43,9 @@ pub(crate) mod parsing {
     /// Create an instance of the tree-sitter-lammps parser
     pub fn setup_parser() -> Parser {
         let mut parser = Parser::new();
-        parser.set_language(tree_sitter_lammps::language()).unwrap();
+        parser
+            .set_language(&tree_sitter_lammps::LANGUAGE.into())
+            .unwrap();
         parser
     }
 }

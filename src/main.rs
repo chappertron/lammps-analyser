@@ -32,7 +32,7 @@ fn main() -> Result<()> {
     let mut parser = Parser::new();
 
     parser
-        .set_language(tree_sitter_lammps::language())
+        .set_language(&tree_sitter_lammps::LANGUAGE.into())
         .context("Could not load tree-sitter language")?;
 
     let state = input_script::InputScript::new(&source_code)?;

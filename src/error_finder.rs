@@ -18,7 +18,7 @@ pub struct ErrorFinder {
 
 static ERROR_QUERY: Lazy<Query> = Lazy::new(|| {
     Query::new(
-        tree_sitter_lammps::language(),
+        &tree_sitter_lammps::LANGUAGE.into(),
         "
             (ERROR) @syntax_error
             ",

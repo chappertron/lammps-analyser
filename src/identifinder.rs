@@ -67,7 +67,7 @@ impl SymbolDef {
 /// Query for identifier definitions
 static QUERY_DEF: Lazy<Query> = Lazy::new(|| {
     Query::new(
-        tree_sitter_lammps::language(),
+        &tree_sitter_lammps::LANGUAGE.into(),
         "(fix (fix_id ) @definition.fix) 
                 (compute (compute_id) @definition.compute) 
                 (variable_def (variable) @definition.variable )",
@@ -78,7 +78,7 @@ static QUERY_DEF: Lazy<Query> = Lazy::new(|| {
 /// Query for identifier references
 static QUERY_REF: Lazy<Query> = Lazy::new(|| {
     Query::new(
-        tree_sitter_lammps::language(),
+        &tree_sitter_lammps::LANGUAGE.into(),
         " (fix_id) @reference.fix  (compute_id) @reference.compute (variable) @reference.variable",
     )
     .expect("Invalid query for LAMMPS TS Grammar")

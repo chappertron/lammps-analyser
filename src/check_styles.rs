@@ -72,7 +72,7 @@ pub fn check_styles(ast: &Ast, tree: &Tree, text: &str) -> Vec<InvalidStyle> {
 
 static STYLE_QUERY: Lazy<Query> = Lazy::new(|| {
     Query::new(
-        tree_sitter_lammps::language(),
+        &tree_sitter_lammps::LANGUAGE.into(),
         "(fix (fix_style) @definition.fix) (compute (compute_style) @definition.compute) ",
     )
     .expect("Invalid TS query")

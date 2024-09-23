@@ -45,6 +45,8 @@ pub enum Expression {
     ThermoKeyword(Word),
     /// TODO: Word might not actually valid in an expr in the TS Grammar
     Word(Word),
+    /// Constant either PI or version
+    Constant(Word),
 
     /// An expression expansion `$(expr)`
     /// This expression is invalid in most cases, except in variable commands.
@@ -80,6 +82,7 @@ impl Display for Expression {
             }
             Self::Parens(expr) => write!(f, "({expr})"),
             Self::ThermoKeyword(kw) => write!(f, "{kw}"),
+            Self::Constant(cons) => write!(f, "{cons}"),
             Self::Word(word) => write!(f, "{word}"),
             Self::VarRound(expr) => write!(f, "$({expr})"),
             Self::VarCurly(var) => write!(f, "${{{var}}}"), // triple { to ensure escaping
@@ -150,7 +153,8 @@ impl Expression {
             // Child 0 is the identifier
             // The v_/f_/c_ prefix is anonymous
             "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
-                &node.child(0).into_err()?,
+                // Node zero is the prefix
+                &node.child(1).into_err()?,
                 text,
             )?)),
             "binary_op" => Ok(Self::BinaryOp(
@@ -203,6 +207,7 @@ impl Expression {
                 _ => unreachable!(), // TODO: Verify this is the case?
             },
             "thermo_kwarg" => Ok(Self::ThermoKeyword(Word::parse_word(node, text))),
+            "constant" => Ok(Self::Constant(Word::parse_word(node, text))),
             "word" => Ok(Self::Word(Word::parse_word(node, text))),
             // TODO: merge this with word in the grammar
             "group_id" => Ok(Self::Word(Word::parse_word(node, text))),
@@ -392,10 +397,11 @@ mod tests {
         let mut parser = Parser::new();
 
         parser
-            .set_language(tree_sitter_lammps::language())
+            .set_language(&tree_sitter_lammps::LANGUAGE.into())
             .expect("Could not load language");
         parser
     }
+
     #[test]
     fn parse_expr() {
         let mut parser = setup_parser();
@@ -420,6 +426,52 @@ mod tests {
                 BinaryOp::Add,
                 Box::new(Expression::Int(2))
             )
+        );
+    }
+
+    #[test]
+    fn parse_const_pi() {
+        let mut parser = setup_parser();
+        let source = "variable a equal PI";
+
+        let tree = parser.parse(source, None).unwrap();
+
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
+
+        dbg!(expr_node.to_sexp());
+        // assert_eq!(ast.commands.len(), 1);
+        assert_eq!(
+            // ast.commands[0],
+            Expression::parse_expression(&expr_node, source).unwrap(),
+            Expression::Constant(Word::new("PI".into(), (0, 17)..(0, 19)))
+        );
+    }
+
+    #[test]
+    fn parse_const_version() {
+        let mut parser = setup_parser();
+        let source = "variable a equal version";
+
+        let tree = parser.parse(source, None).unwrap();
+
+        // let ast = ts_to_ast(&tree, source_bytes);
+
+        let root_node = tree.root_node();
+        dbg!(root_node.to_sexp());
+        // Lots of tedium to parsing this...
+        let expr_node = dbg!(root_node.child(0)).unwrap().child(3).unwrap();
+
+        dbg!(expr_node.to_sexp());
+        // assert_eq!(ast.commands.len(), 1);
+        assert_eq!(
+            // ast.commands[0],
+            Expression::parse_expression(&expr_node, source).unwrap(),
+            Expression::Constant(Word::new("version".into(), (0, 17)..(0, 24)))
         );
     }
 
