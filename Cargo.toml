@@ -8,6 +8,8 @@ description = "A CLI tool and language serever for LAMMPS simulation input scrip
 
 default-run = "lammps-analyser"
 
+exclude = ["/ci", "images/", ".*", "bacon.toml", "_typos.toml"]
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
