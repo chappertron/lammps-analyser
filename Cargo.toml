@@ -13,7 +13,7 @@ exclude = ["/ci", "images/", ".*", "bacon.toml", "_typos.toml"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [build-dependencies]
-cc = "*"
+cc = "1.0"
 
 [dependencies]
 anyhow = "1.0.72"
