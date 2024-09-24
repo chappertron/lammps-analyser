@@ -155,6 +155,26 @@ options for tree-sitter, including being built in to newer versions.
 
 There should also be plugins for these with regular Vim
 
+## Limitations and Reporting Issues
+
+This project does not aim to and cannot catch every possible error in a simulation script.
+It instead aims to reduce the number of errors encountered at runtime.
+
+If have a valid input script that `lammps-analyser` reports as erroneous, please raise an issue.
+
+If you have an invalid script that doesn't show any errors, you are also welcome to report an issue.
+Do note, these will be treated as feature requests and will have a lower priority than false negatives.
+
+There are several syntax features that are not yet handled, most notably single quoted strings and triple quotes. 
+Soon there will be an issue tracking for features such as these, either here or in [tree-sitter-lammps](https://github.com/chappertron/tree-sitter-lammps).
+
 ## Minimum Supported Version of Rust
 
 Building requires Rust > 1.65
+
+## Licence
+
+This project uses the GPL-2.0 Licence to be compatible with that of LAMMPS.
+
+The `lammps_docs_md` folder contains documentation generated from the official [LAMMPS documentation](https://docs.lammps.org/Manual.html). 
+
