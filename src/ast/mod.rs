@@ -47,7 +47,7 @@ pub struct PartialAst {
     pub errors: Vec<SpannedError<FromNodeError>>,
 }
 
-/// Transform a `tree-sitter::Tree` into an Abstract Sytnax Tree
+/// Transform a `tree-sitter::Tree` into an Abstract Syntax Tree
 pub fn ts_to_ast(tree: &Tree, text: &str) -> Result<Ast, PartialAst> {
     let mut cursor = tree.walk();
 

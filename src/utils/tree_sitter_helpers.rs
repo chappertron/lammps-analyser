@@ -1,6 +1,6 @@
 use tree_sitter::Node;
 
-/// An extension trait that adds addtional methods to `tree_sitter::Node`
+/// An extension trait that adds additional methods to `tree_sitter::Node`
 pub(crate) trait NodeExt {
     /// A helper method for getting the text of a node from valid utf-8.
     ///
@@ -12,7 +12,7 @@ pub(crate) trait NodeExt {
 
 impl NodeExt for Node<'_> {
     fn str_text<'a>(&self, source: &'a str) -> &'a str {
-        // Shoul not panic as source is valid utf-8
+        // Should not panic as source is valid utf-8
         self.utf8_text(source.as_bytes()).expect("invalid utf-8")
     }
 }
