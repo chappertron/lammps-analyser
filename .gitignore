@@ -42,3 +42,6 @@ docs_venv/
 # scratch files for experimenting with the pandoc conversions
 pandoc_experimenting/
 
+# Untracked
+tmp/*
+
