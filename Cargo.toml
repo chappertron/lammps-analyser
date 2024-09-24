@@ -3,6 +3,9 @@ name = "lammps-analyser"
 version = "0.1.0-pre-release"
 edition = "2021"
 repository = "https://github.com/chappertron/lammps-analyser"
+license = "GPL-2.0"
+license-file = "LICENSE"
+description = "A CLI tool and language serever for LAMMPS simulation input scripts."
 
 default-run = "lammps-analyser"
 
