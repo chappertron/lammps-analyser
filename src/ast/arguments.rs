@@ -28,8 +28,11 @@ pub enum ArgumentKind {
     Float(f64),
     Bool(bool),
     ArgName(String), // TODO: Is this still in use in the tree-sitter grammar?
-    /// Variables within curly braces
+    /// Variable expansion within curly braces
     VarCurly(Ident),
+    /// A simple variable expansion in $var
+    SimpleExpansion(Ident),
+    /// Expression evaluations in $()
     VarRound(Expression),
     String(String),
     /// Multiple argument stuck together, usually strings and expansions.
@@ -101,6 +104,10 @@ impl FromNode for ArgumentKind {
             "group" => Ok(Self::Group),
             "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
                 &node.child(0).into_err()?,
+                text,
+            )?)),
+            "simple_expansion" => Ok(Self::SimpleExpansion(Ident::new(
+                &node.child(1).into_err()?,
                 text,
             )?)),
             // TODO: check surrounding brackets
@@ -189,6 +196,7 @@ impl Display for ArgumentKind {
             Self::Bool(x) => write!(f, "bool: {x}"),
             Self::ArgName(x) => write!(f, "argname: {x}"),
             Self::VarCurly(x) => write!(f, "var_curly: ${{{0}}}", x.name),
+            Self::SimpleExpansion(x) => write!(f, "simple_expansion: ${0}", x.name),
             Self::VarRound(x) => write!(f, "var_round: $({x})"),
             Self::Concatenation(v) => {
                 write!(f, "concatenation: ")?;
@@ -204,5 +212,44 @@ impl Display for ArgumentKind {
             Self::Word(x) => write!(f, "word: {x}"),
             Self::Error => write!(f, "ERROR"),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use pretty_assertions::assert_eq;
+
+    use crate::utils;
+
+    use super::*;
+
+    #[test]
+    fn simple_expansion() {
+        let contents = "test_cmd $x\n";
+
+        let tree = utils::testing::parse(contents);
+
+        let expansion_node = tree
+            .root_node()
+            .child(0)
+            .unwrap()
+            .child(1)
+            .unwrap()
+            .child(0)
+            .unwrap();
+
+        dbg!(expansion_node.to_sexp());
+
+        assert_eq!(
+            Argument::from_node(&expansion_node, contents).expect("Should parse"),
+            Argument {
+                kind: ArgumentKind::SimpleExpansion(crate::ast::Ident {
+                    name: "x".into(),
+                    ident_type: crate::ast::IdentType::Variable,
+                    span: ((0, 10)..(0, 11)).into(),
+                }),
+                span: ((0, 9)..(0, 11)).into()
+            }
+        )
     }
 }
