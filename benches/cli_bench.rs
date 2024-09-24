@@ -5,7 +5,7 @@ pub fn read_script_w_errors(c: &mut Criterion) {
     // setup
     let mut parser = tree_sitter::Parser::new();
     parser
-        .set_language(tree_sitter_lammps::language())
+        .set_language(&tree_sitter_lammps::LANGUAGE.into())
         .expect("Failed to setup tree-sitter-lammps");
 
     let source = include_str!(concat!(
