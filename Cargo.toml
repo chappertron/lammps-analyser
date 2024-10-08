@@ -12,9 +12,6 @@ exclude = ["/ci", "images/", ".*", "bacon.toml", "_typos.toml"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-[patch.crates-io]
-tree-sitter-lammps = { path = "../tree-sitter-lammps" }
-
 [build-dependencies]
 cc = "1.0"
 
