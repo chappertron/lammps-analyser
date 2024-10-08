@@ -1,5 +1,7 @@
 use tree_sitter::Node;
 
+use crate::ast::from_node::FromNodeError;
+
 /// An extension trait that adds additional methods to `tree_sitter::Node`
 pub(crate) trait NodeExt {
     /// A helper method for getting the text of a node from valid utf-8.
@@ -14,5 +16,49 @@ impl NodeExt for Node<'_> {
     fn str_text<'a>(&self, source: &'a str) -> &'a str {
         // Should not panic as source is valid utf-8
         self.utf8_text(source.as_bytes()).expect("invalid utf-8")
+    }
+}
+
+pub trait ExpectNode {
+    type Output;
+    type Error;
+
+    /// Convert an Optional<Node> or a Missing / Error node into an Error
+    fn expect_node(self, message: impl Into<String>) -> Result<Self::Output, Self::Error>;
+    fn expect_kind(
+        self,
+        kind: &str,
+        message: impl Into<String>,
+    ) -> Result<Self::Output, Self::Error>;
+}
+
+impl<'a> ExpectNode for Option<Node<'a>> {
+    type Output = Node<'a>;
+    type Error = FromNodeError;
+
+    fn expect_node(self, message: impl Into<String>) -> Result<Node<'a>, Self::Error> {
+        match self {
+            Some(x) => {
+                if x.is_error() | x.is_missing() {
+                    return Err(FromNodeError::PartialNode(message.into()));
+                }
+
+                Ok(x)
+            }
+            None => return Err(FromNodeError::PartialNode(message.into())),
+        }
+    }
+
+    fn expect_kind(self, kind: &str, message: impl Into<String>) -> Result<Node<'a>, Self::Error> {
+        match self {
+            Some(x) => {
+                if x.kind() != kind {
+                    return Err(FromNodeError::PartialNode(message.into()));
+                }
+
+                Ok(x)
+            }
+            None => return Err(FromNodeError::PartialNode(message.into())),
+        }
     }
 }
