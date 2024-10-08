@@ -50,6 +50,10 @@
             "named": true
           },
           {
+            "type": "indexed_ident",
+            "named": true
+          },
+          {
             "type": "int",
             "named": true
           },
@@ -360,6 +364,10 @@
       "required": true,
       "types": [
         {
+          "type": "atom_property",
+          "named": true
+        },
+        {
           "type": "binary_func",
           "named": true
         },
@@ -385,6 +393,10 @@
         },
         {
           "type": "hexnary_func",
+          "named": true
+        },
+        {
+          "type": "indexing",
           "named": true
         },
         {
@@ -612,9 +624,24 @@
     "fields": {}
   },
   {
-    "type": "indexing",
+    "type": "indexed_ident",
     "named": true,
-    "fields": {},
+    "fields": {
+      "ident": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "indexed_ident",
+            "named": true
+          },
+          {
+            "type": "underscore_ident",
+            "named": true
+          }
+        ]
+      }
+    },
     "children": {
       "multiple": false,
       "required": true,
@@ -628,6 +655,36 @@
           "named": true
         }
       ]
+    }
+  },
+  {
+    "type": "indexing",
+    "named": true,
+    "fields": {
+      "index": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "glob",
+            "named": true
+          },
+          {
+            "type": "int",
+            "named": true
+          }
+        ]
+      },
+      "value": {
+        "multiple": false,
+        "required": true,
+        "types": [
+          {
+            "type": "expression",
+            "named": true
+          }
+        ]
+      }
     }
   },
   {
@@ -914,7 +971,7 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": true,
       "types": [
         {
@@ -923,10 +980,6 @@
         },
         {
           "type": "fix_id",
-          "named": true
-        },
-        {
-          "type": "indexing",
           "named": true
         },
         {
@@ -1167,6 +1220,10 @@
   {
     "type": "^",
     "named": false
+  },
+  {
+    "type": "atom_property",
+    "named": true
   },
   {
     "type": "atomfile",

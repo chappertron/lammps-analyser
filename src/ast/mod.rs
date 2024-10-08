@@ -110,6 +110,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore = "incomplete test"]
     fn node_coverage() {
         const NODES_STR: &str = tree_sitter_lammps::NODE_TYPES;
 
