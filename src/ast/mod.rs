@@ -89,6 +89,8 @@ pub fn ts_to_ast(tree: &Tree, text: &str) -> Result<Ast, PartialAst> {
 #[allow(clippy::expect_used)]
 mod tests {
 
+    use serde_json::Value;
+
     // use pretty_assertions::assert_eq;
     use crate::utils::testing::parse;
 
@@ -103,6 +105,24 @@ mod tests {
 
         let _ast = ts_to_ast(&tree, source);
         // dbg!(ast.unwrap());
+
+        unimplemented!()
+    }
+
+    #[test]
+    #[ignore = "incomplete test"]
+    fn node_coverage() {
+        const NODES_STR: &str = tree_sitter_lammps::NODE_TYPES;
+
+        std::fs::write("./node_types.json", NODES_STR).expect("Failed to write node types out.");
+        let value: Value = serde_json::from_str(NODES_STR).expect("Failed to deserialise");
+
+        dbg!(&value);
+
+        // dbg!(NODES_STR);
+        for node_type in value.as_array().expect("top level should be an array") {
+            dbg!(node_type);
+        }
 
         unimplemented!()
     }

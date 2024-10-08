@@ -14,7 +14,7 @@ use std::convert::TryFrom;
 use thiserror::Error;
 
 use super::{
-    from_node::{FromNodeError, MissingNode},
+    from_node::{FromNode, FromNodeError, MissingNode},
     Word,
 };
 
@@ -43,13 +43,20 @@ pub enum Expression {
     /// Thermo keyword
     /// TODO: Use an enum instead
     ThermoKeyword(Word),
+
+    /// Built-in atom property keyword
+    /// TODO: Use an enum instead
+    AtomProperty(Word),
     /// TODO: Word might not actually valid in an expr in the TS Grammar
     Word(Word),
     /// Constant either PI or version
     Constant(Word),
 
+    Indexing(Box<Expression>, Index),
+
     /// An expression expansion `$(expr)`
     /// This expression is invalid in most cases, except in variable commands.
+
     /// This is because they cannot be nested
     VarRound(Box<Expression>),
 
@@ -57,6 +64,37 @@ pub enum Expression {
     /// This expression is invalid in most cases, except in variable commands.
     /// This is because they cannot be nested
     VarCurly(Ident),
+}
+
+#[derive(Debug, Default, PartialEq, PartialOrd, Clone)]
+pub enum Index {
+    Int(usize),
+    #[default]
+    Glob,
+}
+
+impl FromNode for Index {
+    type Error = FromNodeError;
+
+    fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
+        match node.kind() {
+            "glob" => Ok(Index::Glob),
+            "int" => Ok(Index::Int(node.str_text(text).parse()?)),
+            _ => Err(FromNodeError::PartialNode(format![
+                "invalid index `{x}`, expected `*` or integer",
+                x = node.str_text(text)
+            ])),
+        }
+    }
+}
+
+impl Display for Index {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Int(n) => write!(f, "{n}"),
+            Self::Glob => write!(f, "*"),
+        }
+    }
 }
 
 impl Display for Expression {
@@ -82,8 +120,10 @@ impl Display for Expression {
             }
             Self::Parens(expr) => write!(f, "({expr})"),
             Self::ThermoKeyword(kw) => write!(f, "{kw}"),
+            Self::AtomProperty(kw) => write!(f, "{kw}"),
             Self::Constant(cons) => write!(f, "{cons}"),
             Self::Word(word) => write!(f, "{word}"),
+            Self::Indexing(expr, index) => write!(f, "{expr}[{index}]"),
             Self::VarRound(expr) => write!(f, "$({expr})"),
             Self::VarCurly(var) => write!(f, "${{{var}}}"), // triple { to ensure escaping
         }
@@ -207,6 +247,7 @@ impl Expression {
                 _ => unreachable!(), // TODO: Verify this is the case?
             },
             "thermo_kwarg" => Ok(Self::ThermoKeyword(Word::parse_word(node, text))),
+            "atom_property" => Ok(Self::AtomProperty(Word::parse_word(node, text))),
             "constant" => Ok(Self::Constant(Word::parse_word(node, text))),
             "word" => Ok(Self::Word(Word::parse_word(node, text))),
             // TODO: merge this with word in the grammar
@@ -215,11 +256,28 @@ impl Expression {
             "identifier" => Ok(Self::Word(Word::parse_word(node, text))),
             "var_round" => Ok(Self::VarRound(Box::new(var_round(node, text)?))),
             "var_curly" => var_curly(node, text).map(Self::VarCurly),
+            "indexing" => indexing(node, text),
             "ERROR" => Err(ParseExprError::ErrorNode.into()),
             x => Err(ParseExprError::UnknownExpressionType(x.to_owned()).into()),
         }
         // todo!()
     }
+}
+
+pub(crate) fn indexing(node: &Node, text: &str) -> Result<Expression, FromNodeError> {
+    let value = node
+        .child_by_field_name("value")
+        .ok_or(FromNodeError::PartialNode("expected expression".into()))?;
+    // TODO: properly handle the `[]`
+    let value = Expression::parse_expression(&value, text)?;
+
+    let index = node
+        .child_by_field_name("index")
+        .ok_or(FromNodeError::PartialNode("expected index".into()))?;
+
+    let index = Index::from_node(&index, text)?;
+
+    Ok(Expression::Indexing(Box::new(value), index))
 }
 
 pub(crate) fn var_round(node: &Node, text: &str) -> Result<Expression, FromNodeError> {
@@ -388,7 +446,7 @@ mod tests {
 
     use pretty_assertions::assert_eq;
 
-    use crate::ast::IdentType;
+    use crate::{ast::IdentType, utils};
 
     use super::*;
 
@@ -678,5 +736,30 @@ mod tests {
             )
         );
         assert_eq!(func.to_string(), "ramp(v_example, 3)")
+    }
+
+    #[test]
+    fn indexed_variable() {
+        let src = "variable y equal x[1]";
+
+        let tree = utils::testing::parse(src);
+        dbg!(&tree.root_node().to_sexp());
+        let expr = tree
+            .root_node()
+            .child(0)
+            .expect("getting variable command")
+            .child(3)
+            .expect("Expression here");
+
+        assert_eq!(
+            Expression::parse_expression(&expr, src),
+            Ok(Expression::Indexing(
+                Box::new(Expression::AtomProperty(Word::new(
+                    "x".into(),
+                    (0, 17)..(0, 18)
+                ))),
+                Index::Int(1)
+            ))
+        )
     }
 }

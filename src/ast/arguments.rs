@@ -5,10 +5,14 @@ use tree_sitter::Node;
 use crate::{
     ast::Ident,
     spans::Span,
-    utils::{into_error::IntoError, tree_sitter_helpers::NodeExt},
+    utils::{
+        into_error::IntoError,
+        tree_sitter_helpers::{ExpectNode, NodeExt},
+    },
 };
 
 use super::{
+    expressions::Index,
     from_node::{FromNode, FromNodeError},
     Expression,
 };
@@ -46,6 +50,9 @@ pub enum ArgumentKind {
     Group,
     /// A variable/fix/compute name prefixed by v_/f_/c_
     UnderscoreIdent(Ident),
+    /// An indexed `UnderscoreIdent`
+    IndexedIdent(Ident, Index),
+
     // TODO: Make the contents of this a [`Word`]
     /// A white-space delimited word
     Word(String),
@@ -102,10 +109,7 @@ impl FromNode for ArgumentKind {
             "quoted_expression" => quoted_expression(node, text).map(Self::Expression),
             "string" => Ok(Self::String(node.str_text(text).to_owned())),
             "group" => Ok(Self::Group),
-            "underscore_ident" => Ok(Self::UnderscoreIdent(Ident::new(
-                &node.child(0).into_err()?,
-                text,
-            )?)),
+            "underscore_ident" => Ok(Self::UnderscoreIdent(underscore_ident(node, text)?)),
             "simple_expansion" => Ok(Self::SimpleExpansion(Ident::new(
                 &node.child(1).into_err()?,
                 text,
@@ -136,6 +140,27 @@ impl FromNode for ArgumentKind {
                     .collect();
                 Ok(Self::Concatenation(v?))
             }
+            "indexed_ident" => {
+                let mut cursor = node.walk();
+                let mut children = node.children(&mut cursor);
+
+                let ident = children
+                    .next()
+                    .expect_node("expected underscore identifier")?;
+                let ident = underscore_ident(&ident, text)?;
+
+                _ = children.next().expect_kind("[", "expected `[`")?;
+
+                let index = children
+                    .next()
+                    .expect_node("expected `*` or integer index")?;
+
+                let index = Index::from_node(&index, text)?;
+
+                _ = children.next().expect_kind("]", "expected `]`")?;
+
+                Ok(ArgumentKind::IndexedIdent(ident, index))
+            }
             // TODO: It seems weird sending something called error through ok.
             "ERROR" => Ok(Self::Error),
             x => Err(FromNodeError::UnknownCustom {
@@ -145,6 +170,12 @@ impl FromNode for ArgumentKind {
             }),
         }
     }
+}
+
+fn underscore_ident(node: &Node, text: &str) -> Result<Ident, FromNodeError> {
+    // 0 is v_
+    // 1 is x
+    Ok(Ident::new(&node.child(1).into_err()?, text)?)
 }
 
 /// Extract a quoted expressison from a node
@@ -209,6 +240,7 @@ impl Display for ArgumentKind {
             Self::Expression(x) => write!(f, "expression: {x}"),
             Self::Group => write!(f, "group"),
             Self::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),
+            Self::IndexedIdent(x, index) => write!(f, "indexed_ident: {x}[{index}]"),
             Self::Word(x) => write!(f, "word: {x}"),
             Self::Error => write!(f, "ERROR"),
         }
@@ -249,6 +281,40 @@ mod test {
                     span: ((0, 10)..(0, 11)).into(),
                 }),
                 span: ((0, 9)..(0, 11)).into()
+            }
+        )
+    }
+
+    #[test]
+    fn indexed_arg() {
+        let contents = "test_cmd v_x[1]\n";
+
+        let tree = utils::testing::parse(contents);
+
+        let expansion_node = tree
+            .root_node()
+            .child(0)
+            .expect("command")
+            .child(1)
+            .expect("argument list")
+            .child(0)
+            .expect("indexed arg");
+
+        dbg!(expansion_node.to_sexp());
+
+        assert_eq!(
+            Argument::from_node(&expansion_node, contents).expect("Should parse"),
+            Argument {
+                kind: ArgumentKind::IndexedIdent(
+                    crate::ast::Ident {
+                        name: "x".into(),
+                        ident_type: crate::ast::IdentType::Variable,
+                        span: ((0, 11)..(0, 12)).into(),
+                    },
+                    Index::Int(1)
+                ),
+
+                span: ((0, 9)..(0, 15)).into()
             }
         )
     }
