@@ -14,7 +14,7 @@ use std::convert::TryFrom;
 use thiserror::Error;
 
 use super::{
-    from_node::{FromNodeError, MissingNode},
+    from_node::{FromNode, FromNodeError, MissingNode},
     Word,
 };
 
@@ -71,6 +71,21 @@ pub enum Index {
     Int(usize),
     #[default]
     Glob,
+}
+
+impl FromNode for Index {
+    type Error = FromNodeError;
+
+    fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
+        match node.kind() {
+            "glob" => Ok(Index::Glob),
+            "int" => Ok(Index::Int(node.str_text(text).parse()?)),
+            _ => Err(FromNodeError::PartialNode(format![
+                "invalid index `{x}`, expected `*` or integer",
+                x = node.str_text(text)
+            ])),
+        }
+    }
 }
 
 impl Display for Index {
@@ -260,15 +275,7 @@ pub(crate) fn indexing(node: &Node, text: &str) -> Result<Expression, FromNodeEr
         .child_by_field_name("index")
         .ok_or(FromNodeError::PartialNode("expected index".into()))?;
 
-    let index = match index.str_text(text) {
-        "*" => Index::Glob,
-        x => {
-            let num = x.parse().map_err(|_| {
-                FromNodeError::PartialNode(format!["invalid index `{x}`, expected `*` or integer"])
-            })?;
-            Index::Int(num)
-        }
-    };
+    let index = Index::from_node(&index, text)?;
 
     Ok(Expression::Indexing(Box::new(value), index))
 }
