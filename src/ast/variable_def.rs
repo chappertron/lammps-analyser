@@ -72,7 +72,8 @@ impl FromNode for VariableDef {
         // TODO: Ensure that the style is valid.
 
         // These styles expect just a single expression.
-        if matches!(variable_kind.contents.as_str(), "equal" | "vector" | "atom") {
+        //  "vector" | TODO: Re-add vector after support is added for expressions in vector command
+        if matches!(variable_kind.contents.as_str(), "equal" | "atom") {
             if !matches!(args[0].kind, ArgumentKind::Expression(_)) {
                 return Err(Self::Error::PartialNode(format!(
                     "expected expression for variable style {}",
