@@ -1,6 +1,6 @@
 [package]
 name = "lammps-analyser"
-version = "0.1.0-pre-release"
+version = "0.1.0-pre-release-2"
 edition = "2021"
 repository = "https://github.com/chappertron/lammps-analyser"
 license = "GPL-2.0-only"
