@@ -63,7 +63,7 @@ impl FromNode for VariableDef {
 
         let args = args?;
 
-        if args.is_empty() {
+        if variable_kind.contents != "delete" && args.is_empty() {
             return Err(Self::Error::PartialNode(
                 "missing arguments in variable command".to_string(),
             ));
