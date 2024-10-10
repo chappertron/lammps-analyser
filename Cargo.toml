@@ -15,6 +15,9 @@ exclude = ["/ci", "images/", ".*", "bacon.toml", "_typos.toml"]
 [build-dependencies]
 cc = "1.0"
 
+[features]
+ast_panics = []
+
 [dependencies]
 anyhow = "1.0.72"
 clap = { version = "4.5", features = ["derive"] }

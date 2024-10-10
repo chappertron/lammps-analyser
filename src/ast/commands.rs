@@ -103,7 +103,8 @@ impl FromNode for Command {
             "compute" => Ok(Self::Compute(
                 ast::ComputeDef::from_node(node, &text).map_err(error_span)?,
             )),
-            "variable_def" => Ok(Self::VariableDef(
+            // TODO: Make a variable deltion it's own type
+            "variable_def" | "variable_del" => Ok(Self::VariableDef(
                 ast::VariableDef::from_node(node, &text).map_err(error_span)?,
             )),
             "shell" => Ok(Self::Shell(node.range().into())),
@@ -111,6 +112,11 @@ impl FromNode for Command {
             "command" => Ok(Self::GenericCommand(
                 GenericCommand::from_node(node, &text).map_err(error_span)?,
             )),
+            "ERROR" => Ok(Self::Error(node.range().into())),
+
+            // NOTE: make this variant a panic for testing purposes.
+            #[cfg(feature = "ast_panics")]
+            c => panic!("unknown command kind {c}"),
             _ => Ok(Self::Error(node.range().into())),
         };
 
@@ -119,7 +125,7 @@ impl FromNode for Command {
             // and pass to that parser.
 
             result = match node.child(0).map(|node| node.kind()) {
-                // Try and pass this as a compute
+                // Try and parse this as a compute
                 Some("compute") => Ok(Self::Compute(
                     ast::ComputeDef::from_node(node, &text).map_err(error_span)?,
                 )),
