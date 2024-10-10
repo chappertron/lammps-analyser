@@ -34,7 +34,7 @@ pub enum ArgumentKind {
     ArgName(String), // TODO: Is this still in use in the tree-sitter grammar?
     /// Variable expansion within curly braces
     VarCurly(Ident),
-    /// A simple variable expansion in $var
+    /// A simple variable expansion in $v
     SimpleExpansion(Ident),
     /// Expression evaluations in $()
     VarRound(Expression),

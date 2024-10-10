@@ -56,14 +56,18 @@ pub enum Expression {
 
     /// An expression expansion `$(expr)`
     /// This expression is invalid in most cases, except in variable commands.
-
     /// This is because they cannot be nested
     VarRound(Box<Expression>),
 
-    /// An variable expansion `${v}`
+    /// A variable expansion `${v}`
     /// This expression is invalid in most cases, except in variable commands.
     /// This is because they cannot be nested
     VarCurly(Ident),
+
+    /// A variable expansion `$v`
+    /// This expression is invalid in most cases, except in variable commands.
+    /// This is because they cannot be nested
+    SimpleExpansion(Ident),
 }
 
 #[derive(Debug, Default, PartialEq, PartialOrd, Clone)]
@@ -126,6 +130,7 @@ impl Display for Expression {
             Self::Indexing(expr, index) => write!(f, "{expr}[{index}]"),
             Self::VarRound(expr) => write!(f, "$({expr})"),
             Self::VarCurly(var) => write!(f, "${{{var}}}"), // triple { to ensure escaping
+            Self::SimpleExpansion(var) => write!(f, "${var}"), // triple { to ensure escaping
         }
     }
 }
@@ -256,6 +261,10 @@ impl Expression {
             "identifier" => Ok(Self::Word(Word::parse_word(node, text))),
             "var_round" => Ok(Self::VarRound(Box::new(var_round(node, text)?))),
             "var_curly" => var_curly(node, text).map(Self::VarCurly),
+            "simple_expansion" => Ok(Self::SimpleExpansion(Ident::new(
+                &node.child(1).into_err()?,
+                text,
+            )?)),
             "indexing" => indexing(node, text),
             "ERROR" => Err(ParseExprError::ErrorNode.into()),
             #[cfg(feature = "ast_panics")]
