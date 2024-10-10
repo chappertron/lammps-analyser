@@ -261,10 +261,15 @@ impl Expression {
             "identifier" => Ok(Self::Word(Word::parse_word(node, text))),
             "var_round" => Ok(Self::VarRound(Box::new(var_round(node, text)?))),
             "var_curly" => var_curly(node, text).map(Self::VarCurly),
-            "simple_expansion" => Ok(Self::SimpleExpansion(Ident::new(
-                &node.child(1).into_err()?,
-                text,
-            )?)),
+            "simple_expansion" => {
+                let ident = Ident::new(&node.child(1).into_err()?, text)?;
+                if ident.name.len() > 1 {
+                    return Err(FromNodeError::PartialNode(
+                        "simple expansions only support one character variables ".into(),
+                    ));
+                }
+                Ok(Self::SimpleExpansion(ident))
+            }
             "indexing" => indexing(node, text),
             "ERROR" => Err(ParseExprError::ErrorNode.into()),
             #[cfg(feature = "ast_panics")]
