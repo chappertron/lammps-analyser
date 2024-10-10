@@ -258,6 +258,8 @@ impl Expression {
             "var_curly" => var_curly(node, text).map(Self::VarCurly),
             "indexing" => indexing(node, text),
             "ERROR" => Err(ParseExprError::ErrorNode.into()),
+            #[cfg(feature = "ast_panics")]
+            exp => panic!("unknown expression kind {exp}"),
             x => Err(ParseExprError::UnknownExpressionType(x.to_owned()).into()),
         }
         // todo!()

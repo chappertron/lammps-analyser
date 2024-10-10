@@ -163,6 +163,9 @@ impl FromNode for ArgumentKind {
             }
             // TODO: It seems weird sending something called error through ok.
             "ERROR" => Ok(Self::Error),
+            // NOTE: make this variant a panic for testing purposes.
+            #[cfg(feature = "ast_panics")]
+            c => panic!("unknown argument kind {c}"),
             x => Err(FromNodeError::UnknownCustom {
                 kind: "argument type".to_string(),
                 name: x.to_string(),
