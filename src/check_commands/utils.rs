@@ -60,6 +60,7 @@ pub(crate) fn kwarg_expected_floats<'a>(
                 ArgumentKind::Int(_) => (),
                 ArgumentKind::VarRound(_) => (),
                 ArgumentKind::VarCurly(_) => (),
+                ArgumentKind::SimpleExpansion(_) => (),
                 _ => Err(invalid_arguments::InvalidArgumentsType::IncorrectType {
                     expected: "float".into(),
                     provided: x.to_string(),
