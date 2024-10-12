@@ -1136,9 +1136,7 @@ dependencies = [
 
 [[package]]
 name = "tree-sitter-lammps"
-version = "0.0.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf381143b234ae8ec73d0cc4399f4370af5c865dc0c9305b955734fb5db1d70d"
+version = "0.0.7"
 dependencies = [
  "cc",
  "tree-sitter-language",

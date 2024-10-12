@@ -12,6 +12,9 @@ exclude = ["/ci", "images/", ".*", "bacon.toml", "_typos.toml"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[patch.crates-io]
+tree-sitter-lammps = { path = "../tree-sitter-lammps/" }
+
 [build-dependencies]
 cc = "1.0"
 
@@ -37,7 +40,7 @@ tokio = { version = "1.40.0", features = [
 ] }
 tower-lsp = "0.20.0"
 tree-sitter = "0.23.0"
-tree-sitter-lammps = "0.0.6"
+tree-sitter-lammps = "0.0.7"
 
 [dev-dependencies]
 criterion = { version = "=0.5.1", features = ["html_reports"] }
