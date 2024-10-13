@@ -38,7 +38,10 @@ pub enum ArgumentKind {
     SimpleExpansion(Ident),
     /// Expression evaluations in $()
     VarRound(Expression),
+    /// TODO: handle the nested identifiers.
     String(String),
+    /// A single quoted string,
+    RawString(String),
     /// Multiple argument stuck together, usually strings and expansions.
     Concatenation(Vec<Argument>),
     /// Expression.
@@ -108,6 +111,7 @@ impl FromNode for ArgumentKind {
             "expression" => Ok(Self::Expression(Expression::parse_expression(node, text)?)),
             "quoted_expression" => quoted_expression(node, text).map(Self::Expression),
             "string" => Ok(Self::String(node.str_text(text).to_owned())),
+            "raw_string" => Ok(Self::RawString(raw_string(node, text)?)),
             "group" => Ok(Self::Group),
             "underscore_ident" => Ok(Self::UnderscoreIdent(underscore_ident(node, text)?)),
             "simple_expansion" => Ok(Self::SimpleExpansion(Ident::new(
@@ -175,6 +179,57 @@ impl FromNode for ArgumentKind {
     }
 }
 
+fn raw_string(node: &Node, text: &str) -> Result<String, FromNodeError> {
+    dbg!(node.child_count());
+    let contents = node.str_text(text);
+
+    if node.n_lines() > 1 {
+        verify_line_continuations(contents).map_err(|_| {
+            FromNodeError::PartialNode(
+                "Raw newlines are not valid in single-quote strings. Prepend with a `&`.".into(),
+            )
+        })?;
+    }
+
+    let mut cursor = node.walk();
+    let mut children = node.children(&mut cursor);
+
+    // TODO: make this stronger and an assertion?
+    children
+        .next()
+        .expect_kind("'", "expected leading single quote")?;
+
+    let mut children = children.skip_while(|node| node.kind() != "'");
+
+    children
+        .next()
+        .expect_kind("'", "Missing closing single quote.")?;
+
+    // TODO: this is temporary
+    Ok(contents.to_owned())
+}
+
+fn verify_line_continuations(s: &str) -> Result<(), ()> {
+    // verify that there is no raw newlines
+    let (left, right) = match s.split_once('\n') {
+        Some((left, right)) => (left, right),
+        None => {
+            // No newlines, no problem
+            return Ok(());
+        }
+    };
+
+    // ensure that the last non-whitespace character before the newline is a '&'
+    // NOTE: because we split at new lines, the trailing white space of `left` should not contain
+    // newlines
+    if left.trim_end().strip_suffix('&').is_none() {
+        // TODO: find a way to provide the byte offset
+        return Err(());
+    }
+
+    verify_line_continuations(right)
+}
+
 fn underscore_ident(node: &Node, text: &str) -> Result<Ident, FromNodeError> {
     // 0 is v_
     // 1 is x
@@ -240,6 +295,7 @@ impl Display for ArgumentKind {
                 Ok(())
             }
             Self::String(s) => write!(f, "string: {s}"),
+            Self::RawString(s) => write!(f, "raw_string: {s}"),
             Self::Expression(x) => write!(f, "expression: {x}"),
             Self::Group => write!(f, "group"),
             Self::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),
@@ -320,5 +376,83 @@ mod test {
                 span: ((0, 9)..(0, 15)).into()
             }
         )
+    }
+
+    #[test]
+    fn test_raw_string_with_continuation() {
+        let text = "print 'string &\n contents'";
+        let tree = utils::testing::parse(text);
+
+        let str_node = tree
+            .root_node()
+            .child(0)
+            .expect("command node")
+            .child(1)
+            .expect("arguments list")
+            .child(0)
+            .expect("string literal");
+
+        dbg!(&str_node.to_sexp());
+
+        let parsed = ArgumentKind::from_node(&str_node, text);
+
+        assert!(parsed.is_ok());
+        assert!(matches!(parsed, Ok(ArgumentKind::RawString(_))));
+
+        unimplemented!()
+    }
+
+    #[test]
+    fn test_raw_string_missing_continuation() {
+        let text = "print 'string \n contents'";
+        let tree = utils::testing::parse(text);
+
+        let str_node = tree
+            .root_node()
+            .child(0)
+            .expect("command node")
+            .child(1)
+            .expect("arguments list")
+            .child(0)
+            .expect("string literal");
+
+        dbg!(&str_node.to_sexp());
+
+        let parsed = ArgumentKind::from_node(&str_node, text);
+
+        assert!(parsed.is_err());
+        assert_eq!(
+            parsed,
+            Err(FromNodeError::PartialNode(
+                "Raw newlines are not valid in single-quote strings. Prepend with a `&`."
+                    .to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn test_raw_string_many_missing_continuations() {
+        let text = "print 'string & \n contents \n more contents'";
+        let tree = utils::testing::parse(text);
+
+        let str_node = tree
+            .root_node()
+            .child(0)
+            .expect("command node")
+            .child(1)
+            .expect("arguments list")
+            .child(0)
+            .expect("string literal");
+
+        let parsed = ArgumentKind::from_node(&str_node, text);
+
+        assert!(parsed.is_err());
+        assert_eq!(
+            parsed,
+            Err(FromNodeError::PartialNode(
+                "Raw newlines are not valid in single-quote strings. Prepend with a `&`."
+                    .to_owned()
+            ))
+        );
     }
 }
