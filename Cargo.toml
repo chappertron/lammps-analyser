@@ -40,7 +40,7 @@ tokio = { version = "1.40.0", features = [
 ] }
 tower-lsp = "0.20.0"
 tree-sitter = "0.23.0"
-tree-sitter-lammps = "0.0.7"
+tree-sitter-lammps = "0.0.8"
 
 [dev-dependencies]
 criterion = { version = "=0.5.1", features = ["html_reports"] }
