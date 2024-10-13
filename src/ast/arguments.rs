@@ -42,7 +42,9 @@ pub enum ArgumentKind {
     String(String),
     /// A single quoted string,
     RawString(String),
-    /// Multiple argument stuck together, usually strings and expansions.
+    /// Triple strings
+    TripleString(String),
+    /// Multiple argument stuck together, usually words and expansions.
     Concatenation(Vec<Argument>),
     /// Expression.
     /// TODO: Not really valid as a bare argument except for with variable commands
@@ -111,6 +113,7 @@ impl FromNode for ArgumentKind {
             "expression" => Ok(Self::Expression(Expression::parse_expression(node, text)?)),
             "quoted_expression" => quoted_expression(node, text).map(Self::Expression),
             "string" => Ok(Self::String(node.str_text(text).to_owned())),
+            "triple_string" => Ok(Self::TripleString(node.str_text(text).to_owned())),
             "raw_string" => Ok(Self::RawString(raw_string(node, text)?)),
             "group" => Ok(Self::Group),
             "underscore_ident" => Ok(Self::UnderscoreIdent(underscore_ident(node, text)?)),
@@ -280,27 +283,27 @@ impl Display for ArgumentKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // TODO: rework this. This is only really appropriate for debug, not display
         match self {
-            Self::Int(x) => write!(f, "int: {x}"),
-            Self::Float(x) => write!(f, "float: {x}"),
-            Self::Bool(x) => write!(f, "bool: {x}"),
-            Self::ArgName(x) => write!(f, "argname: {x}"),
-            Self::VarCurly(x) => write!(f, "var_curly: ${{{0}}}", x.name),
-            Self::SimpleExpansion(x) => write!(f, "simple_expansion: ${0}", x.name),
-            Self::VarRound(x) => write!(f, "var_round: $({x})"),
+            Self::Int(x) => write!(f, "{x}"),
+            Self::Float(x) => write!(f, "{x}"),
+            Self::Bool(x) => write!(f, "{x}"),
+            Self::ArgName(x) => write!(f, "{x}"),
+            Self::VarCurly(x) => write!(f, "${{{0}}}", x.name),
+            Self::SimpleExpansion(x) => write!(f, "${0}", x.name),
+            Self::VarRound(x) => write!(f, "$({x})"),
             Self::Concatenation(v) => {
-                write!(f, "concatenation: ")?;
                 for a in v {
                     write!(f, "{a}")?;
                 }
                 Ok(())
             }
-            Self::String(s) => write!(f, "string: {s}"),
-            Self::RawString(s) => write!(f, "raw_string: {s}"),
-            Self::Expression(x) => write!(f, "expression: {x}"),
+            Self::String(s) => write!(f, "\"{s}\""),
+            Self::TripleString(s) => write!(f, r#""""{s}""""#),
+            Self::RawString(s) => write!(f, "'{s}'"),
+            Self::Expression(x) => write!(f, "{x}"),
             Self::Group => write!(f, "group"),
-            Self::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),
-            Self::IndexedIdent(x, index) => write!(f, "indexed_ident: {x}[{index}]"),
-            Self::Word(x) => write!(f, "word: {x}"),
+            Self::UnderscoreIdent(x) => write!(f, "{x}"),
+            Self::IndexedIdent(x, index) => write!(f, "{x}[{index}]"),
+            Self::Word(x) => write!(f, "{x}"),
             Self::Error => write!(f, "ERROR"),
         }
     }
@@ -398,8 +401,6 @@ mod test {
 
         assert!(parsed.is_ok());
         assert!(matches!(parsed, Ok(ArgumentKind::RawString(_))));
-
-        unimplemented!()
     }
 
     #[test]
