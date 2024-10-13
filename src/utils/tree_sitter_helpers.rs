@@ -10,12 +10,25 @@ pub(crate) trait NodeExt {
     /// Panics if node offset somehow is on invalid UTF-8 character boundaries.
     /// This should only happen if the file wasn't UTF-8 encoded.
     fn str_text<'a>(&self, source: &'a str) -> &'a str;
+
+    /// The number of lines the node spans.
+    fn n_lines(&self) -> usize;
 }
 
 impl NodeExt for Node<'_> {
     fn str_text<'a>(&self, source: &'a str) -> &'a str {
         // Should not panic as source is valid utf-8
         self.utf8_text(source.as_bytes()).expect("invalid utf-8")
+    }
+
+    fn n_lines(&self) -> usize {
+        let tree_sitter::Range {
+            start_point,
+            end_point,
+            ..
+        } = self.range();
+
+        end_point.row - start_point.row + 1
     }
 }
 
