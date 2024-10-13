@@ -149,7 +149,7 @@ mod test {
 
     #[test]
     fn parse_index_variable() {
-        let text = "variable file_name index step4.1.atm";
+        let text = "variable file_name index step4.1.atm\n";
         // let text = include_str!("../../example_input_scripts/in.variable_index");
 
         let tree = parse(text);
@@ -194,7 +194,7 @@ mod test {
 
     #[test]
     fn parse_incomplete_variable_def() {
-        let source = "variable a equal";
+        let source = "variable a equal\n";
 
         let tree = parse(source);
 

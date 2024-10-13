@@ -86,7 +86,7 @@ mod test {
 
     #[test]
     fn parse_compute_with_args() {
-        let source = "compute T_hot water temp/region hot_region";
+        let source = "compute T_hot water temp/region hot_region\n";
 
         let tree = parse(source);
 

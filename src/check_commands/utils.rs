@@ -180,14 +180,16 @@ mod tests {
 
     #[test]
     fn invalid_zero_arg_fix() {
-        let text = "fix NVE all nve asdfas";
+        let text = "fix NVE all nve asdfas\n";
         let tree = parse(text);
         let node = tree.root_node().child(0).unwrap();
+        dbg!(&node.to_sexp());
         let fix = FixDef::from_node(&node, text).unwrap();
 
         assert_eq!(fix.fix_id.name, "NVE");
         assert_eq!(fix.group_id.contents, "all");
         assert_eq!(fix.fix_style, FixStyle::Nve);
+        dbg!(&fix.args);
         assert!(!fix.args.is_empty());
 
         assert_eq!(
