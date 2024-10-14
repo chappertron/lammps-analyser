@@ -16,7 +16,7 @@ impl ast::Ast {
     pub fn find_run_commands(&self) -> impl Iterator<Item = &ast::Command> {
         // TODO: also include `minimize` and `rerun` commands
         self.commands.iter().filter(|cmd| {
-            if let ast::Command::GenericCommand(c) = &cmd {
+            if let ast::Command::Generic(c) = &cmd {
                 c.name.contents == "run"
             } else {
                 false

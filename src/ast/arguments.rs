@@ -78,7 +78,6 @@ impl FromNode for Argument {
     type Error = FromNodeError;
 
     fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
-        let text = text.as_ref();
         let kind = ArgumentKind::from_node(node, text)?;
 
         Ok(Argument {
@@ -96,7 +95,6 @@ impl FromNode for ArgumentKind {
         text: &str,
     ) -> Result<Self, <Argument as FromNode>::Error> {
         // TODO: make these variants more complete.
-        let text = text.as_ref();
         match node.kind() {
             "int" => Ok(Self::Int(node.str_text(text).parse::<isize>()?)),
             "float" => Ok(Self::Float(node.str_text(text).parse::<f64>()?)),
@@ -311,6 +309,9 @@ impl Display for ArgumentKind {
 
 #[cfg(test)]
 mod test {
+    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::expect_used)]
+
     use pretty_assertions::assert_eq;
 
     use crate::utils;

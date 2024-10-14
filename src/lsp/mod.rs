@@ -238,7 +238,7 @@ impl LanguageServer for Backend {
                     DOCS_MAP.computes().get(compute_style)
                 }
 
-                Command::GenericCommand(GenericCommand { name, .. }) => {
+                Command::Generic(GenericCommand { name, .. }) => {
                     let name = CommandName::from(name.as_str());
                     DOCS_MAP.commands().get(&name)
                 }
