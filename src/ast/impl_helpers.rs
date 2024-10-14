@@ -24,7 +24,7 @@ impl ast::Ast {
         })
     }
 
-    // TODO: Is this lifetime bound correct?
+    // TODO: Is this lifetime bound correct? Check that jonhoo talk on return postition impl traits
     /// Find the spans of commands before a each run command.
     ///
     /// These spans start at the end of the previous run command and end at the start of the
@@ -38,8 +38,8 @@ impl ast::Ast {
 
         // The spans of the blocks of commands defined before run commands.
         std::iter::once(Span {
-            start: Default::default(),
-            end: Default::default(),
+            start: (0, 0).into(),
+            end: (0, 0).into(),
         })
         .chain(run_spans)
         .tuple_windows()

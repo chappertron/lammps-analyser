@@ -113,7 +113,8 @@ mod test {
 
     #[test]
     fn parse_fix_with_args() {
-        let source = "fix NVT all nvt temp 1 1.5 $(100.0*dt)";
+        let source = "fix NVT all nvt temp 1 1.5 $(100.0*dt)
+";
 
         let tree = parse(source);
 

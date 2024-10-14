@@ -100,7 +100,7 @@ mod tests {
 
     #[test]
     fn bad_check_n_args() {
-        let text = "fix profw water  ave/chunk 1 $(v_nsteps) $(v_nsteps)";
+        let text = "fix profw water  ave/chunk 1 $(v_nsteps) $(v_nsteps)\n";
         let tree = parse(text);
         let node = tree.root_node().child(0).unwrap();
         let fix = FixDef::from_node(&node, text).unwrap();

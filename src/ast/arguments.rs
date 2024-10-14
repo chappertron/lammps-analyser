@@ -34,12 +34,17 @@ pub enum ArgumentKind {
     ArgName(String), // TODO: Is this still in use in the tree-sitter grammar?
     /// Variable expansion within curly braces
     VarCurly(Ident),
-    /// A simple variable expansion in $var
+    /// A simple variable expansion in $v
     SimpleExpansion(Ident),
     /// Expression evaluations in $()
     VarRound(Expression),
+    /// TODO: handle the nested identifiers.
     String(String),
-    /// Multiple argument stuck together, usually strings and expansions.
+    /// A single quoted string,
+    RawString(String),
+    /// Triple strings
+    TripleString(String),
+    /// Multiple argument stuck together, usually words and expansions.
     Concatenation(Vec<Argument>),
     /// Expression.
     /// TODO: Not really valid as a bare argument except for with variable commands
@@ -108,6 +113,8 @@ impl FromNode for ArgumentKind {
             "expression" => Ok(Self::Expression(Expression::parse_expression(node, text)?)),
             "quoted_expression" => quoted_expression(node, text).map(Self::Expression),
             "string" => Ok(Self::String(node.str_text(text).to_owned())),
+            "triple_string" => Ok(Self::TripleString(node.str_text(text).to_owned())),
+            "raw_string" => Ok(Self::RawString(raw_string(node, text)?)),
             "group" => Ok(Self::Group),
             "underscore_ident" => Ok(Self::UnderscoreIdent(underscore_ident(node, text)?)),
             "simple_expansion" => Ok(Self::SimpleExpansion(Ident::new(
@@ -163,6 +170,9 @@ impl FromNode for ArgumentKind {
             }
             // TODO: It seems weird sending something called error through ok.
             "ERROR" => Ok(Self::Error),
+            // NOTE: make this variant a panic for testing purposes.
+            #[cfg(feature = "ast_panics")]
+            c => panic!("unknown argument kind {c}"),
             x => Err(FromNodeError::UnknownCustom {
                 kind: "argument type".to_string(),
                 name: x.to_string(),
@@ -170,6 +180,57 @@ impl FromNode for ArgumentKind {
             }),
         }
     }
+}
+
+fn raw_string(node: &Node, text: &str) -> Result<String, FromNodeError> {
+    dbg!(node.child_count());
+    let contents = node.str_text(text);
+
+    if node.n_lines() > 1 {
+        verify_line_continuations(contents).map_err(|_| {
+            FromNodeError::PartialNode(
+                "Raw newlines are not valid in single-quote strings. Prepend with a `&`.".into(),
+            )
+        })?;
+    }
+
+    let mut cursor = node.walk();
+    let mut children = node.children(&mut cursor);
+
+    // TODO: make this stronger and an assertion?
+    children
+        .next()
+        .expect_kind("'", "expected leading single quote")?;
+
+    let mut children = children.skip_while(|node| node.kind() != "'");
+
+    children
+        .next()
+        .expect_kind("'", "Missing closing single quote.")?;
+
+    // TODO: this is temporary
+    Ok(contents.to_owned())
+}
+
+fn verify_line_continuations(s: &str) -> Result<(), ()> {
+    // verify that there is no raw newlines
+    let (left, right) = match s.split_once('\n') {
+        Some((left, right)) => (left, right),
+        None => {
+            // No newlines, no problem
+            return Ok(());
+        }
+    };
+
+    // ensure that the last non-whitespace character before the newline is a '&'
+    // NOTE: because we split at new lines, the trailing white space of `left` should not contain
+    // newlines
+    if left.trim_end().strip_suffix('&').is_none() {
+        // TODO: find a way to provide the byte offset
+        return Err(());
+    }
+
+    verify_line_continuations(right)
 }
 
 fn underscore_ident(node: &Node, text: &str) -> Result<Ident, FromNodeError> {
@@ -222,26 +283,27 @@ impl Display for ArgumentKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         // TODO: rework this. This is only really appropriate for debug, not display
         match self {
-            Self::Int(x) => write!(f, "int: {x}"),
-            Self::Float(x) => write!(f, "float: {x}"),
-            Self::Bool(x) => write!(f, "bool: {x}"),
-            Self::ArgName(x) => write!(f, "argname: {x}"),
-            Self::VarCurly(x) => write!(f, "var_curly: ${{{0}}}", x.name),
-            Self::SimpleExpansion(x) => write!(f, "simple_expansion: ${0}", x.name),
-            Self::VarRound(x) => write!(f, "var_round: $({x})"),
+            Self::Int(x) => write!(f, "{x}"),
+            Self::Float(x) => write!(f, "{x}"),
+            Self::Bool(x) => write!(f, "{x}"),
+            Self::ArgName(x) => write!(f, "{x}"),
+            Self::VarCurly(x) => write!(f, "${{{0}}}", x.name),
+            Self::SimpleExpansion(x) => write!(f, "${0}", x.name),
+            Self::VarRound(x) => write!(f, "$({x})"),
             Self::Concatenation(v) => {
-                write!(f, "concatenation: ")?;
                 for a in v {
                     write!(f, "{a}")?;
                 }
                 Ok(())
             }
-            Self::String(s) => write!(f, "string: {s}"),
-            Self::Expression(x) => write!(f, "expression: {x}"),
+            Self::String(s) => write!(f, "\"{s}\""),
+            Self::TripleString(s) => write!(f, r#""""{s}""""#),
+            Self::RawString(s) => write!(f, "'{s}'"),
+            Self::Expression(x) => write!(f, "{x}"),
             Self::Group => write!(f, "group"),
-            Self::UnderscoreIdent(x) => write!(f, "underscore_ident: {x}"),
-            Self::IndexedIdent(x, index) => write!(f, "indexed_ident: {x}[{index}]"),
-            Self::Word(x) => write!(f, "word: {x}"),
+            Self::UnderscoreIdent(x) => write!(f, "{x}"),
+            Self::IndexedIdent(x, index) => write!(f, "{x}[{index}]"),
+            Self::Word(x) => write!(f, "{x}"),
             Self::Error => write!(f, "ERROR"),
         }
     }
@@ -317,5 +379,81 @@ mod test {
                 span: ((0, 9)..(0, 15)).into()
             }
         )
+    }
+
+    #[test]
+    fn test_raw_string_with_continuation() {
+        let text = "print 'string &\n contents'";
+        let tree = utils::testing::parse(text);
+
+        let str_node = tree
+            .root_node()
+            .child(0)
+            .expect("command node")
+            .child(1)
+            .expect("arguments list")
+            .child(0)
+            .expect("string literal");
+
+        dbg!(&str_node.to_sexp());
+
+        let parsed = ArgumentKind::from_node(&str_node, text);
+
+        assert!(parsed.is_ok());
+        assert!(matches!(parsed, Ok(ArgumentKind::RawString(_))));
+    }
+
+    #[test]
+    fn test_raw_string_missing_continuation() {
+        let text = "print 'string \n contents'";
+        let tree = utils::testing::parse(text);
+
+        let str_node = tree
+            .root_node()
+            .child(0)
+            .expect("command node")
+            .child(1)
+            .expect("arguments list")
+            .child(0)
+            .expect("string literal");
+
+        dbg!(&str_node.to_sexp());
+
+        let parsed = ArgumentKind::from_node(&str_node, text);
+
+        assert!(parsed.is_err());
+        assert_eq!(
+            parsed,
+            Err(FromNodeError::PartialNode(
+                "Raw newlines are not valid in single-quote strings. Prepend with a `&`."
+                    .to_owned()
+            ))
+        );
+    }
+
+    #[test]
+    fn test_raw_string_many_missing_continuations() {
+        let text = "print 'string & \n contents \n more contents'";
+        let tree = utils::testing::parse(text);
+
+        let str_node = tree
+            .root_node()
+            .child(0)
+            .expect("command node")
+            .child(1)
+            .expect("arguments list")
+            .child(0)
+            .expect("string literal");
+
+        let parsed = ArgumentKind::from_node(&str_node, text);
+
+        assert!(parsed.is_err());
+        assert_eq!(
+            parsed,
+            Err(FromNodeError::PartialNode(
+                "Raw newlines are not valid in single-quote strings. Prepend with a `&`."
+                    .to_owned()
+            ))
+        );
     }
 }

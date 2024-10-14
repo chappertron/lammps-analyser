@@ -4,11 +4,15 @@
 
 use std::fmt::Display;
 
+use itertools::Itertools;
 use tree_sitter::Node;
 
 use crate::{
     ast::Ident,
-    utils::{into_error::IntoError, tree_sitter_helpers::NodeExt},
+    utils::{
+        into_error::IntoError,
+        tree_sitter_helpers::{ExpectNode, NodeExt},
+    },
 };
 use std::convert::TryFrom;
 use thiserror::Error;
@@ -56,14 +60,18 @@ pub enum Expression {
 
     /// An expression expansion `$(expr)`
     /// This expression is invalid in most cases, except in variable commands.
-
     /// This is because they cannot be nested
     VarRound(Box<Expression>),
 
-    /// An variable expansion `${v}`
+    /// A variable expansion `${v}`
     /// This expression is invalid in most cases, except in variable commands.
     /// This is because they cannot be nested
     VarCurly(Ident),
+
+    /// A variable expansion `$v`
+    /// This expression is invalid in most cases, except in variable commands.
+    /// This is because they cannot be nested
+    SimpleExpansion(Ident),
 }
 
 #[derive(Debug, Default, PartialEq, PartialOrd, Clone)]
@@ -126,6 +134,7 @@ impl Display for Expression {
             Self::Indexing(expr, index) => write!(f, "{expr}[{index}]"),
             Self::VarRound(expr) => write!(f, "$({expr})"),
             Self::VarCurly(var) => write!(f, "${{{var}}}"), // triple { to ensure escaping
+            Self::SimpleExpansion(var) => write!(f, "${var}"), // triple { to ensure escaping
         }
     }
 }
@@ -207,27 +216,30 @@ impl Expression {
                 UnaryOp::try_from(node.child(0).into_err()?.str_text(text))?,
                 Self::parse_expression(&node.child(1).into_err()?, text)?.into(),
             )),
-            "binary_func" | "unary_func" | "ternary_func" | "hexnary_func" | "other_func"
-            | "group_func" | "region_func" => {
+            "func" => {
                 let mut cursor = node.walk();
-
-                let mut args = Vec::new();
-                let name_node = &node.child(0).into_err()?;
-                let name = Word::parse_word(name_node, text);
 
                 // child 0 = function name
                 // child 1 = opening bracket
+                // child 2 = argument list.
+                // child 3 = bracket
+
+                let name_node = &node.child(0).into_err()?;
+                let name = Word::parse_word(name_node, text);
+                let arg_list_node = node
+                    .child_by_field_name("args")
+                    .expect_kind("argument_list", "missing list of arguments")?;
+
                 // TODO: Handle no closing bracket!!!!
-                for node in node.children(&mut cursor).skip(2) {
-                    node.str_text(text);
-                    if node.kind() == ")" {
-                        break;
-                    }
-                    if node.kind() == "," {
-                        continue;
-                    }
-                    args.push(Self::parse_expression(&node, text)?);
-                }
+                let args = arg_list_node
+                    .children(&mut cursor)
+                    .skip(1)
+                    .take_while(|node| node.kind() != ")")
+                    // TODO: This is assuming properly formed interleaved arg and comma
+                    .filter(|node| node.kind() != ",")
+                    .map(|node| Self::parse_expression(&node, text))
+                    .try_collect()?;
+
                 Ok(Self::Function(name, args))
             }
 
@@ -256,8 +268,19 @@ impl Expression {
             "identifier" => Ok(Self::Word(Word::parse_word(node, text))),
             "var_round" => Ok(Self::VarRound(Box::new(var_round(node, text)?))),
             "var_curly" => var_curly(node, text).map(Self::VarCurly),
+            "simple_expansion" => {
+                let ident = Ident::new(&node.child(1).into_err()?, text)?;
+                if ident.name.len() > 1 {
+                    return Err(FromNodeError::PartialNode(
+                        "simple expansions only support one character variables ".into(),
+                    ));
+                }
+                Ok(Self::SimpleExpansion(ident))
+            }
             "indexing" => indexing(node, text),
             "ERROR" => Err(ParseExprError::ErrorNode.into()),
+            #[cfg(feature = "ast_panics")]
+            exp => panic!("unknown expression kind {exp}"),
             x => Err(ParseExprError::UnknownExpressionType(x.to_owned()).into()),
         }
         // todo!()
@@ -701,7 +724,7 @@ mod tests {
     }
 
     #[test]
-    fn func_display() {
+    fn test_func() {
         let mut parser = setup_parser();
         let source = "variable a equal ramp(v_example, 3.0)";
 
