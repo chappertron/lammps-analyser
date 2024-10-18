@@ -74,11 +74,12 @@ pub enum Expression {
     SimpleExpansion(Ident),
 }
 
-#[derive(Debug, Default, PartialEq, PartialOrd, Clone)]
+#[derive(Debug, Default, PartialEq, Clone)]
 pub enum Index {
     Int(usize),
     #[default]
     Glob,
+    Expression(Box<Expression>),
 }
 
 impl FromNode for Index {
@@ -88,8 +89,11 @@ impl FromNode for Index {
         match node.kind() {
             "glob" => Ok(Index::Glob),
             "int" => Ok(Index::Int(node.str_text(text).parse()?)),
+            "expression" => Ok(Index::Expression(Box::new(Expression::parse_expression(
+                node, text,
+            )?))),
             _ => Err(FromNodeError::PartialNode(format![
-                "invalid index `{x}`, expected `*` or integer",
+                "invalid index `{x}`, expected expression, `*` or integer",
                 x = node.str_text(text)
             ])),
         }
@@ -101,6 +105,7 @@ impl Display for Index {
         match self {
             Self::Int(n) => write!(f, "{n}"),
             Self::Glob => write!(f, "*"),
+            Self::Expression(expr) => write!(f, "{expr}"),
         }
     }
 }
@@ -291,7 +296,7 @@ pub(crate) fn indexing(node: &Node, text: &str) -> Result<Expression, FromNodeEr
     let value = node
         .child_by_field_name("value")
         .ok_or(FromNodeError::PartialNode("expected expression".into()))?;
-    // TODO: properly handle the `[]`
+    // TODO: verify the `[]`
     let value = Expression::parse_expression(&value, text)?;
 
     let index = node
