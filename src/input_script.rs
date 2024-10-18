@@ -131,7 +131,7 @@ impl<'src> InputScript<'src> {
     }
 
     fn find_syntax_errors(&mut self) {
-        let syntax_errors = self.error_finder.find_errors(&self.tree, &self.source_code);
+        let syntax_errors = self.error_finder.find_errors(&self.tree, self.source_code);
         self.diagnostics
             .extend(syntax_errors.iter().map(|x| x.diagnostic()));
     }
@@ -174,7 +174,7 @@ impl<'src> InputScript<'src> {
 }
 
 fn get_ast(tree: &Tree, source_code: &str) -> (Ast, impl Iterator<Item = Diagnostic>) {
-    let ast = ts_to_ast(&tree, source_code);
+    let ast = ts_to_ast(tree, source_code);
 
     let (ast, ast_errors) = match ast {
         Ok(ast) => (ast, vec![]),

@@ -56,7 +56,7 @@ impl Ast {
             }
             // Not sure about other named commands yet...
             Command::Compute(compute) => check_compute(compute).err().map(InvalidCommand::from),
-            Command::GenericCommand(command) => {
+            Command::Generic(command) => {
                 let command_name = CommandName::from(command.name.as_str());
 
                 if let CommandName::InvalidCommand(name) = command_name {

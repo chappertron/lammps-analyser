@@ -34,7 +34,6 @@ impl FromNode for FixDef {
     fn from_node(node: &Node, text: &str) -> Result<Self, Self::Error> {
         let span = node.range().into();
         let mut cursor = node.walk();
-        let text = text.as_ref();
 
         let mut children = node.children(&mut cursor);
 
@@ -72,6 +71,9 @@ impl FromNode for FixDef {
 
 #[cfg(test)]
 mod test {
+    // Allowed within the tests
+    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::expect_used)]
 
     use pretty_assertions::assert_eq;
 

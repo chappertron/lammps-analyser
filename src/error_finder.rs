@@ -122,6 +122,12 @@ impl ErrorFinder {
     }
 }
 
+impl Default for ErrorFinder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Debug for ErrorFinder {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ErrorFinder")
@@ -239,7 +245,7 @@ impl MissingToken {
 impl Issue for MissingToken {
     fn diagnostic(&self) -> crate::diagnostics::Diagnostic {
         crate::diagnostics::Diagnostic {
-            name: "Missing Token".into(),
+            name: "Missing Token",
             severity: crate::diagnostics::Severity::Error,
             span: Span {
                 start: self.start,

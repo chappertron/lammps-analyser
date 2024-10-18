@@ -58,7 +58,7 @@ impl<'a> ExpectNode for Option<Node<'a>> {
 
                 Ok(x)
             }
-            None => return Err(FromNodeError::PartialNode(message.into())),
+            None => Err(FromNodeError::PartialNode(message.into())),
         }
     }
 
@@ -71,7 +71,7 @@ impl<'a> ExpectNode for Option<Node<'a>> {
 
                 Ok(x)
             }
-            None => return Err(FromNodeError::PartialNode(message.into())),
+            None => Err(FromNodeError::PartialNode(message.into())),
         }
     }
 }

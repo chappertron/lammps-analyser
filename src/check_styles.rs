@@ -35,7 +35,7 @@ pub fn check_styles(ast: &Ast, tree: &Tree, text: &str) -> Vec<InvalidStyle> {
     // Check pair styles
     // TODO: Also check other types of style.
     for command in &ast.commands {
-        if let ast::Command::GenericCommand(cmd) = &command {
+        if let ast::Command::Generic(cmd) = &command {
             if cmd.name.contents != "pair_style" {
                 continue;
             }

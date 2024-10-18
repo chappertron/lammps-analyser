@@ -31,7 +31,6 @@ impl FromNode for ComputeDef {
         let mut cursor = node.walk();
 
         let mut children = node.children(&mut cursor);
-        let text = text.as_ref();
 
         // skip the compute keyword
         children.next();
@@ -77,6 +76,9 @@ impl FromNode for ComputeDef {
 
 #[cfg(test)]
 mod test {
+    // Allowed within the tests
+    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::expect_used)]
 
     use pretty_assertions::assert_eq;
 

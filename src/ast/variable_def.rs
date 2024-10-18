@@ -100,6 +100,9 @@ impl FromNode for VariableDef {
 
 #[cfg(test)]
 mod test {
+    // Allowed within the tests
+    #![allow(clippy::unwrap_used)]
+    #![allow(clippy::expect_used)]
 
     use pretty_assertions::assert_eq;
 

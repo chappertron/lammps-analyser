@@ -7,7 +7,7 @@ use crate::ast;
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Command {
-    GenericCommand(GenericCommand),
+    Generic(GenericCommand),
     /// A Fix definition
     Fix(ast::FixDef),
     /// A compute definition
@@ -21,7 +21,7 @@ pub enum Command {
 impl Command {
     pub fn span(&self) -> Span {
         match self {
-            Command::GenericCommand(cmd) => cmd.span(),
+            Command::Generic(cmd) => cmd.span(),
             Command::Fix(cmd) => cmd.span,
             Command::Compute(cmd) => cmd.span,
             Command::VariableDef(cmd) => cmd.span,
@@ -58,8 +58,6 @@ impl FromNode for GenericCommand {
         let end = node.end_position();
         let start_byte = node.start_byte();
         let end_byte = node.end_byte();
-
-        let text = text.as_ref();
 
         let mut args = vec![];
 
@@ -98,19 +96,19 @@ impl FromNode for Command {
         let error_span = |e| (Self::Error(node.range().into()), e);
         let mut result = match node.kind() {
             "fix" => Ok(Self::Fix(
-                ast::FixDef::from_node(node, &text).map_err(error_span)?,
+                ast::FixDef::from_node(node, text).map_err(error_span)?,
             )),
             "compute" => Ok(Self::Compute(
-                ast::ComputeDef::from_node(node, &text).map_err(error_span)?,
+                ast::ComputeDef::from_node(node, text).map_err(error_span)?,
             )),
             // TODO: Make a variable deltion it's own type
             "variable_def" | "variable_del" => Ok(Self::VariableDef(
-                ast::VariableDef::from_node(node, &text).map_err(error_span)?,
+                ast::VariableDef::from_node(node, text).map_err(error_span)?,
             )),
             "shell" => Ok(Self::Shell(node.range().into())),
             // Fall back to the generic command type
-            "command" => Ok(Self::GenericCommand(
-                GenericCommand::from_node(node, &text).map_err(error_span)?,
+            "command" => Ok(Self::Generic(
+                GenericCommand::from_node(node, text).map_err(error_span)?,
             )),
             "ERROR" => Ok(Self::Error(node.range().into())),
 
@@ -127,13 +125,13 @@ impl FromNode for Command {
             result = match node.child(0).map(|node| node.kind()) {
                 // Try and parse this as a compute
                 Some("compute") => Ok(Self::Compute(
-                    ast::ComputeDef::from_node(node, &text).map_err(error_span)?,
+                    ast::ComputeDef::from_node(node, text).map_err(error_span)?,
                 )),
                 Some("fix_id") => Ok(Self::Fix(
-                    ast::FixDef::from_node(node, &text).map_err(error_span)?,
+                    ast::FixDef::from_node(node, text).map_err(error_span)?,
                 )),
                 Some("variable") => Ok(Self::VariableDef(
-                    ast::VariableDef::from_node(node, &text).map_err(error_span)?,
+                    ast::VariableDef::from_node(node, text).map_err(error_span)?,
                 )),
                 // Cannot further process
                 // NOTE: This is `Ok` rather than `Error` because syntax errors are also

@@ -98,7 +98,6 @@ impl IdentiFinder {
 
     /// Create a new `Identifinder` and search for symbols.
     pub fn new(tree: &Tree, text: &str) -> Result<Self, FromNodeError> {
-        let text = text.as_ref();
         let mut i = Self::new_no_parse();
         i.find_symbols(tree, text)?;
         Ok(i)
