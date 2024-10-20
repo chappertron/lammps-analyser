@@ -1,18 +1,27 @@
 /target
 .vscode/
-# Until I sort out the docs...
+
+# Docs rst files taken from lammps source code
 lammps_docs/
-lammps_hover_docs/
+# Intermediate docs files from the pipline. 
+# The rst files with some changes to work with pandoc.
+lammps_docs_cleaned/ 
+# The full lammps/docs folder.
+# Includes the docs as well build stuff
 full_lammps_docs/
-#lammps_docs_md/
-lammps_docs_cleaned/
+
 # An attempted rust based docs extractor may readd
 extract_rst/
 
+# For testing docs extraction
 docs_filter.py
 docs_example.rst
 docs_example.md
 prepare_docs.py
+
+# Examples scripts from the LAMMPS Repo
+# TODO: Un-ignore these and create proper tests to handle them
+examples_from_lammps/
 
 # Rust format backups
 .*.rs.rustfmt
@@ -24,17 +33,12 @@ test.*
 tree.dot
 *tree.svg
 
-
 # Profiling outputs
 flamegraph.svg
 profile.json
 
 # language-tool speel checking
 .ltex/
-
-
-# sed backups
-*.rs-r
 
 # venv for docs extract
 docs_venv/
