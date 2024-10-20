@@ -104,6 +104,8 @@ reset_timestep 0
 timestep        1
 
 fix 2 all nve what 
+# An example for compute argument checking
+compute 10 all coord/atom 
 
 log ${outputname}.log
 
