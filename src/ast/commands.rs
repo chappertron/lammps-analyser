@@ -15,7 +15,18 @@ pub enum Command {
     /// A variable definition
     VariableDef(ast::VariableDef),
     Shell(Span),
+    /// An invalid command node
     Error(Span),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct GenericCommand {
+    pub name: ast::Word,
+    pub args: Vec<ast::Argument>,
+    pub start: Point,
+    pub end: Point,
+    pub start_byte: usize,
+    pub end_byte: usize,
 }
 
 impl Command {
@@ -29,16 +40,6 @@ impl Command {
             Command::Error(span) => *span,
         }
     }
-}
-
-#[derive(Debug, PartialEq, Clone)]
-pub struct GenericCommand {
-    pub name: ast::Word,
-    pub args: Vec<ast::Argument>,
-    pub start: Point,
-    pub end: Point,
-    pub start_byte: usize,
-    pub end_byte: usize,
 }
 
 impl GenericCommand {
