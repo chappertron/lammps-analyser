@@ -50,6 +50,13 @@ impl FromNode for VariableDef {
             text,
         )?;
 
+        if !is_valid_variable_style(&variable_kind) {
+            return Err(FromNodeError::PartialNode(format![
+                "invalid variable style `{}`",
+                variable_kind.as_str()
+            ]));
+        }
+
         let args: Result<Vec<Argument>, _> = children
             .map(|arg| {
                 if arg.is_missing() {
@@ -68,8 +75,6 @@ impl FromNode for VariableDef {
                 "missing arguments in variable command".to_string(),
             ));
         }
-
-        // TODO: Ensure that the style is valid.
 
         // These styles expect just a single expression.
         //  "vector" | TODO: Re-add vector after support is added for expressions in vector command
@@ -96,6 +101,29 @@ impl FromNode for VariableDef {
             span,
         })
     }
+}
+
+fn is_valid_variable_style(word: &Word) -> bool {
+    matches!(
+        word.as_str(),
+        "delete"
+            | "atomfile"
+            | "file"
+            | "format"
+            | "getenv"
+            | "index"
+            | "internal"
+            | "loop"
+            | "python"
+            | "string"
+            | "timer"
+            | "uloop"
+            | "universe"
+            | "world"
+            | "equal"
+            | "vector"
+            | "atom"
+    )
 }
 
 #[cfg(test)]
