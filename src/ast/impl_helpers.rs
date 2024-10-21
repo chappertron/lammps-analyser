@@ -59,14 +59,17 @@ mod test {
     #[test]
     #[allow(clippy::unwrap_used)]
     fn test_find_run_commands() {
-        let file = include_str!("../../example_input_scripts/in.nemd");
+        let file = "run 10000
+fix nve all nve
+run 10000
+";
 
         let input_script = InputScript::new(file).unwrap();
 
         let run_commands: Vec<_> = input_script.ast.find_run_commands().cloned().collect();
 
         assert_eq!(run_commands.len(), 2);
-        assert_eq!(run_commands[0].span(), Span::from((132, 0)..(132, 17)));
-        assert_eq!(run_commands[1].span(), Span::from((146, 0)..(146, 6)));
+        assert_eq!(run_commands[0].span(), Span::from((0, 0)..(0, 9)));
+        assert_eq!(run_commands[1].span(), Span::from((2, 0)..(2, 9)));
     }
 }
