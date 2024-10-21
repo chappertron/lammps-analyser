@@ -61,8 +61,7 @@ mod test {
     fn test_find_run_commands() {
         let file = "run 10000
 fix nve all nve
-run 10000
-";
+run 10000";
 
         let input_script = InputScript::new(file).unwrap();
 
