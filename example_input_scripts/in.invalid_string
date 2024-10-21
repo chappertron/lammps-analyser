@@ -1,3 +1,6 @@
 print line 'unterminated double quote & 
 string'
-print line "unterminated double quote string
+print "'unterminated double quote string'"
+
+print """hello"
+

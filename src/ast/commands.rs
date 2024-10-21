@@ -134,13 +134,74 @@ impl FromNode for Command {
                 Some("variable") => Ok(Self::VariableDef(
                     ast::VariableDef::from_node(node, text).map_err(error_span)?,
                 )),
+
                 // Cannot further process
                 // NOTE: This is `Ok` rather than `Error` because syntax errors are also
                 // found within `ErrorFinder`
-                _ => Ok(Self::Error(span)),
+                _ => {
+                    // let contents = node.str_text(&text);
+                    if let Some(err) = check_quotes(node) {
+                        Err((Self::Error(span), err))
+                    } else {
+                        Ok(Self::Error(span))
+                    }
+                }
             };
         }
 
         result
     }
+}
+
+/// Check an error node for mis matched quotes, to see if that was the cause.
+fn check_quotes(err_node: &Node) -> Option<FromNodeError> {
+    /// NOTE: due to the structure of the grammar,
+    /// quotes nested within others should not be in this top level.
+
+    #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+    enum QuoteKind {
+        Single,
+        Double,
+        Triple,
+    }
+
+    let mut quotes_stack = Vec::new();
+
+    let mut cursor = err_node.walk();
+    // Dumb approach:
+    // If the error node contains a "/'/""", then we check if they're paired
+    for child in err_node.children(&mut cursor) {
+        let quote_kind = match child.kind() {
+            r#"""""# => QuoteKind::Triple,
+            r#"""# => QuoteKind::Double,
+            "'" => QuoteKind::Single,
+            _ => {
+                continue;
+            }
+        };
+
+        // TODO: this could probably be made a bit simpler.
+        if let Some((_prev_span, prev_kind)) = quotes_stack.last() {
+            if *prev_kind == quote_kind {
+                quotes_stack.pop();
+            } else {
+                quotes_stack.push((child.range(), quote_kind));
+            }
+        } else {
+            quotes_stack.push((child.range(), quote_kind))
+        }
+    }
+
+    // If the stack still has errors, then handle them here.
+    // TODO: handle all the errors, not just the first one.
+    quotes_stack.into_iter().next().map(|(_span, kind)| {
+        let quote = match kind {
+            QuoteKind::Triple => r#"triple quotes `"""`"#,
+            QuoteKind::Double => r#"double quotes `"`"#,
+            QuoteKind::Single => "single quotes `'`",
+        };
+
+        // TODO: add span to this error, once supported properly
+        FromNodeError::PartialNode(format!("unterminated {}", quote))
+    })
 }
