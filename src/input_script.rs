@@ -96,6 +96,9 @@ impl<'src> InputScript<'src> {
     fn check(&mut self) {
         self.diagnostics.clear();
 
+        // NOTE: syntax errors are first because these messages aren't usually the most useful.
+        self.find_syntax_errors();
+
         let (ast, ast_errors) = get_ast(&self.tree, self.source_code);
 
         self.ast = ast;
@@ -109,7 +112,6 @@ impl<'src> InputScript<'src> {
 
         self.unused_references();
 
-        self.find_syntax_errors();
         self.run_lints();
     }
 
